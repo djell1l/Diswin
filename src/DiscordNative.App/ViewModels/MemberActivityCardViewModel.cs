@@ -45,7 +45,7 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
 
             if (!string.IsNullOrWhiteSpace(VoiceChannelName))
             {
-                parts.Add($"🔊 {VoiceChannelName}");
+                parts.Add(VoiceChannelName);
             }
             else if (!string.IsNullOrWhiteSpace(Activity.State))
             {
@@ -55,6 +55,8 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
             return parts.Count > 0 ? string.Join("  •  ", parts) : "En cours";
         }
     }
+
+    public bool HasVoiceChannel => !string.IsNullOrWhiteSpace(VoiceChannelName);
 
     public string TooltipText => $"{User.DisplayName}\n{Activity.Name}\n{SubtitleLine}";
 }

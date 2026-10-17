@@ -125,7 +125,10 @@
                                       OffContent="Désactivé"
                                       Toggled="OnKrispToggled" />
 
-                        <TextBlock x:Name="KrispEngineStatusText" FontSize="12" Foreground="#23A55A" FontWeight="SemiBold" Opacity="0.9" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <FontIcon x:Name="KrispEngineStatusIcon" Glyph="&#xE73E;" FontSize="12" Foreground="#23A55A" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Name="KrispEngineStatusText" FontSize="12" Foreground="#23A55A" FontWeight="SemiBold" Opacity="0.9" TextWrapping="Wrap" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

@@ -271,7 +271,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
         {
             if (IsInVoice)
             {
-                return $"🔊 {CurrentVoiceChannelName}";
+                return CurrentVoiceChannelName ?? "Salon vocal";
             }
             var act = PrimaryActivity;
             if (act is not null)
@@ -686,14 +686,28 @@ public sealed class DiscordConnectedAccount
         _ => string.IsNullOrWhiteSpace(Type) ? "Compte lié" : char.ToUpperInvariant(Type[0]) + Type[1..]
     };
 
+    public string PlatformGlyph => Type.ToLowerInvariant() switch
+    {
+        "spotify" => "\uEC4F",
+        "youtube" => "\uE768",
+        "twitch" => "\uE714",
+        "steam" or "playstation" or "xbox" or "battlenet" or "riotgames" or "epicgames" or "roblox" => "\uE7FC",
+        "github" => "\uE943",
+        "twitter" or "x" => "\uE110",
+        "domain" => "\uE774",
+        "tiktok" or "instagram" => "\uEB9F",
+        "bluesky" => "\uE774",
+        _ => "\uE71B"
+    };
+
     public string PlatformBadgeText => Type.ToLowerInvariant() switch
     {
         "github" => "GH",
         "steam" => "ST",
-        "spotify" => "🎵",
+        "spotify" => "SP",
         "twitch" => "TW",
-        "youtube" => "▶",
-        "twitter" or "x" => "𝕏",
+        "youtube" => "YT",
+        "twitter" or "x" => "X",
         "reddit" => "RD",
         "playstation" => "PS",
         "xbox" => "XB",
@@ -703,9 +717,9 @@ public sealed class DiscordConnectedAccount
         "roblox" => "RBX",
         "tiktok" => "TT",
         "instagram" => "IG",
-        "bluesky" => "🦋",
-        "domain" => "🌐",
-        _ => "🔗"
+        "bluesky" => "BS",
+        "domain" => "WEB",
+        _ => "LINK"
     };
 
     public string? ProfileUrl => Type.ToLowerInvariant() switch

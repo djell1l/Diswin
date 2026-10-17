@@ -1908,13 +1908,23 @@ public sealed partial class MainWindowContent : UserControl
 
         var changeBannerImgBtn = new Button
         {
-            Content = hasNitro ? "Changer l'image de bannière..." : "🔒 Image de bannière (Nitro)",
             HorizontalAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(8),
             FontSize = 12,
             IsEnabled = hasNitro,
             Opacity = hasNitro ? 1.0 : 0.45
         };
+        if (hasNitro)
+        {
+            changeBannerImgBtn.Content = "Changer l'image de bannière...";
+        }
+        else
+        {
+            var lockStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center };
+            lockStack.Children.Add(new FontIcon { Glyph = "\uE72E", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+            lockStack.Children.Add(new TextBlock { Text = "Image de bannière (Nitro)", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+            changeBannerImgBtn.Content = lockStack;
+        }
         bannerColorSection.Children.Add(changeBannerImgBtn);
         leftStack.Children.Add(bannerColorSection);
 
@@ -2444,7 +2454,7 @@ public sealed partial class MainWindowContent : UserControl
         cardBodyStack.Children.Add(displayNameBox);
         cardBodyStack.Children.Add(zoomSlider);
 
-        // Ligne : username • [🌸 DSKY v] + Badges officiels
+        // Ligne : username • [Clan] + Badges officiels
         var handleBadgesRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
         handleBadgesRow.Children.Add(new TextBlock
         {
@@ -2521,7 +2531,7 @@ public sealed partial class MainWindowContent : UserControl
         };
         cardBodyStack.Children.Add(pronounsInput);
 
-        // Boutons d'aperçu façon Discord : [ 💬 Message ] [ 🏪 ] [ ⋯ ]
+        // Boutons d'aperçu façon Discord : [ Message ] [ Shop ] [ More ]
         var actionButtonsRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         var msgPreviewBtn = new Button
         {
@@ -2596,28 +2606,32 @@ public sealed partial class MainWindowContent : UserControl
         });
         cardBodyStack.Children.Add(memberSinceSection);
 
-        // Section Connections (avec jay-space.com ↗ etc.)
+        // Section Connections (avec liens externes)
         var connectionsSection = new StackPanel { Spacing = 6 };
         connectionsSection.Children.Add(new TextBlock { Text = "Connections", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.7 });
         foreach (var conn in ViewModel.CurrentUserConnectedAccounts)
         {
             var connRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            connRow.Children.Add(new Border
+            var badgeBorder = new Border
             {
-                Width = 22,
                 Height = 22,
-                CornerRadius = new CornerRadius(11),
-                Background = new SolidColorBrush(Microsoft.UI.Colors.White),
-                Child = new TextBlock
-                {
-                    Text = conn.PlatformBadgeText,
-                    FontSize = 10,
-                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
-                    Foreground = new SolidColorBrush(Microsoft.UI.Colors.Black),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
+                CornerRadius = new CornerRadius(6),
+                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 43, 45, 49)),
+                Padding = new Thickness(6, 2, 6, 2),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var badgePanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+            badgePanel.Children.Add(new FontIcon { Glyph = conn.PlatformGlyph, FontSize = 11, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 148, 155, 164)), VerticalAlignment = VerticalAlignment.Center });
+            badgePanel.Children.Add(new TextBlock
+            {
+                Text = conn.PlatformBadgeText,
+                FontSize = 10,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 219, 222, 225)),
+                VerticalAlignment = VerticalAlignment.Center
             });
+            badgeBorder.Child = badgePanel;
+            connRow.Children.Add(badgeBorder);
             connRow.Children.Add(new TextBlock
             {
                 Text = conn.Name,
@@ -2869,7 +2883,7 @@ public sealed partial class MainWindowContent : UserControl
             }
         }
 
-        // Entrée "Main Profile ✓"
+        // Entrée "Main Profile"
         var mainProfItemBtn = new Button
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,

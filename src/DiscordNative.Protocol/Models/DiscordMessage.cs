@@ -361,7 +361,7 @@ public sealed class DiscordReaction
     [JsonPropertyName("me")] public bool Me { get; set; }
     [JsonPropertyName("emoji")] public DiscordEmoji Emoji { get; set; } = new();
 
-    public string EmojiText => Emoji.Name ?? "👍";
+    public string EmojiText => Emoji.Name ?? string.Empty;
     public string CountText => Count > 1 ? Count.ToString() : string.Empty;
 }
 

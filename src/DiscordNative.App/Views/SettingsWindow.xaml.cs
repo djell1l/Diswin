@@ -86,15 +86,18 @@ public sealed partial class SettingsWindow : Window
 
         if (!_settings.Current.EnableKrispNoiseSuppression)
         {
+            if (KrispEngineStatusIcon is not null) KrispEngineStatusIcon.Visibility = Visibility.Collapsed;
             KrispEngineStatusText.Text = "Krisp est actuellement désactivé.";
         }
         else if (nativeOk)
         {
-            KrispEngineStatusText.Text = $"✓ Moteur actif : {engineDesc}";
+            if (KrispEngineStatusIcon is not null) KrispEngineStatusIcon.Visibility = Visibility.Visible;
+            KrispEngineStatusText.Text = $"Moteur actif : {engineDesc}";
         }
         else
         {
-            KrispEngineStatusText.Text = "✓ Filtre de suppression de bruit adaptatif actif (DSP 48kHz)";
+            if (KrispEngineStatusIcon is not null) KrispEngineStatusIcon.Visibility = Visibility.Visible;
+            KrispEngineStatusText.Text = "Filtre de suppression de bruit adaptatif actif (DSP 48kHz)";
         }
     }
 

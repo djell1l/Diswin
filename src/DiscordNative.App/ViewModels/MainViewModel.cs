@@ -160,6 +160,8 @@ public sealed partial class MainViewModel : ObservableObject
         ? _client.CurrentUser.ActivitySummaryText
         : CurrentStatusDisplayName;
 
+    public bool CurrentUserIsInVoice => _client.CurrentUser?.IsInVoice ?? false;
+
     public DiscordActivity? CurrentUserRichPresence => _client.CurrentUser?.PrimaryActivity;
     public Microsoft.UI.Xaml.Visibility CurrentUserRichPresenceVisibility => CurrentUserRichPresence is not null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public string CurrentUserRpcHeader => CurrentUserRichPresence?.HeaderLabel ?? "EN TRAIN DE JOUER";
@@ -448,6 +450,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CurrentStatusDisplayName));
         OnPropertyChanged(nameof(CurrentUserSubStatusText));
+        OnPropertyChanged(nameof(CurrentUserIsInVoice));
         OnPropertyChanged(nameof(CurrentUserRichPresence));
         OnPropertyChanged(nameof(CurrentUserRichPresenceVisibility));
         OnPropertyChanged(nameof(CurrentUserRpcHeader));
