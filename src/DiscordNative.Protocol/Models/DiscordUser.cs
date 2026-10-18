@@ -187,8 +187,40 @@ public sealed class DiscordUser : INotifyPropertyChanged
         }
     }
 
-    public int MutualFriendsCount { get; set; }
-    public int MutualGuildsCount { get; set; }
+    private int _mutualFriendsCount;
+    public int MutualFriendsCount
+    {
+        get => _mutualFriendsCount;
+        set
+        {
+            if (_mutualFriendsCount != value)
+            {
+                _mutualFriendsCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMutualInfo));
+                OnPropertyChanged(nameof(MutualSummaryText));
+                OnPropertyChanged(nameof(MutualFriendsTabTitle));
+            }
+        }
+    }
+
+    private int _mutualGuildsCount;
+    public int MutualGuildsCount
+    {
+        get => _mutualGuildsCount;
+        set
+        {
+            if (_mutualGuildsCount != value)
+            {
+                _mutualGuildsCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMutualInfo));
+                OnPropertyChanged(nameof(MutualSummaryText));
+                OnPropertyChanged(nameof(MutualServersTabTitle));
+            }
+        }
+    }
+
     public bool HasMutualInfo => MutualFriendsCount > 0 || MutualGuildsCount > 0;
     public string MutualSummaryText
     {
@@ -200,6 +232,96 @@ public sealed class DiscordUser : INotifyPropertyChanged
             return string.Join(" • ", parts);
         }
     }
+
+    public string MutualFriendsTabTitle => $"{MutualFriendsCount} Mutual Friend{(MutualFriendsCount > 1 ? "s" : "")}";
+    public string MutualServersTabTitle => $"{MutualGuildsCount} Mutual Server{(MutualGuildsCount > 1 ? "s" : "")}";
+
+    private List<DiscordMutualGuild> _mutualGuilds = new();
+    public List<DiscordMutualGuild> MutualGuilds
+    {
+        get => _mutualGuilds;
+        set
+        {
+            if (_mutualGuilds != value)
+            {
+                _mutualGuilds = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMutualGuilds));
+                OnPropertyChanged(nameof(MutualServersTabTitle));
+            }
+        }
+    }
+    public bool HasMutualGuilds => MutualGuilds.Count > 0;
+
+    private List<DiscordUser> _mutualFriends = new();
+    public List<DiscordUser> MutualFriends
+    {
+        get => _mutualFriends;
+        set
+        {
+            if (_mutualFriends != value)
+            {
+                _mutualFriends = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasMutualFriends));
+                OnPropertyChanged(nameof(MutualFriendsTabTitle));
+            }
+        }
+    }
+    public bool HasMutualFriends => MutualFriends.Count > 0;
+
+    private List<DiscordActivity> _recentActivities = new();
+    public List<DiscordActivity> RecentActivities
+    {
+        get => _recentActivities;
+        set
+        {
+            if (_recentActivities != value)
+            {
+                _recentActivities = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasRecentActivities));
+            }
+        }
+    }
+    public bool HasRecentActivities => RecentActivities.Count > 0;
+
+    private bool _isFriend;
+    public bool IsFriend
+    {
+        get => _isFriend;
+        set
+        {
+            if (_isFriend != value)
+            {
+                _isFriend = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(FriendActionText));
+                OnPropertyChanged(nameof(FriendActionGlyph));
+                OnPropertyChanged(nameof(FriendStatusTooltip));
+            }
+        }
+    }
+
+    public string FriendActionText => IsFriend ? "Message" : "Demande d'ami";
+    public string FriendActionGlyph => IsFriend ? "\uE8BD" : "\uE8FA";
+    public string FriendStatusTooltip => IsFriend ? "Ami (cliquez pour voir les options)" : "Ajouter en ami";
+
+    private string? _friendsSinceText;
+    public string? FriendsSinceText
+    {
+        get => _friendsSinceText;
+        set
+        {
+            if (_friendsSinceText != value)
+            {
+                _friendsSinceText = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasFriendsSince));
+            }
+        }
+    }
+    public bool HasFriendsSince => !string.IsNullOrWhiteSpace(FriendsSinceText);
 
     [JsonPropertyName("bio")]
     public string? Bio { get; set; }
@@ -370,7 +492,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
 
     public string UserTag => Discriminator == "0" ? $"@{Username}" : $"{Username}#{Discriminator}";
 
-    public string Status { get; set; } = "online";
+    public string Status { get; set; } = "offline";
 
     private bool _isSpeaking;
     public bool IsSpeaking
@@ -526,6 +648,32 @@ public sealed class DiscordActivity : INotifyPropertyChanged
     public bool HasLargeImage => !string.IsNullOrWhiteSpace(LargeImageUrl);
     public bool HasSmallImage => !string.IsNullOrWhiteSpace(SmallImageUrl);
     public bool HasElapsed => !string.IsNullOrWhiteSpace(ElapsedText);
+
+    public string RecentSubtitleLine
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(Details)) parts.Add(Details);
+            if (!string.IsNullOrWhiteSpace(State)) parts.Add(State);
+            if (parts.Count == 0)
+            {
+                if (!string.IsNullOrWhiteSpace(ElapsedText)) parts.Add(ElapsedText);
+                else parts.Add("Trending");
+            }
+            return string.Join(" • ", parts);
+        }
+    }
+
+    public string EffectiveIconUrl => !string.IsNullOrWhiteSpace(LargeImageUrl)
+        ? LargeImageUrl
+        : !string.IsNullOrWhiteSpace(SmallImageUrl)
+            ? SmallImageUrl
+            : !string.IsNullOrWhiteSpace(ApplicationId)
+                ? $"https://cdn.discordapp.com/app-icons/{ApplicationId}/icon.png?size=128"
+                : string.Empty;
+
+    public bool HasEffectiveIcon => !string.IsNullOrWhiteSpace(EffectiveIconUrl);
 
     public string? LargeImageUrl => ResolveAssetUrl(ApplicationId, Assets?.LargeImage);
     public string? SmallImageUrl => ResolveAssetUrl(ApplicationId, Assets?.SmallImage);
@@ -752,4 +900,22 @@ public sealed class DiscordWidgetGame
     public string? Comment { get; set; }
     public bool IsFavorite { get; set; }
     public string TooltipText => string.IsNullOrWhiteSpace(Comment) ? Name : $"{Name} — \"{Comment}\"";
+}
+
+public sealed class DiscordMutualGuild : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler? PropertyChanged;
+    public void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("nick")]
+    public string? Nick { get; set; }
+
+    [JsonPropertyName("icon")]
+    public string? Icon { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+    public string? IconUrl { get; set; }
 }

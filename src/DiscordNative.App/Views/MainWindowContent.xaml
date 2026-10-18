@@ -1286,7 +1286,7 @@
                                                 <!-- 3. Edit Message (Uniquement pour mes messages) -->
                                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                                         Background="Transparent" BorderThickness="0" Padding="8,6" CornerRadius="4" Height="34" Margin="2,0"
-                                                        Visibility="{x:Bind IsOwnMessage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        Visibility="{x:Bind IsOwnMessage, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}"
                                                         Tag="{x:Bind}" Click="OnEditMessageClicked">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
@@ -1486,7 +1486,7 @@
                                                 <!-- 14. Delete Message (Uniquement pour mes messages) -->
                                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                                         Background="Transparent" BorderThickness="0" Padding="8,6" CornerRadius="4" Height="34" Margin="2,0"
-                                                        Visibility="{x:Bind IsOwnMessage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        Visibility="{x:Bind IsOwnMessage, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}"
                                                         Tag="{x:Bind}" Click="OnDeleteMessageClicked">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
@@ -1501,7 +1501,7 @@
                                                 <!-- 15. Report Message (Uniquement pour les messages des autres) -->
                                                 <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                                                         Background="Transparent" BorderThickness="0" Padding="8,6" CornerRadius="4" Height="34" Margin="2,0"
-                                                        Visibility="{x:Bind IsNotOwnMessage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        Visibility="{x:Bind IsNotOwnMessage, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}"
                                                         Tag="{x:Bind}" Click="OnReportMessageClicked">
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
@@ -3611,13 +3611,39 @@
 
                                         <!-- Boutons d'action (Add Friend, Message, ...) -->
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,4">
-                                            <Button Content="Demande d'ami" Style="{StaticResource AccentButtonStyle}"
+                                            <!-- Si déjà ami : Bouton principal "Message" -->
+                                            <Button Style="{StaticResource AccentButtonStyle}"
                                                     CornerRadius="8" Padding="14,6" Height="34"
-                                                    Click="OnAddFriendFromProfileClicked" />
+                                                    Visibility="{x:Bind FullProfileUser.IsFriend, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Click="OnSendMessageFromProfileClicked">
+                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE8BD;" FontSize="14" Foreground="White" />
+                                                    <TextBlock Text="Message" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Button>
                                             <Button Width="36" Height="34" Padding="0" CornerRadius="8" Background="#33FFFFFF" BorderThickness="0"
+                                                    Visibility="{x:Bind FullProfileUser.IsFriend, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    ToolTipService.ToolTip="Ami">
+                                                <FontIcon Glyph="&#xE73E;" FontSize="14" Foreground="#23A55A" />
+                                            </Button>
+
+                                            <!-- Si PAS encore ami : Bouton principal "Demande d'ami" -->
+                                            <Button Style="{StaticResource AccentButtonStyle}"
+                                                    CornerRadius="8" Padding="14,6" Height="34"
+                                                    Visibility="{x:Bind FullProfileUser.IsFriend, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
+                                                    Click="OnAddFriendFromProfileClicked">
+                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE8FA;" FontSize="14" Foreground="White" />
+                                                    <TextBlock Text="Demande d'ami" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Width="36" Height="34" Padding="0" CornerRadius="8" Background="#33FFFFFF" BorderThickness="0"
+                                                    Visibility="{x:Bind FullProfileUser.IsFriend, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
                                                     Click="OnSendMessageFromProfileClicked" ToolTipService.ToolTip="Envoyer un message privé">
                                                 <FontIcon Glyph="&#xE8BD;" FontSize="15" Foreground="White" />
                                             </Button>
+
+                                            <!-- Bouton Autres options ... -->
                                             <Button Width="36" Height="34" Padding="0" CornerRadius="8" Background="#33FFFFFF" BorderThickness="0"
                                                     Click="OnProfileMoreActionsClicked" ToolTipService.ToolTip="Autres actions">
                                                 <FontIcon Glyph="&#xE10C;" FontSize="15" Foreground="White" />
@@ -3641,6 +3667,12 @@
                                             <TextBlock Text="{x:Bind FullProfileUser.MemberSinceText, Mode=OneWay}" FontSize="13" FontWeight="Medium" Foreground="{x:Bind FullProfileUser.ProfileTextForegroundColorHex, Mode=OneWay}" />
                                         </StackPanel>
 
+                                        <!-- Section Friends Since (si ami) -->
+                                        <StackPanel Spacing="3" Margin="0,4,0,0" Visibility="{x:Bind FullProfileUser.HasFriendsSince, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="AMIS DEPUIS" FontSize="11" FontWeight="Bold" Opacity="0.65" Foreground="{x:Bind FullProfileUser.ProfileTextForegroundColorHex, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind FullProfileUser.FriendsSinceText, Mode=OneWay}" FontSize="13" FontWeight="Medium" Foreground="{x:Bind FullProfileUser.ProfileTextForegroundColorHex, Mode=OneWay}" />
+                                        </StackPanel>
+
                                         <!-- Ligne de séparation -->
                                         <Border Height="1" Background="#25FFFFFF" Margin="0,4" />
 
@@ -3657,7 +3689,7 @@
                             </ScrollViewer>
                         </Border>
 
-                        <!-- COLONNE DROITE (Onglets : Board, Activity, Wishlist, Mutuals) -->
+                        <!-- COLONNE DROITE (Onglets : Activity, Wishlist, Mutual Friends, Mutual Servers) -->
                         <Grid Grid.Column="1" Margin="8,0,0,0">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -3666,155 +3698,218 @@
 
                             <!-- Barre d'onglets façon Discord -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="4,0,0,12">
-                                <!-- Onglet Board -->
-                                <StackPanel Spacing="4">
-                                    <Button Content="Board" Background="Transparent" BorderThickness="0" Padding="4,4"
-                                            FontSize="14" FontWeight="SemiBold" Foreground="White"
-                                            Tag="Board" Click="OnProfileTabClicked" />
-                                    <Border x:Name="ProfileBoardTabIndicator" Height="2" Background="White" CornerRadius="1" />
-                                </StackPanel>
-
                                 <!-- Onglet Activity -->
                                 <StackPanel Spacing="4">
-                                    <Button Content="Activity" Background="Transparent" BorderThickness="0" Padding="4,4"
-                                            FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
+                                    <Button x:Name="ProfileActivityTabButton" Content="Activity" Background="Transparent" BorderThickness="0" Padding="4,4"
+                                            FontSize="14" FontWeight="SemiBold" Foreground="White"
                                             Tag="Activity" Click="OnProfileTabClicked" />
-                                    <Border x:Name="ProfileActivityTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
+                                    <Border x:Name="ProfileActivityTabIndicator" Height="2" Background="White" CornerRadius="1" />
                                 </StackPanel>
 
                                 <!-- Onglet Wishlist -->
                                 <StackPanel Spacing="4">
-                                    <Button Content="Wishlist" Background="Transparent" BorderThickness="0" Padding="4,4"
+                                    <Button x:Name="ProfileWishlistTabButton" Content="Wishlist" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
                                             Tag="Wishlist" Click="OnProfileTabClicked" />
                                     <Border x:Name="ProfileWishlistTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
                                 </StackPanel>
 
                                 <!-- Onglet Amis en commun -->
-                                <StackPanel Spacing="4" Visibility="{x:Bind FullProfileUser.HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Button Content="{x:Bind FullProfileUser.MutualSummaryText, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
+                                <StackPanel Spacing="4">
+                                    <Button x:Name="ProfileMutualFriendsTabButton" Content="{x:Bind FullProfileUser.MutualFriendsTabTitle, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
-                                            Tag="Mutuals" Click="OnProfileTabClicked" />
-                                    <Border x:Name="ProfileMutualsTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
+                                            Tag="MutualFriends" Click="OnProfileTabClicked" />
+                                    <Border x:Name="ProfileMutualFriendsTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
+                                </StackPanel>
+
+                                <!-- Onglet Serveurs en commun -->
+                                <StackPanel Spacing="4">
+                                    <Button x:Name="ProfileMutualServersTabButton" Content="{x:Bind FullProfileUser.MutualServersTabTitle, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
+                                            FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
+                                            Tag="MutualServers" Click="OnProfileTabClicked" />
+                                    <Border x:Name="ProfileMutualServersTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
                                 </StackPanel>
                             </StackPanel>
 
                             <!-- CONTENU DES ONGLETS -->
                             <Grid Grid.Row="1">
-                                <!-- CONTENU ONGLET 1 : BOARD (Games I Like - 2x4 Grid) -->
-                                <ScrollViewer x:Name="ProfileBoardContent" VerticalScrollBarVisibility="Auto">
-                                    <Border Background="#25000000" CornerRadius="16" Padding="16" Margin="0,0,4,0">
-                                        <StackPanel Spacing="12">
-                                            <Grid>
-                                                <TextBlock Text="Games I Like" FontSize="15" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
-                                                <Button Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
-                                                        HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                    <FontIcon Glyph="&#xE10C;" FontSize="13" Foreground="White" Opacity="0.75" />
-                                                </Button>
-                                            </Grid>
+                                <!-- CONTENU ONGLET 1 : ACTIVITY -->
+                                <ScrollViewer x:Name="ProfileActivityContent" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Spacing="10" Margin="0,0,6,0">
+                                        <TextBlock Text="Recent activity" FontSize="12" FontWeight="SemiBold" Foreground="#949BA4" Margin="2,0,0,4" />
 
-                                            <!-- Grille 2x4 des 8 affiches de jeux (Valorant, osu!, Silent Hill f, Overwatch, Life is Strange, Apex Legends, Saya no Uta, Roblox) -->
-                                            <Grid HorizontalAlignment="Center">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
+                                        <!-- Liste des activités récentes -->
+                                        <ItemsControl ItemsSource="{x:Bind FullProfileUser.RecentActivities, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:DiscordActivity">
+                                                    <Border Background="#2B2D31" CornerRadius="10" Padding="12" Margin="0,0,0,8">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
 
-                                                <!-- Ligne 1 -->
-                                                <Border Grid.Row="0" Grid.Column="0" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="VALORANT">
-                                                    <Image Source="ms-appx:///Assets/Games/valorant.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="0" Grid.Column="1" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="osu!">
-                                                    <Image Source="ms-appx:///Assets/Games/osu.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="0" Grid.Column="2" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="SILENT HILL f">
-                                                    <Image Source="ms-appx:///Assets/Games/silenthill.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="0" Grid.Column="3" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="OVERWATCH">
-                                                    <Image Source="ms-appx:///Assets/Games/overwatch.png" Stretch="UniformToFill" />
-                                                </Border>
+                                                            <!-- Icône de l'application / jeu -->
+                                                            <Grid Grid.Column="0" Width="44" Height="44" Margin="0,0,12,0">
+                                                                <Border CornerRadius="8" Background="#1E1F22">
+                                                                    <Grid>
+                                                                        <Border CornerRadius="8" Visibility="{x:Bind HasEffectiveIcon, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                            <Border.Background>
+                                                                                <ImageBrush ImageSource="{x:Bind EffectiveIconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                            </Border.Background>
+                                                                        </Border>
+                                                                        <FontIcon Glyph="&#xE7FC;" FontSize="20" Foreground="#B5BAC1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                  Visibility="{x:Bind HasEffectiveIcon, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </Grid>
 
-                                                <!-- Ligne 2 -->
-                                                <Border Grid.Row="1" Grid.Column="0" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="LIFE IS STRANGE">
-                                                    <Image Source="ms-appx:///Assets/Games/lifeisstrange.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="1" Grid.Column="1" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="APEX LEGENDS">
-                                                    <Image Source="ms-appx:///Assets/Games/apex.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="1" Grid.Column="2" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="THE SONG OF SAYA">
-                                                    <Image Source="ms-appx:///Assets/Games/saya.png" Stretch="UniformToFill" />
-                                                </Border>
-                                                <Border Grid.Row="1" Grid.Column="3" Width="105" Height="142" CornerRadius="10" Margin="5"
-                                                        Background="#20000000" ToolTipService.ToolTip="ROBLOX">
-                                                    <Image Source="ms-appx:///Assets/Games/roblox.png" Stretch="UniformToFill" />
-                                                </Border>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
+                                                            <!-- Infos du jeu : Nom + Sous-titre (Manette + Temps / Trending) -->
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                                                <TextBlock Text="{x:Bind Name, Mode=OneTime}" FontSize="14" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
+                                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                    <FontIcon Glyph="&#xE7FC;" FontSize="11" Foreground="#949BA4" />
+                                                                    <TextBlock Text="{x:Bind RecentSubtitleLine, Mode=OneTime}" FontSize="12" Foreground="#949BA4" TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Bouton ... (actions) -->
+                                                            <Button Grid.Column="2" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
+                                                                    HorizontalAlignment="Right" VerticalAlignment="Top">
+                                                                <FontIcon Glyph="&#xE10C;" FontSize="13" Foreground="#949BA4" />
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Message si aucune activité récente -->
+                                        <Border Background="#2B2D31" CornerRadius="10" Padding="28"
+                                                Visibility="{x:Bind FullProfileUser.HasRecentActivities, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                                <FontIcon Glyph="&#xE7FC;" FontSize="32" Foreground="#949BA4" Opacity="0.5" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Aucune activité récente" FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </ScrollViewer>
 
-                                <!-- CONTENU ONGLET 2 : ACTIVITY (Spotify / Rich Presence) -->
-                                <ScrollViewer x:Name="ProfileActivityContent" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                                    <Border Background="#25000000" CornerRadius="16" Padding="16">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Activité actuelle" FontSize="15" FontWeight="Bold" Foreground="White" />
-                                            <Border Background="#30000000" CornerRadius="12" Padding="16"
-                                                    Visibility="{x:Bind FullProfileUser.HasRichPresence, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Grid Grid.Column="0" Width="68" Height="68" Margin="0,0,14,0">
-                                                        <Border CornerRadius="10">
-                                                            <Border.Background>
-                                                                <ImageBrush ImageSource="{x:Bind FullProfileUser.PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                            </Border.Background>
-                                                        </Border>
-                                                    </Grid>
-                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                                                        <TextBlock Text="{x:Bind FullProfileUser.PrimaryActivity.HeaderLabel, Mode=OneWay}" FontSize="12" FontWeight="Bold" Opacity="0.75" Foreground="White" />
-                                                        <TextBlock Text="{x:Bind FullProfileUser.PrimaryActivity.Name, Mode=OneWay}" FontSize="15" FontWeight="Bold" Foreground="White" />
-                                                        <TextBlock Text="{x:Bind FullProfileUser.PrimaryActivity.Details, Mode=OneWay}" FontSize="13" Opacity="0.85" Foreground="White" />
-                                                        <TextBlock Text="{x:Bind FullProfileUser.PrimaryActivity.State, Mode=OneWay}" FontSize="12" Opacity="0.7" Foreground="White" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </StackPanel>
-                                    </Border>
-                                </ScrollViewer>
-
-                                <!-- CONTENU ONGLET 3 : WISHLIST -->
+                                <!-- CONTENU ONGLET 2 : WISHLIST -->
                                 <ScrollViewer x:Name="ProfileWishlistContent" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                                    <Border Background="#25000000" CornerRadius="16" Padding="20">
-                                        <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE734;" FontSize="28" Foreground="White" Opacity="0.5" HorizontalAlignment="Center" />
-                                            <TextBlock Text="Aucun jeu dans la liste de souhaits pour le moment" FontSize="14" Opacity="0.65" Foreground="White" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
+                                    <StackPanel Spacing="12" Margin="0,0,6,0">
+                                        <Grid Margin="2,0,2,4">
+                                            <TextBlock Text="Wishlist" FontSize="12" FontWeight="SemiBold" Foreground="#949BA4" VerticalAlignment="Center" />
+                                            <Button HorizontalAlignment="Right" Background="#35373C" BorderThickness="0" CornerRadius="4" Padding="10,6"
+                                                    Click="OnBrowseShopClicked">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE7BF;" FontSize="13" Foreground="#F2F3F5" />
+                                                    <TextBlock Text="Browse the Shop" FontSize="12" FontWeight="SemiBold" Foreground="#F2F3F5" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+
+                                        <Border Background="#2B2D31" CornerRadius="10" Padding="28">
+                                            <StackPanel Spacing="10" HorizontalAlignment="Center">
+                                                <FontIcon Glyph="&#xE734;" FontSize="32" Foreground="#949BA4" Opacity="0.5" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Cette liste de souhaits est vide pour le moment" FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </ScrollViewer>
 
-                                <!-- CONTENU ONGLET 4 : MUTUALS -->
-                                <ScrollViewer x:Name="ProfileMutualsContent" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
-                                    <Border Background="#25000000" CornerRadius="16" Padding="16">
-                                        <StackPanel Spacing="10">
-                                            <TextBlock Text="Serveurs et amis en commun" FontSize="15" FontWeight="Bold" Foreground="White" />
-                                            <TextBlock Text="{x:Bind FullProfileUser.MutualSummaryText, Mode=OneWay}" FontSize="13" Opacity="0.8" Foreground="White" />
-                                        </StackPanel>
-                                    </Border>
+                                <!-- CONTENU ONGLET 3 : MUTUAL FRIENDS -->
+                                <ScrollViewer x:Name="ProfileMutualFriendsContent" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                                    <StackPanel Spacing="8" Margin="0,0,6,0">
+                                        <ItemsControl ItemsSource="{x:Bind FullProfileUser.MutualFriends, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:DiscordUser">
+                                                    <Button Background="Transparent" BorderThickness="0" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                            CornerRadius="8" Margin="0,0,0,4" Tag="{x:Bind}" Click="OnMutualFriendItemClicked">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Avatar avec badge de statut -->
+                                                            <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
+                                                                <Border Width="40" Height="40" CornerRadius="20">
+                                                                    <Border.Background>
+                                                                        <ImageBrush ImageSource="{x:Bind AvatarUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                    </Border.Background>
+                                                                </Border>
+                                                                <Ellipse Width="12" Height="12"
+                                                                         HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                                         Fill="{x:Bind StatusColor, Mode=OneTime}"
+                                                                         Stroke="#232428" StrokeThickness="2" />
+                                                            </Grid>
+
+                                                            <!-- Pseudo et Activité -->
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                                <TextBlock Text="{x:Bind DisplayName, Mode=OneTime}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{x:Bind ActivitySummaryText, Mode=OneTime}" FontSize="12" Foreground="#949BA4" TextTrimming="CharacterEllipsis"
+                                                                           Visibility="{x:Bind HasActivityOrCustomStatus, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- État vide -->
+                                        <Border Background="#2B2D31" CornerRadius="10" Padding="28"
+                                                Visibility="{x:Bind FullProfileUser.HasMutualFriends, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                                <FontIcon Glyph="&#xE716;" FontSize="32" Foreground="#949BA4" Opacity="0.5" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Aucun ami en commun" FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- CONTENU ONGLET 4 : MUTUAL SERVERS -->
+                                <ScrollViewer x:Name="ProfileMutualServersContent" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                                    <StackPanel Spacing="8" Margin="0,0,6,0">
+                                        <ItemsControl ItemsSource="{x:Bind FullProfileUser.MutualGuilds, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:DiscordMutualGuild">
+                                                    <Button Background="Transparent" BorderThickness="0" Padding="8,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                            CornerRadius="8" Margin="0,0,0,4" Tag="{x:Bind}" Click="OnMutualServerClicked">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Icône du serveur arrondi (squircle) -->
+                                                            <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
+                                                                <Border Width="40" Height="40" CornerRadius="12">
+                                                                    <Border.Background>
+                                                                        <ImageBrush ImageSource="{x:Bind IconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                    </Border.Background>
+                                                                </Border>
+                                                            </Grid>
+
+                                                            <!-- Nom du serveur -->
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneTime}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- État vide -->
+                                        <Border Background="#2B2D31" CornerRadius="10" Padding="28"
+                                                Visibility="{x:Bind FullProfileUser.HasMutualGuilds, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                                <FontIcon Glyph="&#xE774;" FontSize="32" Foreground="#949BA4" Opacity="0.5" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Aucun serveur en commun" FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </ScrollViewer>
                             </Grid>
                         </Grid>
@@ -3845,7 +3940,7 @@
                                 </Border>
                                 <!-- Dégradé d'ambiance si pas de bannière -->
                                 <Border CornerRadius="17,17,0,0"
-                                        Visibility="{x:Bind ViewModel.ActiveClanCard.HasBanner, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                        Visibility="{x:Bind ViewModel.ActiveClanCard.HasBanner, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                                             <GradientStop Color="#1E3A5F" Offset="0.0" />
@@ -3873,7 +3968,7 @@
                                     <TextBlock Text="{x:Bind ViewModel.ActiveClanCard.Tag, Mode=OneWay}"
                                                FontSize="20" FontWeight="Bold" Foreground="White"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Visibility="{x:Bind ViewModel.ActiveClanCard.HasIcon, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                                               Visibility="{x:Bind ViewModel.ActiveClanCard.HasIcon, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
                                 </Grid>
                             </Border>
                         </Grid>

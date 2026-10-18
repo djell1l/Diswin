@@ -1,7 +1,7 @@
 param(
-    [string]$Version = "0.5.3",
+    [string]$Version = "0.5.4-edge.1",
     [ValidateSet("Stable", "Edge")]
-    [string]$Channel = "Stable"
+    [string]$Channel = "Edge"
 )
 
 $ErrorActionPreference = 'Stop'

@@ -349,6 +349,7 @@ public sealed partial class MainViewModel : ObservableObject
 
             foreach (var m in allMembers)
             {
+                _client.ApplyCachedPresenceToUser(m);
                 var (_, vcName) = _client.GetUserVoiceChannel(m.Id);
                 m.CurrentVoiceChannelName = vcName;
             }
@@ -511,8 +512,75 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task EnsureUserProfileEnrichedAsync(DiscordUser user)
     {
-        if (user is null || string.IsNullOrWhiteSpace(user.Id) || user.HasProfileEnriched) return;
-        await _client.Rest.EnrichUserProfileAsync(user);
+        if (user is null || string.IsNullOrWhiteSpace(user.Id)) return;
+        user.IsFriend = _client.IsFriend(user.Id);
+        if (user.IsFriend)
+        {
+            var rel = _client.Friends.FirstOrDefault(f => f.User?.Id == user.Id || f.Id == user.Id);
+            if (rel != null && ulong.TryParse(rel.Id, out ulong rSnowflake))
+            {
+                long rTime = (long)(rSnowflake >> 22) + 1420070400000L;
+                user.FriendsSinceText = DateTimeOffset.FromUnixTimeMilliseconds(rTime).ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        // Récupérer les activités récentes du cache RPC
+        var hist = _client.GetUserActivityHistory(user.Id);
+        var acts = new List<DiscordActivity>();
+        if (user.Activities != null) acts.AddRange(user.Activities.Where(a => a.Type != 4 && a.Type != 6));
+        foreach (var h in hist)
+        {
+            if (acts.All(a => a.Name != h.Name)) acts.Add(h);
+        }
+        user.RecentActivities = acts;
+
+        if (!user.HasProfileEnriched)
+        {
+            await _client.Rest.EnrichUserProfileAsync(user);
+
+            // Re-fusionner avec widgets de jeux
+            if (user.GameWidgets != null && user.GameWidgets.Count > 0)
+            {
+                foreach (var gw in user.GameWidgets)
+                {
+                    if (acts.All(a => a.Name != gw.Name))
+                    {
+                        acts.Add(new DiscordActivity
+                        {
+                            Name = gw.Name,
+                            ApplicationId = gw.GameId,
+                            Details = gw.Comment,
+                            Type = 0
+                        });
+                    }
+                }
+                user.RecentActivities = acts;
+            }
+
+            // Résoudre les noms et icônes réels des serveurs en commun
+            if (user.MutualGuilds != null && user.MutualGuilds.Count > 0)
+            {
+                foreach (var mg in user.MutualGuilds)
+                {
+                    var matchGuild = Guilds.FirstOrDefault(g => g.Id == mg.Id);
+                    if (matchGuild != null)
+                    {
+                        mg.Name = matchGuild.Name;
+                        if (string.IsNullOrEmpty(mg.IconUrl) && !string.IsNullOrEmpty(matchGuild.IconUrl))
+                        {
+                            mg.IconUrl = matchGuild.IconUrl;
+                        }
+                    }
+                }
+            }
+
+            // Charger les amis en commun si disponibles
+            if (user.MutualFriendsCount > 0 && user.MutualFriends.Count == 0)
+            {
+                var mf = await _client.Rest.GetMutualFriendsAsync(user.Id);
+                if (mf.Count > 0) user.MutualFriends = mf;
+            }
+        }
     }
 
     public void SetFriendsFilter(string filter)

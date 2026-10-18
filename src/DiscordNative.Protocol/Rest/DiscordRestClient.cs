@@ -81,6 +81,29 @@ public sealed class DiscordRestClient : IDisposable
             if (root.TryGetProperty("mutual_guilds", out var mgEl) && mgEl.ValueKind == JsonValueKind.Array)
             {
                 user.MutualGuildsCount = mgEl.GetArrayLength();
+                var mGuilds = new List<DiscordMutualGuild>();
+                foreach (var gEl in mgEl.EnumerateArray())
+                {
+                    var gid = gEl.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                    var nick = gEl.TryGetProperty("nick", out var nickEl) && nickEl.ValueKind == JsonValueKind.String ? nickEl.GetString() : null;
+                    var icon = gEl.TryGetProperty("icon", out var iconEl) && iconEl.ValueKind == JsonValueKind.String ? iconEl.GetString() : null;
+                    if (!string.IsNullOrEmpty(gid))
+                    {
+                        var mg = new DiscordMutualGuild
+                        {
+                            Id = gid!,
+                            Nick = nick,
+                            Icon = icon,
+                            Name = !string.IsNullOrEmpty(nick) ? nick : "Serveur"
+                        };
+                        if (!string.IsNullOrEmpty(icon))
+                        {
+                            mg.IconUrl = $"https://cdn.discordapp.com/icons/{gid}/{icon}.png?size=128";
+                        }
+                        mGuilds.Add(mg);
+                    }
+                }
+                user.MutualGuilds = mGuilds;
             }
 
             if (root.TryGetProperty("user_profile", out var upEl) && upEl.ValueKind == JsonValueKind.Object)
@@ -192,6 +215,19 @@ public sealed class DiscordRestClient : IDisposable
             Protocol.App.RunOnUiThread(() => user.NotifyProfileEnriched());
         }
         catch { }
+    }
+
+    public async Task<List<DiscordUser>> GetMutualFriendsAsync(string userId, CancellationToken ct = default)
+    {
+        try
+        {
+            var friends = await _http.GetFromJsonAsync<List<DiscordUser>>($"{ApiBase}/users/{userId}/relationships", ct);
+            return friends ?? new();
+        }
+        catch
+        {
+            return new();
+        }
     }
 
     public async Task<List<DiscordConnectedAccount>> GetCurrentUserVisibleConnectionsAsync(CancellationToken ct = default)

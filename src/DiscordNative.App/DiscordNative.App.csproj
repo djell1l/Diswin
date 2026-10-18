@@ -18,8 +18,9 @@
 
     <EnableMsixTooling>false</EnableMsixTooling>
     <SatelliteResourceLanguages>en-US;fr-FR;fr;en</SatelliteResourceLanguages>
-    <Version>0.5.3</Version>
-    <PackageVersion>0.5.3</PackageVersion>
+    <Version>0.5.4</Version>
+    <PackageVersion>0.5.4-edge.1</PackageVersion>
+    <InformationalVersion>0.5.4-edge.1</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

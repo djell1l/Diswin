@@ -1324,14 +1324,14 @@ public sealed partial class MainWindowContent : UserControl
     }
 
     // --- Vue Complète du Profil (Full User Profile Modal) ---
-    public void ShowFullUserProfileModal(DiscordUser? user)
+    public async void ShowFullUserProfileModal(DiscordUser? user)
     {
         if (user == null) return;
         FullProfileUser = user;
 
-        if (!user.HasProfileEnriched && ViewModel?.Client?.Rest != null)
+        if (ViewModel != null)
         {
-            _ = ViewModel.Client.Rest.EnrichUserProfileAsync(user);
+            await ViewModel.EnsureUserProfileEnrichedAsync(user);
         }
 
         if (ProfileUserNoteTextBox != null)
@@ -1339,7 +1339,7 @@ public sealed partial class MainWindowContent : UserControl
             ProfileUserNoteTextBox.Text = App.Settings.Current.UserNotes.TryGetValue(user.Id, out var note) ? note : string.Empty;
         }
 
-        SelectProfileTab("Board");
+        SelectProfileTab("Activity");
         FullUserProfileOverlay.Visibility = Visibility.Visible;
     }
 
@@ -1440,17 +1440,50 @@ public sealed partial class MainWindowContent : UserControl
 
     private void SelectProfileTab(string tabName)
     {
-        if (ProfileBoardContent == null) return;
+        if (ProfileActivityContent == null) return;
 
-        ProfileBoardContent.Visibility = tabName == "Board" ? Visibility.Visible : Visibility.Collapsed;
         ProfileActivityContent.Visibility = tabName == "Activity" ? Visibility.Visible : Visibility.Collapsed;
         ProfileWishlistContent.Visibility = tabName == "Wishlist" ? Visibility.Visible : Visibility.Collapsed;
-        ProfileMutualsContent.Visibility = tabName == "Mutuals" ? Visibility.Visible : Visibility.Collapsed;
+        ProfileMutualFriendsContent.Visibility = tabName == "MutualFriends" ? Visibility.Visible : Visibility.Collapsed;
+        ProfileMutualServersContent.Visibility = tabName == "MutualServers" ? Visibility.Visible : Visibility.Collapsed;
 
-        ProfileBoardTabIndicator.Visibility = tabName == "Board" ? Visibility.Visible : Visibility.Collapsed;
         ProfileActivityTabIndicator.Visibility = tabName == "Activity" ? Visibility.Visible : Visibility.Collapsed;
         ProfileWishlistTabIndicator.Visibility = tabName == "Wishlist" ? Visibility.Visible : Visibility.Collapsed;
-        ProfileMutualsTabIndicator.Visibility = tabName == "Mutuals" ? Visibility.Visible : Visibility.Collapsed;
+        ProfileMutualFriendsTabIndicator.Visibility = tabName == "MutualFriends" ? Visibility.Visible : Visibility.Collapsed;
+        ProfileMutualServersTabIndicator.Visibility = tabName == "MutualServers" ? Visibility.Visible : Visibility.Collapsed;
+
+        if (ProfileActivityTabButton != null) ProfileActivityTabButton.Opacity = tabName == "Activity" ? 1.0 : 0.75;
+        if (ProfileWishlistTabButton != null) ProfileWishlistTabButton.Opacity = tabName == "Wishlist" ? 1.0 : 0.75;
+        if (ProfileMutualFriendsTabButton != null) ProfileMutualFriendsTabButton.Opacity = tabName == "MutualFriends" ? 1.0 : 0.75;
+        if (ProfileMutualServersTabButton != null) ProfileMutualServersTabButton.Opacity = tabName == "MutualServers" ? 1.0 : 0.75;
+    }
+
+    private async void OnMutualServerClicked(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is DiscordMutualGuild mutualGuild && ViewModel != null)
+        {
+            var targetGuild = ViewModel.Guilds.FirstOrDefault(g => g.Id == mutualGuild.Id);
+            if (targetGuild != null)
+            {
+                HideFullUserProfileModal();
+                await ViewModel.SelectGuildAsync(targetGuild);
+            }
+        }
+    }
+
+    private void OnMutualFriendItemClicked(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is DiscordUser friendUser)
+        {
+            ShowFullUserProfileModal(friendUser);
+        }
+    }
+
+    private void OnBrowseShopClicked(object sender, RoutedEventArgs e)
+    {
+        HideFullUserProfileModal();
+        var settingsWindow = new SettingsWindow();
+        settingsWindow.Activate();
     }
 
     private async void OnAddFriendFromProfileClicked(object sender, RoutedEventArgs e)

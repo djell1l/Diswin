@@ -5,6 +5,7 @@
 
     <services:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     <services:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+    <services:InvertedBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
     <services:StringToImageSourceConverter x:Key="StringToImageSourceConverter" />
     <services:ChannelTypeToGlyphConverter x:Key="ChannelTypeToGlyphConverter" />
 

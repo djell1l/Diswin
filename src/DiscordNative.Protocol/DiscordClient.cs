@@ -82,6 +82,9 @@ public sealed class DiscordClient : IAsyncDisposable
     // Cache temps réel de la présence (statut + Rich Presence / Activités) par userId
     private readonly ConcurrentDictionary<string, (string Status, List<DiscordActivity> Activities)> _userPresences = new();
 
+    // Historique des activités récentes (jeux, rpc, musiques) par userId
+    private readonly ConcurrentDictionary<string, List<DiscordActivity>> _userActivityHistory = new();
+
     public DiscordRestClient Rest { get; }
     public DiscordUser? CurrentUser { get; set; }
     public ObservableCollection<DiscordGuild> Guilds { get; } = new();
@@ -487,6 +490,30 @@ public sealed class DiscordClient : IAsyncDisposable
                         {
                             CacheGuildMember(null, mEl);
                         }
+                    }
+                }
+            }
+
+            if (data.TryGetProperty("merged_presences", out var mpEl) && mpEl.ValueKind == JsonValueKind.Object)
+            {
+                if (mpEl.TryGetProperty("guilds", out var gPresArr) && gPresArr.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var innerList in gPresArr.EnumerateArray())
+                    {
+                        if (innerList.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var pEl in innerList.EnumerateArray())
+                            {
+                                HandlePresenceUpdate(pEl);
+                            }
+                        }
+                    }
+                }
+                if (mpEl.TryGetProperty("friends", out var fPresArr) && fPresArr.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var pEl in fPresArr.EnumerateArray())
+                    {
+                        HandlePresenceUpdate(pEl);
                     }
                 }
             }
@@ -1239,6 +1266,21 @@ public sealed class DiscordClient : IAsyncDisposable
     {
         _userPresences[userId] = (status, activities);
 
+        if (activities != null && activities.Count > 0)
+        {
+            var hist = _userActivityHistory.GetOrAdd(userId, _ => new List<DiscordActivity>());
+            lock (hist)
+            {
+                foreach (var act in activities.Where(a => a.Type != 4 && a.Type != 6 && !string.IsNullOrWhiteSpace(a.Name)))
+                {
+                    var existing = hist.FirstOrDefault(x => string.Equals(x.Name, act.Name, StringComparison.OrdinalIgnoreCase));
+                    if (existing != null) hist.Remove(existing);
+                    hist.Insert(0, act);
+                    if (hist.Count > 10) hist.RemoveAt(hist.Count - 1);
+                }
+            }
+        }
+
         App.RunOnUiThread(() =>
         {
             if (CurrentUser?.Id == userId)
@@ -1248,7 +1290,7 @@ public sealed class DiscordClient : IAsyncDisposable
                 CurrentUser.NotifyPresenceChanged();
             }
 
-            foreach (var rel in Friends.Where(f => f.User.Id == userId))
+            foreach (var rel in Friends.Where(f => f.User?.Id == userId || f.Id == userId))
             {
                 rel.User.Status = status;
                 rel.User.Activities = activities;
@@ -1277,19 +1319,61 @@ public sealed class DiscordClient : IAsyncDisposable
                 }
             }
 
+            foreach (var gDict in _guildMembers.Values)
+            {
+                if (gDict.TryGetValue(userId, out var gu))
+                {
+                    gu.Status = status;
+                    gu.Activities = activities;
+                    gu.NotifyPresenceChanged();
+                }
+            }
+
             PresenceUpdated?.Invoke(userId);
         });
+    }
+
+    public List<DiscordActivity> GetUserActivityHistory(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return new();
+        if (_userActivityHistory.TryGetValue(userId, out var hist))
+        {
+            lock (hist)
+            {
+                return hist.ToList();
+            }
+        }
+        return new();
+    }
+
+    public bool IsFriend(string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return false;
+        return Friends.Any(f => f.User?.Id == userId || f.Id == userId);
     }
 
     public void ApplyCachedPresenceToUser(DiscordUser user)
     {
         if (string.IsNullOrWhiteSpace(user.Id)) return;
+        if (CurrentUser != null && user.Id == CurrentUser.Id)
+        {
+            user.Status = _currentStatus;
+            user.Activities = _userPresences.TryGetValue(user.Id, out var myP) ? myP.Activities : new();
+            user.NotifyPresenceChanged();
+            return;
+        }
+
         if (_userPresences.TryGetValue(user.Id, out var p))
         {
             user.Status = p.Status;
             user.Activities = p.Activities;
-            user.NotifyPresenceChanged();
         }
+        else
+        {
+            user.Status = "offline";
+            user.Activities = new();
+        }
+        user.NotifyPresenceChanged();
     }
 
     private void OnLocalIpcActivityChanged(DiscordActivity? activity)

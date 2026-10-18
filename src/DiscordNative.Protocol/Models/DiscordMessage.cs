@@ -1,9 +1,14 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace DiscordNative.Protocol.Models;
 
-public sealed class DiscordMessage
+public sealed class DiscordMessage : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+    public void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -69,7 +74,21 @@ public sealed class DiscordMessage
     /// <summary>Faux = message "suite" du même auteur (en-tête masqué, comme Discord).</summary>
     [JsonIgnore] public bool ShowHeader { get; set; } = true;
     [JsonIgnore] public bool HideHeader => !ShowHeader;
-    [JsonIgnore] public bool IsOwnMessage { get; set; }
+    private bool _isOwnMessage;
+    [JsonIgnore]
+    public bool IsOwnMessage
+    {
+        get => _isOwnMessage;
+        set
+        {
+            if (_isOwnMessage != value)
+            {
+                _isOwnMessage = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsNotOwnMessage));
+            }
+        }
+    }
     [JsonIgnore] public bool IsNotOwnMessage => !IsOwnMessage;
 
     /// <summary>Types 0 (défaut), 19 (réponse), 20 (commande slash), 23 (menu contextuel) = messages normaux.</summary>

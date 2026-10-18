@@ -67,7 +67,7 @@ public static class UpdateService
         }
         catch { }
 
-        return "v0.5.3";
+        return "v0.5.4-edge.1";
     }
 
     public static async Task<UpdateInfo?> CheckForUpdatesAsync()
@@ -91,21 +91,22 @@ public static class UpdateService
 
             if (isEdge)
             {
-                // Sur le canal Edge, on prend la version la plus récente absolue (qu'elle soit pré-release ou finale)
-                latest = releases[0];
+                // Sur le canal Edge, on prend la version la plus récente (pré-release ou stable)
+                latest = releases.FirstOrDefault(r => IsNewerVersion(r.TagName, CurrentVersion));
             }
             else
             {
-                // Sur le canal Stable, on ignore rigoureusement les pré-releases et les builds taggués edge/exp/preview
+                // Sur le canal Stable, on ignore rigoureusement les pré-releases et les tags edge
                 latest = releases.FirstOrDefault(r => !r.Prerelease
                     && !r.TagName.Contains("edge", StringComparison.OrdinalIgnoreCase)
                     && !r.TagName.Contains("exp", StringComparison.OrdinalIgnoreCase)
                     && !r.TagName.Contains("preview", StringComparison.OrdinalIgnoreCase)
                     && !r.TagName.Contains("beta", StringComparison.OrdinalIgnoreCase)
-                    && !r.TagName.Contains("alpha", StringComparison.OrdinalIgnoreCase));
+                    && !r.TagName.Contains("alpha", StringComparison.OrdinalIgnoreCase)
+                    && IsNewerVersion(r.TagName, CurrentVersion));
             }
 
-            if (latest is not null && IsNewerVersion(latest.TagName, CurrentVersion))
+            if (latest is not null)
             {
                 return latest;
             }
@@ -220,9 +221,18 @@ public static class UpdateService
             var scriptPath = Path.Combine(Path.GetTempPath(), "discordnative_updater.ps1");
             var scriptContent = $@"
 Start-Sleep -Seconds 1
-Get-Process -Name 'DiscordNative.App' -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Name 'DiscordNative.App', 'Diswin' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
-Copy-Item -Path '{tempExtract}\*' -Destination '{currentAppDir}' -Recurse -Force
+$retry = 0
+while ($retry -lt 10) {{
+    try {{
+        Copy-Item -Path '{tempExtract}\*' -Destination '{currentAppDir}' -Recurse -Force -ErrorAction Stop
+        break
+    }} catch {{
+        Start-Sleep -Milliseconds 500
+        $retry++
+    }}
+}}
 Start-Process -FilePath '{currentExe}'
 Remove-Item '{tempZip}' -Force -ErrorAction SilentlyContinue
 Remove-Item '{tempExtract}' -Recurse -Force -ErrorAction SilentlyContinue
