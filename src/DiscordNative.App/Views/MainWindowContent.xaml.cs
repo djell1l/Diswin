@@ -774,20 +774,45 @@ public sealed partial class MainWindowContent : UserControl
         ViewModel.ToggleMemberList();
     }
 
+    private static DiscordUser? ExtractDiscordUser(object? sender)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.Tag is DiscordUser u1) return u1;
+            if (fe.Tag is ViewModels.MemberActivityCardViewModel m1) return m1.User;
+            if (fe.DataContext is DiscordUser u2) return u2;
+            if (fe.DataContext is ViewModels.MemberActivityCardViewModel m2) return m2.User;
+        }
+        else if (sender is DiscordUser u) return u;
+        else if (sender is ViewModels.MemberActivityCardViewModel m) return m.User;
+        return null;
+    }
+
     private void OnMemberItemClicked(object sender, RoutedEventArgs e)
     {
-        // Le clic ouvre directement le popout de profil Discord via Button.Flyout
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
+        {
+            _ = ViewModel.EnsureUserProfileEnrichedAsync(user);
+            user.UpdateDisplayRoles(ViewModel.SelectedGuild?.Roles);
+        }
     }
 
     private void OnActivityCardClicked(object sender, RoutedEventArgs e)
     {
-        // Ouvre le profil de l'utilisateur actif
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
+        {
+            _ = ViewModel.EnsureUserProfileEnrichedAsync(user);
+            user.UpdateDisplayRoles(ViewModel.SelectedGuild?.Roles);
+        }
     }
 
     private void OnViewFullProfileFromPopoutClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             ShowFullUserProfileModal(user);
         }
@@ -795,7 +820,8 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnShareProfileFromPopoutClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             CopyToClipboard(user.Discriminator is null or "0" ? $"@{user.Username}" : $"{user.Username}#{user.Discriminator}");
         }
@@ -803,7 +829,8 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnCopyUserIdFromPopoutClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             CopyToClipboard(user.Id);
         }
@@ -811,7 +838,8 @@ public sealed partial class MainWindowContent : UserControl
 
     private async void OnBlockUserFromPopoutClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             await ViewModel.BlockUserAsync(user);
         }
@@ -819,7 +847,8 @@ public sealed partial class MainWindowContent : UserControl
 
     private async void OnAddFriendFromPopoutClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             try
             {
@@ -852,12 +881,16 @@ public sealed partial class MainWindowContent : UserControl
 
     private async void OnQuickProfileMessageKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == VirtualKey.Enter && sender is TextBox { Tag: DiscordUser user } tb && !string.IsNullOrWhiteSpace(tb.Text))
+        if (e.Key == VirtualKey.Enter && sender is TextBox tb && !string.IsNullOrWhiteSpace(tb.Text))
         {
-            e.Handled = true;
-            var msg = tb.Text.Trim();
-            tb.Text = string.Empty;
-            await ViewModel.OpenOrSendDirectMessageAsync(user, msg);
+            var user = ExtractDiscordUser(tb);
+            if (user != null)
+            {
+                e.Handled = true;
+                var msg = tb.Text.Trim();
+                tb.Text = string.Empty;
+                await ViewModel.OpenOrSendDirectMessageAsync(user, msg);
+            }
         }
     }
 
@@ -1355,11 +1388,7 @@ public sealed partial class MainWindowContent : UserControl
     private void OnOpenFullUserProfileFromPopoutClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
-        DiscordUser? user = null;
-        if (sender is FrameworkElement fe)
-        {
-            user = fe.Tag as DiscordUser ?? fe.DataContext as DiscordUser;
-        }
+        var user = ExtractDiscordUser(sender);
         if (user != null)
         {
             ShowFullUserProfileModal(user);
@@ -1370,20 +1399,18 @@ public sealed partial class MainWindowContent : UserControl
     {
         e.Handled = true;
         CloseParentFlyout(sender);
-        if (sender is FrameworkElement fe)
+        var user = (sender as FrameworkElement)?.DataContext is DiscordMessage dm ? dm.Author : ExtractDiscordUser(sender);
+        if (user != null)
         {
-            var user = (fe.DataContext as DiscordMessage)?.Author ?? fe.Tag as DiscordUser ?? fe.DataContext as DiscordUser;
-            if (user != null)
-            {
-                ShowFullUserProfileModal(user);
-            }
+            ShowFullUserProfileModal(user);
         }
     }
 
     private void OnMemberItemDoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
         e.Handled = true;
-        if (sender is FrameworkElement fe && fe.Tag is DiscordUser user)
+        var user = ExtractDiscordUser(sender);
+        if (user != null)
         {
             ShowFullUserProfileModal(user);
         }
@@ -3337,11 +3364,7 @@ public sealed partial class MainWindowContent : UserControl
     {
         if (sender is Flyout flyout)
         {
-            DiscordUser? targetUser = null;
-            if (flyout.Content is FrameworkElement { Tag: DiscordUser u1 }) targetUser = u1;
-            else if (flyout.Content is FrameworkElement { DataContext: DiscordUser u2 }) targetUser = u2;
-            else if (flyout.Target is FrameworkElement { Tag: DiscordUser u3 }) targetUser = u3;
-            else if (flyout.Target is FrameworkElement { DataContext: DiscordUser u4 }) targetUser = u4;
+            DiscordUser? targetUser = ExtractDiscordUser(flyout.Content) ?? ExtractDiscordUser(flyout.Target);
 
             if (targetUser != null)
             {
@@ -3415,8 +3438,7 @@ public sealed partial class MainWindowContent : UserControl
         if (sender is FrameworkElement fe)
         {
             DiscordClan? clan = fe.Tag as DiscordClan
-                ?? (fe.Tag as DiscordUser)?.ActiveClan
-                ?? (fe.DataContext as DiscordUser)?.ActiveClan
+                ?? ExtractDiscordUser(fe)?.ActiveClan
                 ?? (fe.DataContext as DiscordMessage)?.Author.ActiveClan;
 
             if (clan == null && fe.Tag is null)

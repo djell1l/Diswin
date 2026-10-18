@@ -1675,10 +1675,15 @@
 
                                                             <!-- Corps du profil positionné proprement sous la bannière -->
                                                             <StackPanel Margin="16,168,16,16" Spacing="8">
-                                                                <!-- Nom d'affichage en grand -->
-                                                                <TextBlock Text="{x:Bind Author.DisplayName}"
-                                                                           Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}"
-                                                                           FontWeight="Bold" FontSize="20" />
+                                                                <!-- Nom d'affichage en grand + bouton Note -->
+                                                                <Grid>
+                                                                    <TextBlock Text="{x:Bind Author.DisplayName}"
+                                                                               Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                               FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
+                                                                        <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
+                                                                    </Button>
+                                                                </Grid>
 
                                                                 <!-- Ligne : username • pronoms [Clan] + Badges officiels côte à côte -->
                                                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -1795,9 +1800,12 @@
                                                                             <ColumnDefinition Width="*" />
                                                                             <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
-                                                                        <TextBlock Grid.Column="0" Text="Game Collection"
-                                                                                   Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}"
-                                                                                   FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                            <TextBlock Text="Game"
+                                                                                       Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                            <FontIcon Glyph="&#xE70D;" FontSize="9" Foreground="{x:Bind Author.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" VerticalAlignment="Center" />
+                                                                        </StackPanel>
                                                                         <ItemsControl Grid.Column="1" ItemsSource="{x:Bind Author.GameWidgets, Mode=OneWay}" VerticalAlignment="Center">
                                                                             <ItemsControl.ItemsPanel>
                                                                                 <ItemsPanelTemplate>
@@ -2108,28 +2116,25 @@
                                                             <Flyout.FlyoutPresenterStyle>
                                                                 <Style TargetType="FlyoutPresenter">
                                                                     <Setter Property="Padding" Value="0" />
-                                                                    <Setter Property="CornerRadius" Value="16" />
-                                                                    <Setter Property="MaxWidth" Value="340" />
-                                                                    <Setter Property="MaxHeight" Value="620" />
+                                                                    <Setter Property="CornerRadius" Value="18" />
+                                                                    <Setter Property="MaxWidth" Value="350" />
                                                                     <Setter Property="Background" Value="Transparent" />
                                                                     <Setter Property="BorderThickness" Value="0" />
                                                                 </Style>
                                                             </Flyout.FlyoutPresenterStyle>
-                                                            <!-- Carte Popout de l'utilisateur actif -->
-                                                            <Border Width="330" CornerRadius="16"
-                                                                    Background="#1e1f22"
-                                                                    BorderBrush="#35373c"
-                                                                    BorderThickness="1"
+                                                            <Border Width="336" CornerRadius="18"
+                                                                    BorderBrush="{x:Bind User.ProfileBorderColorHex, Mode=OneWay}"
+                                                                    BorderThickness="3"
                                                                     Tag="{x:Bind User}">
+                                                                <Border.Background>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="{x:Bind User.ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
+                                                                        <GradientStop Color="{x:Bind User.ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
+                                                                    </LinearGradientBrush>
+                                                                </Border.Background>
                                                                 <Grid>
-                                                                    <!-- Bannière -->
-                                                                    <Border Height="110" VerticalAlignment="Top" CornerRadius="15,15,0,0">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="{x:Bind User.ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
-                                                                                <GradientStop Color="{x:Bind User.ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                    <!-- Bannière (124px de haut, calée en haut, coins arrondis clippés) avec boutons d'actions -->
+                                                                    <Border Height="124" VerticalAlignment="Top" Background="{x:Bind User.ProfilePrimaryColorHex, Mode=OneWay}" CornerRadius="15,15,0,0">
                                                                         <Grid>
                                                                             <Border CornerRadius="15,15,0,0"
                                                                                     Visibility="{x:Bind User.HasBanner, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -2200,45 +2205,80 @@
                                                                         </Grid>
                                                                     </Border>
 
-                                                                    <!-- Avatar + Pastille + Bulle de pensée personnalisée -->
-                                                                    <Grid Margin="16,68,16,0" VerticalAlignment="Top">
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                            <ColumnDefinition Width="*" />
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <Grid Grid.Column="0" Width="82" Height="82">
-                                                                            <Ellipse Fill="#1e1f22" Stroke="#1e1f22" StrokeThickness="4" />
-                                                                            <Ellipse Width="76" Height="76">
-                                                                                <Ellipse.Fill>
-                                                                                    <ImageBrush ImageSource="{x:Bind User.AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                                </Ellipse.Fill>
-                                                                            </Ellipse>
-                                                                            <Ellipse Width="22" Height="22" Fill="{x:Bind User.StatusColor, Mode=OneWay}"
-                                                                                     Stroke="#1e1f22" StrokeThickness="4"
-                                                                                     HorizontalAlignment="Right" VerticalAlignment="Bottom" />
-                                                                        </Grid>
-                                                                        <Border Grid.Column="1" Margin="8,24,0,0" VerticalAlignment="Center"
-                                                                                Background="#111214" BorderBrush="#383A40" BorderThickness="1"
-                                                                                CornerRadius="14" Padding="10,6"
-                                                                                Visibility="{x:Bind User.HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="{x:Bind User.CustomStatusText, Mode=OneWay}"
-                                                                                       Foreground="#F2F3F5" FontSize="11" FontWeight="Medium"
-                                                                                       TextTrimming="CharacterEllipsis" MaxWidth="165" />
-                                                                        </Border>
-                                                                    </Grid>
+                                                                    <!-- Avatar rond avec bordure assortie à la couleur principale du profil (cliquable pour ouvrir la vue complète) -->
+                                                                    <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="43"
+                                                                            Margin="16,74,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            ToolTipService.ToolTip="Afficher le profil complet"
+                                                                            Tag="{x:Bind User}"
+                                                                            Click="OnOpenFullUserProfileFromPopoutClicked">
+                                                                        <Ellipse Width="86" Height="86"
+                                                                                 StrokeThickness="6" Stroke="{x:Bind User.ProfilePrimaryColorHex, Mode=OneWay}">
+                                                                            <Ellipse.Fill>
+                                                                                <ImageBrush ImageSource="{x:Bind User.AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                            </Ellipse.Fill>
+                                                                        </Ellipse>
+                                                                    </Button>
 
-                                                                    <!-- Corps du profil -->
-                                                                    <StackPanel Margin="16,156,16,14" Spacing="8">
+                                                                    <!-- Pastille de statut sur l'avatar -->
+                                                                    <Ellipse Width="22" Height="22" Margin="78,136,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                             Fill="{x:Bind User.StatusColor, Mode=OneWay}"
+                                                                             Stroke="{x:Bind User.ProfilePrimaryColorHex, Mode=OneWay}" StrokeThickness="4" />
+
+                                                                    <!-- Bulle de pensée Statut Personnalisé à droite de l'avatar (comme sur la capture Discord) -->
+                                                                    <Border Margin="112,110,14,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            Background="#F2FFFFFF" CornerRadius="16" Padding="12,7"
+                                                                            Visibility="{x:Bind User.HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <TextBlock Text="{x:Bind User.CustomStatusText, Mode=OneWay}"
+                                                                                   Foreground="#1E1F22" FontSize="12" FontWeight="Medium"
+                                                                                   TextTrimming="CharacterEllipsis" MaxWidth="185" />
+                                                                    </Border>
+
+                                                                    <!-- Corps du profil positionné proprement sous la bannière -->
+                                                                    <StackPanel Margin="16,168,16,16" Spacing="8">
+                                                                        <!-- Nom d'affichage en grand + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind User.DisplayName}" FontSize="18" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <TextBlock Text="{x:Bind User.DisplayName}"
+                                                                                       Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
-                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="#B5BAC1" />
+                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>
                                                                         </Grid>
 
+                                                                        <!-- Ligne : username • pronoms [Clan] + Badges officiels côte à côte -->
                                                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                            <TextBlock Text="{x:Bind User.UserTag}" FontSize="12" Foreground="#B5BAC1" FontWeight="Normal" />
-                                                                            <ItemsControl ItemsSource="{x:Bind User.Badges, Mode=OneWay}" VerticalAlignment="Center"
+                                                                            <TextBlock Text="{x:Bind User.Username}"
+                                                                                       Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center" />
+                                                                            <TextBlock Text="•"
+                                                                                       Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.55" FontSize="12" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind User.HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                            <TextBlock Text="{x:Bind User.Pronouns, Mode=OneWay}"
+                                                                                       Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind User.HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                                                            <!-- Tag de Clan / Serveur avec son icône -->
+                                                                            <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="6"
+                                                                                    Visibility="{x:Bind User.HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                    Tag="{x:Bind User}" Click="OnClanTagPillClicked"
+                                                                                    ToolTipService.ToolTip="Afficher le profil du clan">
+                                                                                <Border Background="{x:Bind User.ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                        BorderBrush="#33FFFFFF"
+                                                                                        BorderThickness="1" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                        <Image Width="14" Height="14" Source="{x:Bind User.ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
+                                                                                        <TextBlock Text="{x:Bind User.ClanTag, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                                    </StackPanel>
+                                                                                </Border>
+                                                                            </Button>
+
+                                                                            <!-- Badges officiels de l'utilisateur alignés sur la même ligne -->
+                                                                            <ItemsControl ItemsSource="{x:Bind User.Badges, Mode=OneWay}"
+                                                                                          VerticalAlignment="Center"
                                                                                           Visibility="{x:Bind User.HasBadges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                                 <ItemsControl.ItemsPanel>
                                                                                     <ItemsPanelTemplate>
@@ -2247,49 +2287,160 @@
                                                                                 </ItemsControl.ItemsPanel>
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate x:DataType="models:DiscordBadge">
-                                                                                        <Image Width="16" Height="16" Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
-                                                                                               ToolTipService.ToolTip="{x:Bind Description}" Stretch="Uniform" />
+                                                                                        <Image Width="18" Height="18"
+                                                                                               Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                                               ToolTipService.ToolTip="{x:Bind Description}"
+                                                                                               Stretch="Uniform" />
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
                                                                             </ItemsControl>
                                                                         </StackPanel>
 
-                                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                                                                                    Visibility="{x:Bind User.HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <FontIcon Glyph="&#xE716;" FontSize="12" Foreground="#B5BAC1" />
-                                                                            <TextBlock Text="{x:Bind User.MutualSummaryText, Mode=OneWay}" FontSize="11" Foreground="#B5BAC1" FontWeight="Medium" />
-                                                                        </StackPanel>
+                                                                        <!-- Ligne Mutual Friends • Mutual Servers -->
+                                                                        <TextBlock Text="{x:Bind User.MutualSummaryText, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   Opacity="0.78" FontSize="12" FontWeight="Medium"
+                                                                                   Visibility="{x:Bind User.HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                                                        <TextBlock Text="{x:Bind User.AboutMe, Mode=OneWay}" FontSize="12" Foreground="#DBDEE1" TextWrapping="Wrap" Opacity="0.9" />
-
+                                                                        <!-- Carte Rich Presence (RPC) de l'utilisateur -->
                                                                         <Border Visibility="{x:Bind User.HasRichPresence, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                                                Background="#111214" BorderBrush="#35373c" BorderThickness="1" CornerRadius="8" Padding="8">
-                                                                            <StackPanel Spacing="4">
-                                                                                <TextBlock Text="{x:Bind User.PrimaryActivity.HeaderLabel, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#949BA4" />
-                                                                                <Grid ColumnSpacing="8">
+                                                                                Background="{x:Bind User.ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10">
+                                                                            <StackPanel Spacing="6">
+                                                                                <TextBlock Text="{x:Bind User.PrimaryActivity.HeaderLabel, Mode=OneWay}"
+                                                                                           Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontSize="10" FontWeight="Bold" Opacity="0.7" />
+                                                                                <Grid ColumnSpacing="10">
                                                                                     <Grid.ColumnDefinitions>
                                                                                         <ColumnDefinition Width="Auto" />
                                                                                         <ColumnDefinition Width="*" />
                                                                                     </Grid.ColumnDefinitions>
-                                                                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6"
-                                                                                            Visibility="{x:Bind User.PrimaryActivity.HasLargeImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                                        <Border.Background>
-                                                                                            <ImageBrush ImageSource="{x:Bind User.PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                                        </Border.Background>
-                                                                                    </Border>
-                                                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.Name, Mode=OneWay}" FontSize="12" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
-                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.Details, Mode=OneWay}" FontSize="10" Foreground="#B5BAC1" TextTrimming="CharacterEllipsis"
+                                                                                    <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Top"
+                                                                                          Visibility="{x:Bind User.PrimaryActivity.HasLargeImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                        <Border Width="52" Height="52" CornerRadius="8">
+                                                                                            <Border.Background>
+                                                                                                <ImageBrush ImageSource="{x:Bind User.PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Border.Background>
+                                                                                        </Border>
+                                                                                        <Ellipse Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"
+                                                                                                 Stroke="{ThemeResource CardBackgroundFillColorDefaultBrush}" StrokeThickness="2"
+                                                                                                 Visibility="{x:Bind User.PrimaryActivity.HasSmallImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                            <Ellipse.Fill>
+                                                                                                <ImageBrush ImageSource="{x:Bind User.PrimaryActivity.SmallImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Ellipse.Fill>
+                                                                                        </Ellipse>
+                                                                                    </Grid>
+                                                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.Name, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.Details, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.85" TextTrimming="CharacterEllipsis"
                                                                                                    Visibility="{x:Bind User.PrimaryActivity.HasDetails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.ElapsedText, Mode=OneWay}" FontSize="10" Foreground="#23A55A" FontWeight="SemiBold"
+                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.State, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                                                                                                   Visibility="{x:Bind User.PrimaryActivity.HasState, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                        <TextBlock Text="{x:Bind User.PrimaryActivity.ElapsedText, Mode=OneWay}" FontSize="11" Foreground="#23A55A" FontWeight="SemiBold"
                                                                                                    Visibility="{x:Bind User.PrimaryActivity.HasElapsed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                                                     </StackPanel>
                                                                                 </Grid>
                                                                             </StackPanel>
                                                                         </Border>
 
+                                                                        <!-- Widget Game Collection de l'utilisateur -->
+                                                                        <Border Visibility="{x:Bind User.HasGameWidgets, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                Background="{x:Bind User.ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10,8">
+                                                                            <Grid>
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="*" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                    <TextBlock Text="Game"
+                                                                                               Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                               FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                                    <FontIcon Glyph="&#xE70D;" FontSize="9" Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" VerticalAlignment="Center" />
+                                                                                </StackPanel>
+                                                                                <ItemsControl Grid.Column="1" ItemsSource="{x:Bind User.GameWidgets, Mode=OneWay}" VerticalAlignment="Center">
+                                                                                    <ItemsControl.ItemsPanel>
+                                                                                        <ItemsPanelTemplate>
+                                                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                                                        </ItemsPanelTemplate>
+                                                                                    </ItemsControl.ItemsPanel>
+                                                                                    <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="models:DiscordWidgetGame">
+                                                                                            <Border Width="26" Height="26" CornerRadius="6" ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                                <Border.Background>
+                                                                                                    <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+                                                                            </Grid>
+                                                                        </Border>
+
+                                                                        <!-- Bio directe comme sur Discord -->
+                                                                        <TextBlock Text="{x:Bind User.AboutMe, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   FontSize="13" TextWrapping="Wrap" Opacity="0.92" />
+
+                                                                        <!-- Comptes et liens reliés affichés sur le profil de l'utilisateur -->
+                                                                        <StackPanel Spacing="6" Visibility="{x:Bind User.HasConnectedAccounts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                            <ItemsControl ItemsSource="{x:Bind User.ConnectedAccounts, Mode=OneWay}">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <StackPanel Spacing="4" />
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="models:DiscordConnectedAccount">
+                                                                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                                                                Background="#33000000"
+                                                                                                BorderBrush="#22FFFFFF"
+                                                                                                BorderThickness="1" CornerRadius="8" Padding="10,7"
+                                                                                                Tag="{x:Bind}"
+                                                                                                Click="OnConnectedAccountClicked"
+                                                                                                ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                            <Grid ColumnSpacing="8">
+                                                                                                <Grid.ColumnDefinitions>
+                                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                                    <ColumnDefinition Width="*" />
+                                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                                </Grid.ColumnDefinitions>
+                                                                                                <Border Grid.Column="0" Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                                                                        CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                        <FontIcon Glyph="{x:Bind PlatformGlyph}" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                                                                        <TextBlock Text="{x:Bind PlatformBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                                                                                                    </StackPanel>
+                                                                                                </Border>
+                                                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                        <TextBlock Text="{x:Bind Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="165" />
+                                                                                                        <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#23A55A" VerticalAlignment="Center"
+                                                                                                                  Visibility="{x:Bind Verified, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                                                  ToolTipService.ToolTip="Compte vérifié" />
+                                                                                                    </StackPanel>
+                                                                                                    <TextBlock Text="{x:Bind PlatformDisplayName}" FontSize="10" Opacity="0.6" />
+                                                                                                </StackPanel>
+                                                                                                <FontIcon Grid.Column="2" Glyph="&#xE8A7;" FontSize="12" Opacity="0.65" VerticalAlignment="Center"
+                                                                                                          Visibility="{x:Bind HasUrl, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                            </Grid>
+                                                                                        </Button>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
+                                                                        </StackPanel>
+
+                                                                        <!-- Rôles de l'utilisateur dans le serveur -->
                                                                         <StackPanel Spacing="4" Visibility="{x:Bind User.HasDisplayRoles, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="#949BA4" />
+                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" />
                                                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                                                                           HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
                                                                                 <ItemsControl ItemsSource="{x:Bind User.DisplayRoles, Mode=OneWay}">
@@ -2312,12 +2463,14 @@
                                                                             </ScrollViewer>
                                                                         </StackPanel>
 
+                                                                        <!-- Champ de message direct actif (Entrée pour envoyer un MP) -->
                                                                         <Grid Margin="0,4,0,0">
                                                                             <TextBox PlaceholderText="{x:Bind User.QuickMessagePlaceholder, Mode=OneWay}"
                                                                                      Tag="{x:Bind User}"
                                                                                      KeyDown="OnQuickProfileMessageKeyDown"
-                                                                                     Background="#111214" Foreground="#F2F3F5"
-                                                                                     BorderBrush="#383A40" BorderThickness="1"
+                                                                                     Background="{x:Bind User.ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                     Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                     BorderThickness="1"
                                                                                      CornerRadius="8" Padding="10,6,34,6" FontSize="12" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
                                                                                     Margin="0,0,4,0" Padding="4"
@@ -2392,28 +2545,25 @@
                                                             <Flyout.FlyoutPresenterStyle>
                                                                 <Style TargetType="FlyoutPresenter">
                                                                     <Setter Property="Padding" Value="0" />
-                                                                    <Setter Property="CornerRadius" Value="16" />
-                                                                    <Setter Property="MaxWidth" Value="340" />
-                                                                    <Setter Property="MaxHeight" Value="620" />
+                                                                    <Setter Property="CornerRadius" Value="18" />
+                                                                    <Setter Property="MaxWidth" Value="350" />
                                                                     <Setter Property="Background" Value="Transparent" />
                                                                     <Setter Property="BorderThickness" Value="0" />
                                                                 </Style>
                                                             </Flyout.FlyoutPresenterStyle>
-                                                            <!-- Carte Popout de l'utilisateur -->
-                                                            <Border Width="330" CornerRadius="16"
-                                                                    Background="#1e1f22"
-                                                                    BorderBrush="#35373c"
-                                                                    BorderThickness="1"
+                                                            <Border Width="336" CornerRadius="18"
+                                                                    BorderBrush="{x:Bind ProfileBorderColorHex, Mode=OneWay}"
+                                                                    BorderThickness="3"
                                                                     Tag="{x:Bind}">
+                                                                <Border.Background>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
+                                                                        <GradientStop Color="{x:Bind ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
+                                                                    </LinearGradientBrush>
+                                                                </Border.Background>
                                                                 <Grid>
-                                                                    <!-- Bannière -->
-                                                                    <Border Height="110" VerticalAlignment="Top" CornerRadius="15,15,0,0">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
-                                                                                <GradientStop Color="{x:Bind ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                    <!-- Bannière (124px de haut, calée en haut, coins arrondis clippés) avec boutons d'actions -->
+                                                                    <Border Height="124" VerticalAlignment="Top" Background="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" CornerRadius="15,15,0,0">
                                                                         <Grid>
                                                                             <Border CornerRadius="15,15,0,0"
                                                                                     Visibility="{x:Bind HasBanner, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -2484,59 +2634,80 @@
                                                                         </Grid>
                                                                     </Border>
 
-                                                                    <!-- Avatar + Pastille + Bulle de pensée -->
-                                                                    <Grid Margin="16,68,16,0" VerticalAlignment="Top">
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                            <ColumnDefinition Width="*" />
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <Grid Grid.Column="0" Width="82" Height="82">
-                                                                            <Ellipse Fill="#1e1f22" Stroke="#1e1f22" StrokeThickness="4" />
-                                                                            <Ellipse Width="76" Height="76">
-                                                                                <Ellipse.Fill>
-                                                                                    <ImageBrush ImageSource="{x:Bind AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                                </Ellipse.Fill>
-                                                                            </Ellipse>
-                                                                            <Ellipse Width="22" Height="22" Fill="{x:Bind StatusColor, Mode=OneWay}"
-                                                                                     Stroke="#1e1f22" StrokeThickness="4"
-                                                                                     HorizontalAlignment="Right" VerticalAlignment="Bottom" />
-                                                                        </Grid>
-                                                                        <Border Grid.Column="1" Margin="8,24,0,0" VerticalAlignment="Center"
-                                                                                Background="#111214" BorderBrush="#383A40" BorderThickness="1"
-                                                                                CornerRadius="14" Padding="10,6"
-                                                                                Visibility="{x:Bind HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="{x:Bind CustomStatusText, Mode=OneWay}"
-                                                                                       Foreground="#F2F3F5" FontSize="11" FontWeight="Medium"
-                                                                                       TextTrimming="CharacterEllipsis" MaxWidth="165" />
-                                                                        </Border>
-                                                                    </Grid>
+                                                                    <!-- Avatar rond avec bordure assortie à la couleur principale du profil (cliquable pour ouvrir la vue complète) -->
+                                                                    <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="43"
+                                                                            Margin="16,74,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            ToolTipService.ToolTip="Afficher le profil complet"
+                                                                            Tag="{x:Bind}"
+                                                                            Click="OnOpenFullUserProfileFromPopoutClicked">
+                                                                        <Ellipse Width="86" Height="86"
+                                                                                 StrokeThickness="6" Stroke="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}">
+                                                                            <Ellipse.Fill>
+                                                                                <ImageBrush ImageSource="{x:Bind AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                            </Ellipse.Fill>
+                                                                        </Ellipse>
+                                                                    </Button>
 
-                                                                    <!-- Corps du profil -->
-                                                                    <StackPanel Margin="16,156,16,14" Spacing="8">
+                                                                    <!-- Pastille de statut sur l'avatar -->
+                                                                    <Ellipse Width="22" Height="22" Margin="78,136,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                             Fill="{x:Bind StatusColor, Mode=OneWay}"
+                                                                             Stroke="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" StrokeThickness="4" />
+
+                                                                    <!-- Bulle de pensée Statut Personnalisé à droite de l'avatar (comme sur la capture Discord) -->
+                                                                    <Border Margin="112,110,14,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            Background="#F2FFFFFF" CornerRadius="16" Padding="12,7"
+                                                                            Visibility="{x:Bind HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <TextBlock Text="{x:Bind CustomStatusText, Mode=OneWay}"
+                                                                                   Foreground="#1E1F22" FontSize="12" FontWeight="Medium"
+                                                                                   TextTrimming="CharacterEllipsis" MaxWidth="185" />
+                                                                    </Border>
+
+                                                                    <!-- Corps du profil positionné proprement sous la bannière -->
+                                                                    <StackPanel Margin="16,168,16,16" Spacing="8">
+                                                                        <!-- Nom d'affichage en grand + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind DisplayName}" FontSize="18" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <TextBlock Text="{x:Bind DisplayName}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
-                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="#B5BAC1" />
+                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>
                                                                         </Grid>
 
+                                                                        <!-- Ligne : username • pronoms [Clan] + Badges officiels côte à côte -->
                                                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                            <TextBlock Text="{x:Bind UserTag}" FontSize="12" Foreground="#B5BAC1" FontWeight="Normal" />
+                                                                            <TextBlock Text="{x:Bind Username}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center" />
+                                                                            <TextBlock Text="•"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.55" FontSize="12" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                            <TextBlock Text="{x:Bind Pronouns, Mode=OneWay}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                                                            <!-- Tag de Clan / Serveur -->
-                                                                            <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="5"
+                                                                            <!-- Tag de Clan / Serveur avec son icône -->
+                                                                            <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="6"
                                                                                     Visibility="{x:Bind HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                                                                     Tag="{x:Bind}" Click="OnClanTagPillClicked"
                                                                                     ToolTipService.ToolTip="Afficher le profil du clan">
-                                                                                <Border Background="#2b2d31" BorderBrush="#35373C" BorderThickness="1" CornerRadius="5" Padding="5,1">
-                                                                                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                                                                                        <Image Width="12" Height="12" Source="{x:Bind ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
-                                                                                        <TextBlock Text="{x:Bind ClanTag, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                                                                                <Border Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                        BorderBrush="#33FFFFFF"
+                                                                                        BorderThickness="1" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                        <Image Width="14" Height="14" Source="{x:Bind ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
+                                                                                        <TextBlock Text="{x:Bind ClanTag, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                                                     </StackPanel>
                                                                                 </Border>
                                                                             </Button>
 
-                                                                            <ItemsControl ItemsSource="{x:Bind Badges, Mode=OneWay}" VerticalAlignment="Center"
+                                                                            <!-- Badges officiels de l'utilisateur alignés sur la même ligne -->
+                                                                            <ItemsControl ItemsSource="{x:Bind Badges, Mode=OneWay}"
+                                                                                          VerticalAlignment="Center"
                                                                                           Visibility="{x:Bind HasBadges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                                 <ItemsControl.ItemsPanel>
                                                                                     <ItemsPanelTemplate>
@@ -2545,49 +2716,160 @@
                                                                                 </ItemsControl.ItemsPanel>
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate x:DataType="models:DiscordBadge">
-                                                                                        <Image Width="16" Height="16" Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
-                                                                                               ToolTipService.ToolTip="{x:Bind Description}" Stretch="Uniform" />
+                                                                                        <Image Width="18" Height="18"
+                                                                                               Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                                               ToolTipService.ToolTip="{x:Bind Description}"
+                                                                                               Stretch="Uniform" />
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
                                                                             </ItemsControl>
                                                                         </StackPanel>
 
-                                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                                                                                    Visibility="{x:Bind HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <FontIcon Glyph="&#xE716;" FontSize="12" Foreground="#B5BAC1" />
-                                                                            <TextBlock Text="{x:Bind MutualSummaryText, Mode=OneWay}" FontSize="11" Foreground="#B5BAC1" FontWeight="Medium" />
-                                                                        </StackPanel>
+                                                                        <!-- Ligne Mutual Friends • Mutual Servers -->
+                                                                        <TextBlock Text="{x:Bind MutualSummaryText, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   Opacity="0.78" FontSize="12" FontWeight="Medium"
+                                                                                   Visibility="{x:Bind HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                                                        <TextBlock Text="{x:Bind AboutMe, Mode=OneWay}" FontSize="12" Foreground="#DBDEE1" TextWrapping="Wrap" Opacity="0.9" />
-
+                                                                        <!-- Carte Rich Presence (RPC) de l'utilisateur -->
                                                                         <Border Visibility="{x:Bind HasRichPresence, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                                                Background="#111214" BorderBrush="#35373c" BorderThickness="1" CornerRadius="8" Padding="8">
-                                                                            <StackPanel Spacing="4">
-                                                                                <TextBlock Text="{x:Bind PrimaryActivity.HeaderLabel, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#949BA4" />
-                                                                                <Grid ColumnSpacing="8">
+                                                                                Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10">
+                                                                            <StackPanel Spacing="6">
+                                                                                <TextBlock Text="{x:Bind PrimaryActivity.HeaderLabel, Mode=OneWay}"
+                                                                                           Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontSize="10" FontWeight="Bold" Opacity="0.7" />
+                                                                                <Grid ColumnSpacing="10">
                                                                                     <Grid.ColumnDefinitions>
                                                                                         <ColumnDefinition Width="Auto" />
                                                                                         <ColumnDefinition Width="*" />
                                                                                     </Grid.ColumnDefinitions>
-                                                                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6"
-                                                                                            Visibility="{x:Bind PrimaryActivity.HasLargeImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                                        <Border.Background>
-                                                                                            <ImageBrush ImageSource="{x:Bind PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                                        </Border.Background>
-                                                                                    </Border>
-                                                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Name, Mode=OneWay}" FontSize="12" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
-                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Details, Mode=OneWay}" FontSize="10" Foreground="#B5BAC1" TextTrimming="CharacterEllipsis"
+                                                                                    <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Top"
+                                                                                          Visibility="{x:Bind PrimaryActivity.HasLargeImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                        <Border Width="52" Height="52" CornerRadius="8">
+                                                                                            <Border.Background>
+                                                                                                <ImageBrush ImageSource="{x:Bind PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Border.Background>
+                                                                                        </Border>
+                                                                                        <Ellipse Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"
+                                                                                                 Stroke="{ThemeResource CardBackgroundFillColorDefaultBrush}" StrokeThickness="2"
+                                                                                                 Visibility="{x:Bind PrimaryActivity.HasSmallImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                            <Ellipse.Fill>
+                                                                                                <ImageBrush ImageSource="{x:Bind PrimaryActivity.SmallImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Ellipse.Fill>
+                                                                                        </Ellipse>
+                                                                                    </Grid>
+                                                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Name, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Details, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.85" TextTrimming="CharacterEllipsis"
                                                                                                    Visibility="{x:Bind PrimaryActivity.HasDetails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.ElapsedText, Mode=OneWay}" FontSize="10" Foreground="#23A55A" FontWeight="SemiBold"
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.State, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                                                                                                   Visibility="{x:Bind PrimaryActivity.HasState, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.ElapsedText, Mode=OneWay}" FontSize="11" Foreground="#23A55A" FontWeight="SemiBold"
                                                                                                    Visibility="{x:Bind PrimaryActivity.HasElapsed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                                                     </StackPanel>
                                                                                 </Grid>
                                                                             </StackPanel>
                                                                         </Border>
 
+                                                                        <!-- Widget Game Collection de l'utilisateur -->
+                                                                        <Border Visibility="{x:Bind HasGameWidgets, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10,8">
+                                                                            <Grid>
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="*" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                    <TextBlock Text="Game"
+                                                                                               Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                               FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                                    <FontIcon Glyph="&#xE70D;" FontSize="9" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" VerticalAlignment="Center" />
+                                                                                </StackPanel>
+                                                                                <ItemsControl Grid.Column="1" ItemsSource="{x:Bind GameWidgets, Mode=OneWay}" VerticalAlignment="Center">
+                                                                                    <ItemsControl.ItemsPanel>
+                                                                                        <ItemsPanelTemplate>
+                                                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                                                        </ItemsPanelTemplate>
+                                                                                    </ItemsControl.ItemsPanel>
+                                                                                    <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="models:DiscordWidgetGame">
+                                                                                            <Border Width="26" Height="26" CornerRadius="6" ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                                <Border.Background>
+                                                                                                    <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+                                                                            </Grid>
+                                                                        </Border>
+
+                                                                        <!-- Bio directe comme sur Discord -->
+                                                                        <TextBlock Text="{x:Bind AboutMe, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   FontSize="13" TextWrapping="Wrap" Opacity="0.92" />
+
+                                                                        <!-- Comptes et liens reliés affichés sur le profil de l'utilisateur -->
+                                                                        <StackPanel Spacing="6" Visibility="{x:Bind HasConnectedAccounts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                            <ItemsControl ItemsSource="{x:Bind ConnectedAccounts, Mode=OneWay}">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <StackPanel Spacing="4" />
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="models:DiscordConnectedAccount">
+                                                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                                                                    Background="#33000000"
+                                                                                                    BorderBrush="#22FFFFFF"
+                                                                                                    BorderThickness="1" CornerRadius="8" Padding="10,7"
+                                                                                                    Tag="{x:Bind}"
+                                                                                                    Click="OnConnectedAccountClicked"
+                                                                                                    ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                                <Grid ColumnSpacing="8">
+                                                                                                    <Grid.ColumnDefinitions>
+                                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                                        <ColumnDefinition Width="*" />
+                                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                                    </Grid.ColumnDefinitions>
+                                                                                                    <Border Grid.Column="0" Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                                                                            CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                            <FontIcon Glyph="{x:Bind PlatformGlyph}" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                                                                            <TextBlock Text="{x:Bind PlatformBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                                                                                                        </StackPanel>
+                                                                                                    </Border>
+                                                                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                            <TextBlock Text="{x:Bind Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="165" />
+                                                                                                            <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#23A55A" VerticalAlignment="Center"
+                                                                                                                      Visibility="{x:Bind Verified, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                                                      ToolTipService.ToolTip="Compte vérifié" />
+                                                                                                        </StackPanel>
+                                                                                                        <TextBlock Text="{x:Bind PlatformDisplayName}" FontSize="10" Opacity="0.6" />
+                                                                                                    </StackPanel>
+                                                                                                    <FontIcon Grid.Column="2" Glyph="&#xE8A7;" FontSize="12" Opacity="0.65" VerticalAlignment="Center"
+                                                                                                              Visibility="{x:Bind HasUrl, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                                </Grid>
+                                                                                            </Button>
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+                                                                            </StackPanel>
+
+                                                                        <!-- Rôles de l'utilisateur dans le serveur -->
                                                                         <StackPanel Spacing="4" Visibility="{x:Bind HasDisplayRoles, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="#949BA4" />
+                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" />
                                                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                                                                           HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
                                                                                 <ItemsControl ItemsSource="{x:Bind DisplayRoles, Mode=OneWay}">
@@ -2610,12 +2892,14 @@
                                                                             </ScrollViewer>
                                                                         </StackPanel>
 
+                                                                        <!-- Champ de message direct actif (Entrée pour envoyer un MP) -->
                                                                         <Grid Margin="0,4,0,0">
                                                                             <TextBox PlaceholderText="{x:Bind QuickMessagePlaceholder, Mode=OneWay}"
                                                                                      Tag="{x:Bind}"
                                                                                      KeyDown="OnQuickProfileMessageKeyDown"
-                                                                                     Background="#111214" Foreground="#F2F3F5"
-                                                                                     BorderBrush="#383A40" BorderThickness="1"
+                                                                                     Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                     Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                     BorderThickness="1"
                                                                                      CornerRadius="8" Padding="10,6,34,6" FontSize="12" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
                                                                                     Margin="0,0,4,0" Padding="4"
@@ -2698,27 +2982,25 @@
                                                             <Flyout.FlyoutPresenterStyle>
                                                                 <Style TargetType="FlyoutPresenter">
                                                                     <Setter Property="Padding" Value="0" />
-                                                                    <Setter Property="CornerRadius" Value="16" />
-                                                                    <Setter Property="MaxWidth" Value="340" />
-                                                                    <Setter Property="MaxHeight" Value="620" />
+                                                                    <Setter Property="CornerRadius" Value="18" />
+                                                                    <Setter Property="MaxWidth" Value="350" />
                                                                     <Setter Property="Background" Value="Transparent" />
                                                                     <Setter Property="BorderThickness" Value="0" />
                                                                 </Style>
                                                             </Flyout.FlyoutPresenterStyle>
-                                                            <!-- Carte Popout de l'utilisateur hors-ligne -->
-                                                            <Border Width="330" CornerRadius="16"
-                                                                    Background="#1e1f22"
-                                                                    BorderBrush="#35373c"
-                                                                    BorderThickness="1"
+                                                            <Border Width="336" CornerRadius="18"
+                                                                    BorderBrush="{x:Bind ProfileBorderColorHex, Mode=OneWay}"
+                                                                    BorderThickness="3"
                                                                     Tag="{x:Bind}">
+                                                                <Border.Background>
+                                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                                        <GradientStop Color="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
+                                                                        <GradientStop Color="{x:Bind ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
+                                                                    </LinearGradientBrush>
+                                                                </Border.Background>
                                                                 <Grid>
-                                                                    <Border Height="110" VerticalAlignment="Top" CornerRadius="15,15,0,0">
-                                                                        <Border.Background>
-                                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                                                <GradientStop Color="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" Offset="0.0" />
-                                                                                <GradientStop Color="{x:Bind ProfileSecondaryColorHex, Mode=OneWay}" Offset="1.0" />
-                                                                            </LinearGradientBrush>
-                                                                        </Border.Background>
+                                                                    <!-- Bannière (124px de haut, calée en haut, coins arrondis clippés) avec boutons d'actions -->
+                                                                    <Border Height="124" VerticalAlignment="Top" Background="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" CornerRadius="15,15,0,0">
                                                                         <Grid>
                                                                             <Border CornerRadius="15,15,0,0"
                                                                                     Visibility="{x:Bind HasBanner, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -2789,59 +3071,80 @@
                                                                         </Grid>
                                                                     </Border>
 
-                                                                    <!-- Avatar + Pastille -->
-                                                                    <Grid Margin="16,68,16,0" VerticalAlignment="Top">
-                                                                        <Grid.ColumnDefinitions>
-                                                                            <ColumnDefinition Width="Auto" />
-                                                                            <ColumnDefinition Width="*" />
-                                                                        </Grid.ColumnDefinitions>
-                                                                        <Grid Grid.Column="0" Width="82" Height="82">
-                                                                            <Ellipse Fill="#1e1f22" Stroke="#1e1f22" StrokeThickness="4" />
-                                                                            <Ellipse Width="76" Height="76">
-                                                                                <Ellipse.Fill>
-                                                                                    <ImageBrush ImageSource="{x:Bind AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                                </Ellipse.Fill>
-                                                                            </Ellipse>
-                                                                            <Ellipse Width="22" Height="22" Fill="{x:Bind StatusColor, Mode=OneWay}"
-                                                                                     Stroke="#1e1f22" StrokeThickness="4"
-                                                                                     HorizontalAlignment="Right" VerticalAlignment="Bottom" />
-                                                                        </Grid>
-                                                                        <Border Grid.Column="1" Margin="8,24,0,0" VerticalAlignment="Center"
-                                                                                Background="#111214" BorderBrush="#383A40" BorderThickness="1"
-                                                                                CornerRadius="14" Padding="10,6"
-                                                                                Visibility="{x:Bind HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="{x:Bind CustomStatusText, Mode=OneWay}"
-                                                                                       Foreground="#F2F3F5" FontSize="11" FontWeight="Medium"
-                                                                                       TextTrimming="CharacterEllipsis" MaxWidth="165" />
-                                                                        </Border>
-                                                                    </Grid>
+                                                                    <!-- Avatar rond avec bordure assortie à la couleur principale du profil (cliquable pour ouvrir la vue complète) -->
+                                                                    <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="43"
+                                                                            Margin="16,74,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            ToolTipService.ToolTip="Afficher le profil complet"
+                                                                            Tag="{x:Bind}"
+                                                                            Click="OnOpenFullUserProfileFromPopoutClicked">
+                                                                        <Ellipse Width="86" Height="86"
+                                                                                 StrokeThickness="6" Stroke="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}">
+                                                                            <Ellipse.Fill>
+                                                                                <ImageBrush ImageSource="{x:Bind AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                            </Ellipse.Fill>
+                                                                        </Ellipse>
+                                                                    </Button>
 
-                                                                    <!-- Corps du profil -->
-                                                                    <StackPanel Margin="16,156,16,14" Spacing="8">
+                                                                    <!-- Pastille de statut sur l'avatar -->
+                                                                    <Ellipse Width="22" Height="22" Margin="78,136,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                             Fill="{x:Bind StatusColor, Mode=OneWay}"
+                                                                             Stroke="{x:Bind ProfilePrimaryColorHex, Mode=OneWay}" StrokeThickness="4" />
+
+                                                                    <!-- Bulle de pensée Statut Personnalisé à droite de l'avatar (comme sur la capture Discord) -->
+                                                                    <Border Margin="112,110,14,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                                            Background="#F2FFFFFF" CornerRadius="16" Padding="12,7"
+                                                                            Visibility="{x:Bind HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <TextBlock Text="{x:Bind CustomStatusText, Mode=OneWay}"
+                                                                                   Foreground="#1E1F22" FontSize="12" FontWeight="Medium"
+                                                                                   TextTrimming="CharacterEllipsis" MaxWidth="185" />
+                                                                    </Border>
+
+                                                                    <!-- Corps du profil positionné proprement sous la bannière -->
+                                                                    <StackPanel Margin="16,168,16,16" Spacing="8">
+                                                                        <!-- Nom d'affichage en grand + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind DisplayName}" FontSize="18" FontWeight="Bold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <TextBlock Text="{x:Bind DisplayName}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
-                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="#B5BAC1" />
+                                                                                <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>
                                                                         </Grid>
 
+                                                                        <!-- Ligne : username • pronoms [Clan] + Badges officiels côte à côte -->
                                                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                            <TextBlock Text="{x:Bind UserTag}" FontSize="12" Foreground="#B5BAC1" FontWeight="Normal" />
+                                                                            <TextBlock Text="{x:Bind Username}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center" />
+                                                                            <TextBlock Text="•"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.55" FontSize="12" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                            <TextBlock Text="{x:Bind Pronouns, Mode=OneWay}"
+                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                       Opacity="0.85" FontSize="13" VerticalAlignment="Center"
+                                                                                       Visibility="{x:Bind HasPronouns, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                                                            <!-- Tag de Clan / Serveur -->
-                                                                            <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="5"
+                                                                            <!-- Tag de Clan / Serveur avec son icône -->
+                                                                            <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="6"
                                                                                     Visibility="{x:Bind HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                                                                     Tag="{x:Bind}" Click="OnClanTagPillClicked"
                                                                                     ToolTipService.ToolTip="Afficher le profil du clan">
-                                                                                <Border Background="#2b2d31" BorderBrush="#35373C" BorderThickness="1" CornerRadius="5" Padding="5,1">
-                                                                                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                                                                                        <Image Width="12" Height="12" Source="{x:Bind ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
-                                                                                        <TextBlock Text="{x:Bind ClanTag, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                                                                                <Border Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                        BorderBrush="#33FFFFFF"
+                                                                                        BorderThickness="1" CornerRadius="6" Padding="7,2" VerticalAlignment="Center">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                        <Image Width="14" Height="14" Source="{x:Bind ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
+                                                                                        <TextBlock Text="{x:Bind ClanTag, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                                                     </StackPanel>
                                                                                 </Border>
                                                                             </Button>
 
-                                                                            <ItemsControl ItemsSource="{x:Bind Badges, Mode=OneWay}" VerticalAlignment="Center"
+                                                                            <!-- Badges officiels de l'utilisateur alignés sur la même ligne -->
+                                                                            <ItemsControl ItemsSource="{x:Bind Badges, Mode=OneWay}"
+                                                                                          VerticalAlignment="Center"
                                                                                           Visibility="{x:Bind HasBadges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                                 <ItemsControl.ItemsPanel>
                                                                                     <ItemsPanelTemplate>
@@ -2850,23 +3153,160 @@
                                                                                 </ItemsControl.ItemsPanel>
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate x:DataType="models:DiscordBadge">
-                                                                                        <Image Width="16" Height="16" Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
-                                                                                               ToolTipService.ToolTip="{x:Bind Description}" Stretch="Uniform" />
+                                                                                        <Image Width="18" Height="18"
+                                                                                               Source="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                                               ToolTipService.ToolTip="{x:Bind Description}"
+                                                                                               Stretch="Uniform" />
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
                                                                             </ItemsControl>
                                                                         </StackPanel>
 
-                                                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                                                                                    Visibility="{x:Bind HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <FontIcon Glyph="&#xE716;" FontSize="12" Foreground="#B5BAC1" />
-                                                                            <TextBlock Text="{x:Bind MutualSummaryText, Mode=OneWay}" FontSize="11" Foreground="#B5BAC1" FontWeight="Medium" />
+                                                                        <!-- Ligne Mutual Friends • Mutual Servers -->
+                                                                        <TextBlock Text="{x:Bind MutualSummaryText, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   Opacity="0.78" FontSize="12" FontWeight="Medium"
+                                                                                   Visibility="{x:Bind HasMutualInfo, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                                                        <!-- Carte Rich Presence (RPC) de l'utilisateur -->
+                                                                        <Border Visibility="{x:Bind HasRichPresence, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10">
+                                                                            <StackPanel Spacing="6">
+                                                                                <TextBlock Text="{x:Bind PrimaryActivity.HeaderLabel, Mode=OneWay}"
+                                                                                           Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontSize="10" FontWeight="Bold" Opacity="0.7" />
+                                                                                <Grid ColumnSpacing="10">
+                                                                                    <Grid.ColumnDefinitions>
+                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                        <ColumnDefinition Width="*" />
+                                                                                    </Grid.ColumnDefinitions>
+                                                                                    <Grid Grid.Column="0" Width="52" Height="52" VerticalAlignment="Top"
+                                                                                          Visibility="{x:Bind PrimaryActivity.HasLargeImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                        <Border Width="52" Height="52" CornerRadius="8">
+                                                                                            <Border.Background>
+                                                                                                <ImageBrush ImageSource="{x:Bind PrimaryActivity.LargeImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Border.Background>
+                                                                                        </Border>
+                                                                                        <Ellipse Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"
+                                                                                                 Stroke="{ThemeResource CardBackgroundFillColorDefaultBrush}" StrokeThickness="2"
+                                                                                                 Visibility="{x:Bind PrimaryActivity.HasSmallImage, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                            <Ellipse.Fill>
+                                                                                                <ImageBrush ImageSource="{x:Bind PrimaryActivity.SmallImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                            </Ellipse.Fill>
+                                                                                        </Ellipse>
+                                                                                    </Grid>
+                                                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Name, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.Details, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.85" TextTrimming="CharacterEllipsis"
+                                                                                                   Visibility="{x:Bind PrimaryActivity.HasDetails, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.State, Mode=OneWay}"
+                                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                                   FontSize="11" Opacity="0.75" TextTrimming="CharacterEllipsis"
+                                                                                                   Visibility="{x:Bind PrimaryActivity.HasState, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                        <TextBlock Text="{x:Bind PrimaryActivity.ElapsedText, Mode=OneWay}" FontSize="11" Foreground="#23A55A" FontWeight="SemiBold"
+                                                                                                   Visibility="{x:Bind PrimaryActivity.HasElapsed, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                    </StackPanel>
+                                                                                </Grid>
+                                                                            </StackPanel>
+                                                                        </Border>
+
+                                                                        <!-- Widget Game Collection de l'utilisateur -->
+                                                                        <Border Visibility="{x:Bind HasGameWidgets, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                BorderBrush="#22FFFFFF"
+                                                                                BorderThickness="1" CornerRadius="10" Padding="10,8">
+                                                                            <Grid>
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="*" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                    <TextBlock Text="Game"
+                                                                                               Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                               FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                                    <FontIcon Glyph="&#xE70D;" FontSize="9" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" VerticalAlignment="Center" />
+                                                                                </StackPanel>
+                                                                                <ItemsControl Grid.Column="1" ItemsSource="{x:Bind GameWidgets, Mode=OneWay}" VerticalAlignment="Center">
+                                                                                    <ItemsControl.ItemsPanel>
+                                                                                        <ItemsPanelTemplate>
+                                                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                                                        </ItemsPanelTemplate>
+                                                                                    </ItemsControl.ItemsPanel>
+                                                                                    <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="models:DiscordWidgetGame">
+                                                                                            <Border Width="26" Height="26" CornerRadius="6" ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                                <Border.Background>
+                                                                                                    <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                                </Border.Background>
+                                                                                            </Border>
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+                                                                            </Grid>
+                                                                        </Border>
+
+                                                                        <!-- Bio directe comme sur Discord -->
+                                                                        <TextBlock Text="{x:Bind AboutMe, Mode=OneWay}"
+                                                                                   Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                   FontSize="13" TextWrapping="Wrap" Opacity="0.92" />
+
+                                                                        <!-- Comptes et liens reliés affichés sur le profil de l'utilisateur -->
+                                                                        <StackPanel Spacing="6" Visibility="{x:Bind HasConnectedAccounts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                            <ItemsControl ItemsSource="{x:Bind ConnectedAccounts, Mode=OneWay}">
+                                                                                <ItemsControl.ItemsPanel>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <StackPanel Spacing="4" />
+                                                                                    </ItemsPanelTemplate>
+                                                                                </ItemsControl.ItemsPanel>
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="models:DiscordConnectedAccount">
+                                                                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                                                                Background="#33000000"
+                                                                                                BorderBrush="#22FFFFFF"
+                                                                                                BorderThickness="1" CornerRadius="8" Padding="10,7"
+                                                                                                Tag="{x:Bind}"
+                                                                                                Click="OnConnectedAccountClicked"
+                                                                                                ToolTipService.ToolTip="{x:Bind TooltipText}">
+                                                                                            <Grid ColumnSpacing="8">
+                                                                                                <Grid.ColumnDefinitions>
+                                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                                    <ColumnDefinition Width="*" />
+                                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                                </Grid.ColumnDefinitions>
+                                                                                                <Border Grid.Column="0" Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                                                                                        CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                        <FontIcon Glyph="{x:Bind PlatformGlyph}" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                                                                        <TextBlock Text="{x:Bind PlatformBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                                                                                                    </StackPanel>
+                                                                                                </Border>
+                                                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                                                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                                                        <TextBlock Text="{x:Bind Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="165" />
+                                                                                                        <FontIcon Glyph="&#xE73E;" FontSize="11" Foreground="#23A55A" VerticalAlignment="Center"
+                                                                                                                  Visibility="{x:Bind Verified, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                                                  ToolTipService.ToolTip="Compte vérifié" />
+                                                                                                    </StackPanel>
+                                                                                                    <TextBlock Text="{x:Bind PlatformDisplayName}" FontSize="10" Opacity="0.6" />
+                                                                                                </StackPanel>
+                                                                                                <FontIcon Grid.Column="2" Glyph="&#xE8A7;" FontSize="12" Opacity="0.65" VerticalAlignment="Center"
+                                                                                                          Visibility="{x:Bind HasUrl, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                                            </Grid>
+                                                                                        </Button>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
                                                                         </StackPanel>
 
-                                                                        <TextBlock Text="{x:Bind AboutMe, Mode=OneWay}" FontSize="12" Foreground="#DBDEE1" TextWrapping="Wrap" Opacity="0.9" />
-
+                                                                        <!-- Rôles de l'utilisateur dans le serveur -->
                                                                         <StackPanel Spacing="4" Visibility="{x:Bind HasDisplayRoles, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="#949BA4" />
+                                                                            <TextBlock Text="RÔLES" FontSize="10" FontWeight="Bold" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.7" />
                                                                             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                                                                                           HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
                                                                                 <ItemsControl ItemsSource="{x:Bind DisplayRoles, Mode=OneWay}">
@@ -2889,12 +3329,14 @@
                                                                             </ScrollViewer>
                                                                         </StackPanel>
 
+                                                                        <!-- Champ de message direct actif (Entrée pour envoyer un MP) -->
                                                                         <Grid Margin="0,4,0,0">
                                                                             <TextBox PlaceholderText="{x:Bind QuickMessagePlaceholder, Mode=OneWay}"
                                                                                      Tag="{x:Bind}"
                                                                                      KeyDown="OnQuickProfileMessageKeyDown"
-                                                                                     Background="#111214" Foreground="#F2F3F5"
-                                                                                     BorderBrush="#383A40" BorderThickness="1"
+                                                                                     Background="{x:Bind ProfilePillBackgroundColorHex, Mode=OneWay}"
+                                                                                     Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                     BorderThickness="1"
                                                                                      CornerRadius="8" Padding="10,6,34,6" FontSize="12" />
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
                                                                                     Margin="0,0,4,0" Padding="4"
