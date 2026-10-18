@@ -58,7 +58,9 @@ public sealed partial class SettingsWindow : Window
 
         UpdateChannelCombo.SelectedItem = UpdateChannelCombo.Items
             .OfType<ComboBoxItem>()
-            .FirstOrDefault(i => (string)i.Tag == current.UpdateChannel) ?? UpdateChannelCombo.Items[0];
+            .FirstOrDefault(i => string.Equals((string)i.Tag, current.UpdateChannel, StringComparison.OrdinalIgnoreCase)
+                              || (string.Equals((string)i.Tag, "Edge", StringComparison.OrdinalIgnoreCase) && string.Equals(current.UpdateChannel, "Experimental", StringComparison.OrdinalIgnoreCase)))
+            ?? UpdateChannelCombo.Items[0];
 
         ScaleSlider.Value = Math.Clamp(current.InterfaceScale, 0.85, 1.25);
         BubbleStyleToggle.IsOn = current.BubbleMessageStyle;
@@ -207,7 +209,8 @@ public sealed partial class SettingsWindow : Window
             }
             else
             {
-                UpdateCheckStatusText.Text = $"Diswin est à jour ({UpdateService.CurrentVersion}).";
+                var channelLabel = string.Equals(_settings.Current.UpdateChannel, "Edge", StringComparison.OrdinalIgnoreCase) ? "Edge" : "Stable";
+                UpdateCheckStatusText.Text = $"Diswin est à jour ({UpdateService.CurrentVersion} — Canal {channelLabel}).";
             }
         }
         catch

@@ -4,14 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. v0.4.1)'
+        description: 'Release version (e.g. 0.5.4)'
         required: false
-        default: 'v0.4.1'
+        default: '0.5.4'
+      channel:
+        description: 'Release channel'
+        required: true
+        default: 'Stable'
+        type: choice
+        options:
+          - Stable
+          - Edge
   push:
     tags:
       - 'v*'
     branches:
       - main
+      - edge
 
 permissions:
   contents: write
@@ -31,14 +40,43 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Determine Channel and Version
+        id: meta
+        shell: powershell
+        run: |
+          $branch = "${{ github.ref_name }}"
+          $inputChannel = "${{ github.event.inputs.channel }}"
+          $inputVersion = "${{ github.event.inputs.version }}"
+
+          if ($inputChannel) {
+              $channel = $inputChannel
+          } elseif ($branch -eq "edge" -or $branch -match "edge") {
+              $channel = "Edge"
+          } else {
+              $channel = "Stable"
+          }
+
+          if ($inputVersion) {
+              $ver = $inputVersion.TrimStart('v', 'V')
+          } elseif ($branch -match '^v?(\d+\.\d+\.\d+)') {
+              $ver = $Matches[1]
+          } else {
+              $ver = "0.5.4"
+          }
+
+          Write-Host "Resolved Channel: $channel"
+          Write-Host "Resolved Version: $ver"
+          "channel=$channel" >> $env:GITHUB_OUTPUT
+          "version=$ver" >> $env:GITHUB_OUTPUT
+
       - name: Package Release
         id: package
         shell: powershell
         run: |
-          .\package_release.ps1
+          .\package_release.ps1 -Version "${{ steps.meta.outputs.version }}" -Channel "${{ steps.meta.outputs.channel }}"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Diswin-Release
+          name: Diswin-${{ steps.meta.outputs.channel }}-v${{ steps.meta.outputs.version }}
           path: dist/*.*

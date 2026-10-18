@@ -1,5 +1,18 @@
+param(
+    [string]$Version = "0.5.3",
+    [ValidateSet("Stable", "Edge")]
+    [string]$Channel = "Stable"
+)
+
 $ErrorActionPreference = 'Stop'
-$version = "0.5.3"
+
+if ($Channel -eq "Edge" -and $Version -notmatch "edge") {
+    $version = "$Version-edge"
+} else {
+    $version = $Version
+}
+
+Write-Host "Packaging Diswin v$version (Canal: $Channel)..." -ForegroundColor Magenta
 $appReleaseDir = "src\DiscordNative.App\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 $installerReleaseDir = "src\DiscordNative.Installer\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64"
 

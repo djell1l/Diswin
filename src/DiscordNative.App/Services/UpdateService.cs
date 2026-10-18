@@ -38,7 +38,7 @@ public sealed class UpdateInfo
 
 public static class UpdateService
 {
-    public const string CurrentVersion = "v0.4.0";
+    public const string CurrentVersion = "v0.5.3";
     private const string RepoOwner = "djell1l";
     private const string RepoName = "Diswin";
     private static readonly HttpClient Http = new();
@@ -57,10 +57,28 @@ public static class UpdateService
             var releases = JsonSerializer.Deserialize<List<UpdateInfo>>(json);
             if (releases is null || releases.Count == 0) return null;
 
-            var includeExp = string.Equals(App.Settings.Current.UpdateChannel, "Experimental", StringComparison.OrdinalIgnoreCase);
-            var latest = releases.FirstOrDefault(r => includeExp || !r.Prerelease) ?? releases[0];
+            var isEdge = string.Equals(App.Settings.Current.UpdateChannel, "Edge", StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(App.Settings.Current.UpdateChannel, "Experimental", StringComparison.OrdinalIgnoreCase);
 
-            if (IsNewerVersion(latest.TagName, CurrentVersion))
+            UpdateInfo? latest = null;
+
+            if (isEdge)
+            {
+                // Sur le canal Edge, on prend la version la plus récente absolue (qu'elle soit pré-release ou finale)
+                latest = releases[0];
+            }
+            else
+            {
+                // Sur le canal Stable, on ignore rigoureusement les pré-releases et les builds taggués edge/exp/preview
+                latest = releases.FirstOrDefault(r => !r.Prerelease
+                    && !r.TagName.Contains("edge", StringComparison.OrdinalIgnoreCase)
+                    && !r.TagName.Contains("exp", StringComparison.OrdinalIgnoreCase)
+                    && !r.TagName.Contains("preview", StringComparison.OrdinalIgnoreCase)
+                    && !r.TagName.Contains("beta", StringComparison.OrdinalIgnoreCase)
+                    && !r.TagName.Contains("alpha", StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (latest is not null && IsNewerVersion(latest.TagName, CurrentVersion))
             {
                 return latest;
             }
@@ -73,14 +91,63 @@ public static class UpdateService
     private static bool IsNewerVersion(string remoteTag, string localTag)
     {
         if (string.IsNullOrWhiteSpace(remoteTag)) return false;
-        string cleanRemote = remoteTag.Trim().TrimStart('v', 'V').Split('-')[0];
-        string cleanLocal = localTag.Trim().TrimStart('v', 'V').Split('-')[0];
-        if (Version.TryParse(cleanRemote, out var vRemote) && Version.TryParse(cleanLocal, out var vLocal))
+        if (string.IsNullOrWhiteSpace(localTag)) return true;
+
+        string rClean = remoteTag.Trim().TrimStart('v', 'V');
+        string lClean = localTag.Trim().TrimStart('v', 'V');
+
+        if (string.Equals(rClean, lClean, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var rParts = rClean.Split('-', 2);
+        var lParts = lClean.Split('-', 2);
+
+        string rBase = rParts[0];
+        string lBase = lParts[0];
+
+        bool rHasSuffix = rParts.Length > 1;
+        bool lHasSuffix = lParts.Length > 1;
+
+        if (Version.TryParse(rBase, out var vRemote) && Version.TryParse(lBase, out var vLocal))
         {
-            return vRemote > vLocal;
+            if (vRemote > vLocal) return true;
+            if (vRemote < vLocal) return false;
+
+            // Base versions identiques (ex: 0.5.4 vs 0.5.4)
+            // Une release stable (sans suffixe) est plus récente qu'une pré-release/edge du même numéro
+            if (!rHasSuffix && lHasSuffix) return true;
+            if (rHasSuffix && !lHasSuffix) return false;
+
+            // Deux suffixes présents (ex: edge.2 vs edge.1)
+            if (rHasSuffix && lHasSuffix)
+            {
+                return CompareSuffixes(rParts[1], lParts[1]) > 0;
+            }
         }
-        return !string.Equals(remoteTag.Trim(), localTag.Trim(), StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(remoteTag.Trim(), localTag.Trim() + "-exp", StringComparison.OrdinalIgnoreCase);
+
+        return !string.Equals(rClean, lClean, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int CompareSuffixes(string rSuffix, string lSuffix)
+    {
+        var rTokens = rSuffix.Split('.');
+        var lTokens = lSuffix.Split('.');
+        int minLen = Math.Min(rTokens.Length, lTokens.Length);
+
+        for (int i = 0; i < minLen; i++)
+        {
+            if (int.TryParse(rTokens[i], out int rNum) && int.TryParse(lTokens[i], out int lNum))
+            {
+                if (rNum != lNum) return rNum.CompareTo(lNum);
+            }
+            else
+            {
+                int cmp = string.Compare(rTokens[i], lTokens[i], StringComparison.OrdinalIgnoreCase);
+                if (cmp != 0) return cmp;
+            }
+        }
+
+        return rTokens.Length.CompareTo(lTokens.Length);
     }
 
     public static async Task ApplyAutomaticUpdateAsync(UpdateInfo update, Action<string> onProgress)

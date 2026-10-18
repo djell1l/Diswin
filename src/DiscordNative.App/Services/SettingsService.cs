@@ -21,7 +21,7 @@ public sealed class AppSettings
     public double InterfaceScale { get; set; } = 1.0;
     public bool AnonymizeUploads { get; set; } = false;
     public bool ConvertLongMessagesToFile { get; set; } = true;
-    public string UpdateChannel { get; set; } = "Stable"; // Stable | Experimental
+    public string UpdateChannel { get; set; } = "Stable"; // Stable | Edge
     public bool ShowNotifications { get; set; } = true;
     public bool StartMinimized { get; set; } = false;
     public bool EnableKrispNoiseSuppression { get; set; } = true;
