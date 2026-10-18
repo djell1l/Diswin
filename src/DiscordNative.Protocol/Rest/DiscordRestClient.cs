@@ -13,6 +13,7 @@ namespace DiscordNative.Protocol.Rest;
 public sealed class DiscordRestClient : IDisposable
 {
     private const string ApiBase = "https://discord.com/api/v9";
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     private readonly HttpClient _http;
 
     public DiscordRestClient(string token)
@@ -221,8 +222,43 @@ public sealed class DiscordRestClient : IDisposable
     {
         try
         {
-            var friends = await _http.GetFromJsonAsync<List<DiscordUser>>($"{ApiBase}/users/{userId}/relationships", ct);
-            return friends ?? new();
+            using var resp = await _http.GetAsync($"{ApiBase}/users/{userId}/relationships", ct);
+            if (!resp.IsSuccessStatusCode) return new();
+
+            using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return new();
+
+            var list = new List<DiscordUser>();
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                JsonElement userEl = el;
+                if (el.TryGetProperty("user", out var innerUser) && innerUser.ValueKind == JsonValueKind.Object)
+                {
+                    userEl = innerUser;
+                }
+
+                var u = userEl.Deserialize<DiscordUser>(JsonOptions);
+                if (u != null)
+                {
+                    if (el.TryGetProperty("clan", out var cEl) && cEl.ValueKind == JsonValueKind.Object && u.Clan == null)
+                    {
+                        u.Clan = cEl.Deserialize<DiscordClan>(JsonOptions);
+                    }
+                    if (el.TryGetProperty("presence", out var presEl) && presEl.ValueKind == JsonValueKind.Object)
+                    {
+                        if (presEl.TryGetProperty("status", out var stEl) && stEl.ValueKind == JsonValueKind.String)
+                        {
+                            u.Status = stEl.GetString() ?? "offline";
+                        }
+                        if (presEl.TryGetProperty("activities", out var actsEl) && actsEl.ValueKind == JsonValueKind.Array)
+                        {
+                            u.Activities = actsEl.Deserialize<List<DiscordActivity>>(JsonOptions) ?? new();
+                        }
+                    }
+                    list.Add(u);
+                }
+            }
+            return list;
         }
         catch
         {

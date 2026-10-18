@@ -86,7 +86,17 @@ public sealed class DiscordClient : IAsyncDisposable
     private readonly ConcurrentDictionary<string, List<DiscordActivity>> _userActivityHistory = new();
 
     public DiscordRestClient Rest { get; }
-    public DiscordUser? CurrentUser { get; set; }
+    public static string? CurrentLoggedInUserId { get; set; }
+    private DiscordUser? _currentUser;
+    public DiscordUser? CurrentUser
+    {
+        get => _currentUser;
+        set
+        {
+            _currentUser = value;
+            CurrentLoggedInUserId = value?.Id;
+        }
+    }
     public ObservableCollection<DiscordGuild> Guilds { get; } = new();
     public ObservableCollection<DiscordChannel> PrivateChannels { get; } = new();
     public ObservableCollection<DiscordRelationship> Friends { get; } = new();
@@ -130,11 +140,10 @@ public sealed class DiscordClient : IAsyncDisposable
         try
         {
             var relationships = await Rest.GetRelationshipsAsync(ct);
-            var friends = relationships.Where(r => r.Type == DiscordRelationshipType.Friend).ToList();
             App.RunOnUiThread(() =>
             {
                 Friends.Clear();
-                foreach (var f in friends) Friends.Add(f);
+                foreach (var f in relationships) Friends.Add(f);
             });
         }
         catch { /* pas critique si ça échoue */ }
@@ -329,6 +338,30 @@ public sealed class DiscordClient : IAsyncDisposable
                 break;
             case "VOICE_SERVER_UPDATE":
                 HandleVoiceServerUpdate(evt.Data);
+                break;
+            case "RELATIONSHIP_ADD":
+            case "RELATIONSHIP_UPDATE":
+                var rel = evt.Data.Deserialize<DiscordRelationship>(JsonOptions);
+                if (rel != null)
+                {
+                    App.RunOnUiThread(() =>
+                    {
+                        var existing = Friends.FirstOrDefault(f => f.Id == rel.Id || (f.User?.Id != null && f.User.Id == rel.User?.Id));
+                        if (existing != null) Friends.Remove(existing);
+                        Friends.Add(rel);
+                    });
+                }
+                break;
+            case "RELATIONSHIP_REMOVE":
+                var relId = evt.Data.TryGetProperty("id", out var rIdEl) ? rIdEl.GetString() : null;
+                if (!string.IsNullOrEmpty(relId))
+                {
+                    App.RunOnUiThread(() =>
+                    {
+                        var existing = Friends.FirstOrDefault(f => f.Id == relId || f.User?.Id == relId);
+                        if (existing != null) Friends.Remove(existing);
+                    });
+                }
                 break;
         }
     }
@@ -978,6 +1011,25 @@ public sealed class DiscordClient : IAsyncDisposable
 
     private void HandleReady(JsonElement data)
     {
+        if (data.TryGetProperty("user", out var uEl) && uEl.ValueKind == JsonValueKind.Object)
+        {
+            var u = uEl.Deserialize<DiscordUser>(JsonOptions);
+            if (u != null)
+            {
+                CurrentUser = u;
+            }
+        }
+
+        if (data.TryGetProperty("relationships", out var relEl) && relEl.ValueKind == JsonValueKind.Array)
+        {
+            var relationships = relEl.Deserialize<List<DiscordRelationship>>(JsonOptions) ?? new();
+            App.RunOnUiThread(() =>
+            {
+                Friends.Clear();
+                foreach (var r in relationships) Friends.Add(r);
+            });
+        }
+
         if (data.TryGetProperty("session_id", out var sidProp) && sidProp.ValueKind == JsonValueKind.String)
         {
             _voiceSessionId = sidProp.GetString();
@@ -1349,7 +1401,7 @@ public sealed class DiscordClient : IAsyncDisposable
     public bool IsFriend(string? userId)
     {
         if (string.IsNullOrWhiteSpace(userId)) return false;
-        return Friends.Any(f => f.User?.Id == userId || f.Id == userId);
+        return Friends.Any(f => (f.User?.Id == userId || f.Id == userId) && f.IsFriend);
     }
 
     public void ApplyCachedPresenceToUser(DiscordUser user)

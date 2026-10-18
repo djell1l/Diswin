@@ -852,14 +852,22 @@ public sealed partial class MainWindowContent : UserControl
 
     private async void OnAddFriendFromPopoutClicked(object sender, RoutedEventArgs e)
     {
+        CloseParentFlyout(sender);
         var user = ExtractDiscordUser(sender);
-        if (user != null)
+        if (user != null && ViewModel != null)
         {
-            try
+            if (user.IsFriend)
             {
-                await ViewModel.SendFriendRequestAsync(user.UserTag);
+                await ViewModel.OpenOrSendDirectMessageAsync(user);
             }
-            catch { }
+            else
+            {
+                try
+                {
+                    await ViewModel.SendFriendRequestAsync(user.UserTag);
+                }
+                catch { }
+            }
         }
     }
 
@@ -1331,7 +1339,7 @@ public sealed partial class MainWindowContent : UserControl
 
         if (ViewModel != null)
         {
-            await ViewModel.EnsureUserProfileEnrichedAsync(user);
+            user.IsFriend = ViewModel.Client.IsFriend(user.Id);
         }
 
         if (ProfileUserNoteTextBox != null)
@@ -1339,8 +1347,33 @@ public sealed partial class MainWindowContent : UserControl
             ProfileUserNoteTextBox.Text = App.Settings.Current.UserNotes.TryGetValue(user.Id, out var note) ? note : string.Empty;
         }
 
-        SelectProfileTab("Activity");
+        string initialTab = user.HasRecentActivities ? "Activity"
+                          : user.HasWishlist ? "Wishlist"
+                          : user.HasMutualFriends ? "MutualFriends"
+                          : user.HasMutualGuilds ? "MutualServers"
+                          : "";
+        SelectProfileTab(initialTab);
         FullUserProfileOverlay.Visibility = Visibility.Visible;
+
+        if (ViewModel != null)
+        {
+            await ViewModel.EnsureUserProfileEnrichedAsync(user);
+
+            string bestTab = user.HasRecentActivities ? "Activity"
+                           : user.HasWishlist ? "Wishlist"
+                           : user.HasMutualFriends ? "MutualFriends"
+                           : user.HasMutualGuilds ? "MutualServers"
+                           : "";
+
+            if (string.IsNullOrEmpty(initialTab) ||
+                (initialTab == "Activity" && !user.HasRecentActivities) ||
+                (initialTab == "MutualFriends" && !user.HasMutualFriends) ||
+                (initialTab == "MutualServers" && !user.HasMutualGuilds) ||
+                (initialTab == "Wishlist" && !user.HasWishlist))
+            {
+                SelectProfileTab(bestTab);
+            }
+        }
     }
 
     public void HideFullUserProfileModal()
@@ -3404,8 +3437,9 @@ public sealed partial class MainWindowContent : UserControl
         {
             DiscordUser? targetUser = ExtractDiscordUser(flyout.Content) ?? ExtractDiscordUser(flyout.Target);
 
-            if (targetUser != null)
+            if (targetUser != null && ViewModel != null)
             {
+                targetUser.IsFriend = ViewModel.Client.IsFriend(targetUser.Id);
                 _ = ViewModel.EnsureUserProfileEnrichedAsync(targetUser);
                 targetUser.UpdateDisplayRoles(ViewModel.SelectedGuild?.Roles);
             }

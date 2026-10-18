@@ -1586,9 +1586,10 @@
                                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Spacing="6">
                                                                         <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                 Background="#66000000" BorderThickness="0"
-                                                                                ToolTipService.ToolTip="Ajouter en ami"
+                                                                                Visibility="{x:Bind Author.IsNotCurrentUser, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                ToolTipService.ToolTip="{x:Bind Author.FriendStatusTooltip, Mode=OneWay}"
                                                                                 Tag="{x:Bind Author}" Click="OnAddFriendFromPopoutClicked">
-                                                                            <FontIcon Glyph="&#xE8FA;" FontSize="13" Foreground="#FFFFFF" />
+                                                                            <FontIcon Glyph="{x:Bind Author.FriendActionGlyph, Mode=OneWay}" FontSize="13" Foreground="#FFFFFF" />
                                                                         </Button>
                                                                         <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                 Background="#66000000" BorderThickness="0"
@@ -2146,9 +2147,10 @@
                                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Spacing="6">
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
-                                                                                        ToolTipService.ToolTip="Ajouter en ami"
+                                                                                        Visibility="{x:Bind User.IsNotCurrentUser, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                        ToolTipService.ToolTip="{x:Bind User.FriendStatusTooltip, Mode=OneWay}"
                                                                                         Tag="{x:Bind User}" Click="OnAddFriendFromPopoutClicked">
-                                                                                    <FontIcon Glyph="&#xE8FA;" FontSize="13" Foreground="#FFFFFF" />
+                                                                                    <FontIcon Glyph="{x:Bind User.FriendActionGlyph, Mode=OneWay}" FontSize="13" Foreground="#FFFFFF" />
                                                                                 </Button>
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
@@ -2575,9 +2577,10 @@
                                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Spacing="6">
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
-                                                                                        ToolTipService.ToolTip="Ajouter en ami"
+                                                                                        Visibility="{x:Bind IsNotCurrentUser, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                        ToolTipService.ToolTip="{x:Bind FriendStatusTooltip, Mode=OneWay}"
                                                                                         Tag="{x:Bind}" Click="OnAddFriendFromPopoutClicked">
-                                                                                    <FontIcon Glyph="&#xE8FA;" FontSize="13" Foreground="#FFFFFF" />
+                                                                                    <FontIcon Glyph="{x:Bind FriendActionGlyph, Mode=OneWay}" FontSize="13" Foreground="#FFFFFF" />
                                                                                 </Button>
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
@@ -3012,9 +3015,10 @@
                                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Spacing="6">
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
-                                                                                        ToolTipService.ToolTip="Ajouter en ami"
+                                                                                        Visibility="{x:Bind IsNotCurrentUser, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                                        ToolTipService.ToolTip="{x:Bind FriendStatusTooltip, Mode=OneWay}"
                                                                                         Tag="{x:Bind}" Click="OnAddFriendFromPopoutClicked">
-                                                                                    <FontIcon Glyph="&#xE8FA;" FontSize="13" Foreground="#FFFFFF" />
+                                                                                    <FontIcon Glyph="{x:Bind FriendActionGlyph, Mode=OneWay}" FontSize="13" Foreground="#FFFFFF" />
                                                                                 </Button>
                                                                                 <Button Width="30" Height="30" Padding="0" CornerRadius="15"
                                                                                         Background="#66000000" BorderThickness="0"
@@ -3699,7 +3703,8 @@
                             <!-- Barre d'onglets façon Discord -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="4,0,0,12">
                                 <!-- Onglet Activity -->
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="4"
+                                            Visibility="{x:Bind FullProfileUser.HasRecentActivities, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Button x:Name="ProfileActivityTabButton" Content="Activity" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White"
                                             Tag="Activity" Click="OnProfileTabClicked" />
@@ -3707,15 +3712,17 @@
                                 </StackPanel>
 
                                 <!-- Onglet Wishlist -->
-                                <StackPanel Spacing="4">
-                                    <Button x:Name="ProfileWishlistTabButton" Content="Wishlist" Background="Transparent" BorderThickness="0" Padding="4,4"
+                                <StackPanel Spacing="4"
+                                            Visibility="{x:Bind FullProfileUser.HasWishlist, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Button x:Name="ProfileWishlistTabButton" Content="{x:Bind FullProfileUser.WishlistTabTitle, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
                                             Tag="Wishlist" Click="OnProfileTabClicked" />
                                     <Border x:Name="ProfileWishlistTabIndicator" Height="2" Background="White" CornerRadius="1" Visibility="Collapsed" />
                                 </StackPanel>
 
                                 <!-- Onglet Amis en commun -->
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="4"
+                                            Visibility="{x:Bind FullProfileUser.HasMutualFriends, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Button x:Name="ProfileMutualFriendsTabButton" Content="{x:Bind FullProfileUser.MutualFriendsTabTitle, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
                                             Tag="MutualFriends" Click="OnProfileTabClicked" />
@@ -3723,7 +3730,8 @@
                                 </StackPanel>
 
                                 <!-- Onglet Serveurs en commun -->
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="4"
+                                            Visibility="{x:Bind FullProfileUser.HasMutualGuilds, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <Button x:Name="ProfileMutualServersTabButton" Content="{x:Bind FullProfileUser.MutualServersTabTitle, Mode=OneWay}" Background="Transparent" BorderThickness="0" Padding="4,4"
                                             FontSize="14" FontWeight="SemiBold" Foreground="White" Opacity="0.75"
                                             Tag="MutualServers" Click="OnProfileTabClicked" />
@@ -3837,20 +3845,41 @@
                                                             <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
                                                                 <Border Width="40" Height="40" CornerRadius="20">
                                                                     <Border.Background>
-                                                                        <ImageBrush ImageSource="{x:Bind AvatarUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                        <ImageBrush ImageSource="{x:Bind AvatarUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
                                                                     </Border.Background>
                                                                 </Border>
                                                                 <Ellipse Width="12" Height="12"
                                                                          HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                                         Fill="{x:Bind StatusColor, Mode=OneTime}"
+                                                                         Fill="{x:Bind StatusColor, Mode=OneWay}"
                                                                          Stroke="#232428" StrokeThickness="2" />
                                                             </Grid>
 
-                                                            <!-- Pseudo et Activité -->
+                                                            <!-- Pseudo, Tag de clan, et Activité -->
                                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                                                <TextBlock Text="{x:Bind DisplayName, Mode=OneTime}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Text="{x:Bind ActivitySummaryText, Mode=OneTime}" FontSize="12" Foreground="#949BA4" TextTrimming="CharacterEllipsis"
-                                                                           Visibility="{x:Bind HasActivityOrCustomStatus, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{x:Bind DisplayName, Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
+
+                                                                    <!-- Badge de clan (façon Screenshots 1 et 2) -->
+                                                                    <Border Background="#2B2D31" CornerRadius="4" Padding="4,1" VerticalAlignment="Center"
+                                                                            Visibility="{x:Bind HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                                            <Image Width="10" Height="10" Source="{x:Bind ClanBadgeUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform"
+                                                                                   Visibility="{x:Bind HasClanBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                            <TextBlock Text="{x:Bind ClanTag, Mode=OneWay}" FontSize="10" FontWeight="Bold" Foreground="#DBDEE1" />
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </StackPanel>
+
+                                                                <!-- Sous-titre Jeu : Manette + Nom du jeu (façon Screenshot 1 Melo na melo) -->
+                                                                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
+                                                                            Visibility="{x:Bind HasGameActivity, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                    <FontIcon Glyph="&#xE7FC;" FontSize="11" Foreground="#949BA4" />
+                                                                    <TextBlock Text="{x:Bind CurrentGameName, Mode=OneWay}" FontSize="12" Foreground="#949BA4" TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+
+                                                                <!-- Autre activité / statut personnalisé si pas de jeu -->
+                                                                <TextBlock Text="{x:Bind ActivitySummaryText, Mode=OneWay}" FontSize="12" Foreground="#949BA4" TextTrimming="CharacterEllipsis"
+                                                                           Visibility="{x:Bind HasNonGameActivitySummary, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                             </StackPanel>
                                                         </Grid>
                                                     </Button>
@@ -3883,17 +3912,24 @@
                                                                 <ColumnDefinition Width="*" />
                                                             </Grid.ColumnDefinitions>
 
-                                                            <!-- Icône du serveur arrondi (squircle) -->
+                                                            <!-- Icône du serveur arrondi (squircle) avec fallback initiales -->
                                                             <Grid Grid.Column="0" Width="40" Height="40" Margin="0,0,12,0">
-                                                                <Border Width="40" Height="40" CornerRadius="12">
-                                                                    <Border.Background>
-                                                                        <ImageBrush ImageSource="{x:Bind IconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                                                    </Border.Background>
+                                                                <Border Width="40" Height="40" CornerRadius="12" Background="#2B2D31">
+                                                                    <Grid>
+                                                                        <Border CornerRadius="12" Visibility="{x:Bind HasIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                            <Border.Background>
+                                                                                <ImageBrush ImageSource="{x:Bind IconUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                            </Border.Background>
+                                                                        </Border>
+                                                                        <TextBlock Text="{x:Bind Initials, Mode=OneWay}" FontSize="13" FontWeight="Bold" Foreground="#DBDEE1"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                   Visibility="{x:Bind HasIcon, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                                                    </Grid>
                                                                 </Border>
                                                             </Grid>
 
                                                             <!-- Nom du serveur -->
-                                                            <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneTime}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5"
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="#F2F3F5"
                                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                         </Grid>
                                                     </Button>

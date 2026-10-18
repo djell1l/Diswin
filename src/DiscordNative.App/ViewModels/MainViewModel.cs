@@ -538,24 +538,13 @@ public sealed partial class MainViewModel : ObservableObject
         {
             await _client.Rest.EnrichUserProfileAsync(user);
 
-            // Re-fusionner avec widgets de jeux
-            if (user.GameWidgets != null && user.GameWidgets.Count > 0)
+            // Re-fusionner avec l'historique d'activités réelles
+            var updatedHist = _client.GetUserActivityHistory(user.Id);
+            foreach (var h in updatedHist)
             {
-                foreach (var gw in user.GameWidgets)
-                {
-                    if (acts.All(a => a.Name != gw.Name))
-                    {
-                        acts.Add(new DiscordActivity
-                        {
-                            Name = gw.Name,
-                            ApplicationId = gw.GameId,
-                            Details = gw.Comment,
-                            Type = 0
-                        });
-                    }
-                }
-                user.RecentActivities = acts;
+                if (acts.All(a => a.Name != h.Name)) acts.Add(h);
             }
+            user.RecentActivities = acts;
 
             // Résoudre les noms et icônes réels des serveurs en commun
             if (user.MutualGuilds != null && user.MutualGuilds.Count > 0)
@@ -578,8 +567,29 @@ public sealed partial class MainViewModel : ObservableObject
             if (user.MutualFriendsCount > 0 && user.MutualFriends.Count == 0)
             {
                 var mf = await _client.Rest.GetMutualFriendsAsync(user.Id);
-                if (mf.Count > 0) user.MutualFriends = mf;
+                if (mf.Count > 0)
+                {
+                    foreach (var friend in mf)
+                    {
+                        var existingFriend = _client.Friends.FirstOrDefault(f => f.User?.Id == friend.Id)?.User;
+                        if (existingFriend != null)
+                        {
+                            friend.Status = existingFriend.Status;
+                            friend.Activities = existingFriend.Activities;
+                            if (existingFriend.Clan != null && friend.Clan == null) friend.Clan = existingFriend.Clan;
+                            if (existingFriend.PrimaryGuild != null && friend.PrimaryGuild == null) friend.PrimaryGuild = existingFriend.PrimaryGuild;
+                        }
+                        else
+                        {
+                            _client.ApplyCachedPresenceToUser(friend);
+                        }
+                        friend.NotifyPresenceChanged();
+                    }
+                    user.MutualFriends = mf;
+                }
             }
+
+            user.NotifyProfileEnriched();
         }
     }
 

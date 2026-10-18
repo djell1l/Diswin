@@ -29,6 +29,9 @@ public sealed class DiscordUser : INotifyPropertyChanged
         OnPropertyChanged(nameof(CurrentGameIconUrl));
         OnPropertyChanged(nameof(HasCurrentGameIcon));
         OnPropertyChanged(nameof(GameTooltipText));
+        OnPropertyChanged(nameof(HasNonGameActivitySummary));
+        OnPropertyChanged(nameof(IsCurrentUser));
+        OnPropertyChanged(nameof(IsNotCurrentUser));
     }
 
     public void NotifyProfileEnriched()
@@ -66,6 +69,19 @@ public sealed class DiscordUser : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasGameWidgets));
         OnPropertyChanged(nameof(DisplayRoles));
         OnPropertyChanged(nameof(HasDisplayRoles));
+        OnPropertyChanged(nameof(HasMutualFriends));
+        OnPropertyChanged(nameof(MutualFriendsTabTitle));
+        OnPropertyChanged(nameof(HasMutualGuilds));
+        OnPropertyChanged(nameof(MutualServersTabTitle));
+        OnPropertyChanged(nameof(HasRecentActivities));
+        OnPropertyChanged(nameof(HasWishlist));
+        OnPropertyChanged(nameof(WishlistTabTitle));
+        OnPropertyChanged(nameof(IsFriend));
+        OnPropertyChanged(nameof(FriendActionText));
+        OnPropertyChanged(nameof(FriendActionGlyph));
+        OnPropertyChanged(nameof(FriendStatusTooltip));
+        OnPropertyChanged(nameof(IsCurrentUser));
+        OnPropertyChanged(nameof(IsNotCurrentUser));
     }
 
     public bool HasProfileEnriched { get; set; }
@@ -200,6 +216,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
                 OnPropertyChanged(nameof(HasMutualInfo));
                 OnPropertyChanged(nameof(MutualSummaryText));
                 OnPropertyChanged(nameof(MutualFriendsTabTitle));
+                OnPropertyChanged(nameof(HasMutualFriends));
             }
         }
     }
@@ -217,6 +234,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
                 OnPropertyChanged(nameof(HasMutualInfo));
                 OnPropertyChanged(nameof(MutualSummaryText));
                 OnPropertyChanged(nameof(MutualServersTabTitle));
+                OnPropertyChanged(nameof(HasMutualGuilds));
             }
         }
     }
@@ -245,13 +263,20 @@ public sealed class DiscordUser : INotifyPropertyChanged
             if (_mutualGuilds != value)
             {
                 _mutualGuilds = value;
+                if (_mutualGuilds.Count > 0 && _mutualGuildsCount == 0)
+                {
+                    _mutualGuildsCount = _mutualGuilds.Count;
+                    OnPropertyChanged(nameof(MutualGuildsCount));
+                }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasMutualGuilds));
                 OnPropertyChanged(nameof(MutualServersTabTitle));
+                OnPropertyChanged(nameof(HasMutualInfo));
+                OnPropertyChanged(nameof(MutualSummaryText));
             }
         }
     }
-    public bool HasMutualGuilds => MutualGuilds.Count > 0;
+    public bool HasMutualGuilds => MutualGuilds.Count > 0 || MutualGuildsCount > 0;
 
     private List<DiscordUser> _mutualFriends = new();
     public List<DiscordUser> MutualFriends
@@ -262,13 +287,20 @@ public sealed class DiscordUser : INotifyPropertyChanged
             if (_mutualFriends != value)
             {
                 _mutualFriends = value;
+                if (_mutualFriends.Count > 0 && _mutualFriendsCount == 0)
+                {
+                    _mutualFriendsCount = _mutualFriends.Count;
+                    OnPropertyChanged(nameof(MutualFriendsCount));
+                }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasMutualFriends));
                 OnPropertyChanged(nameof(MutualFriendsTabTitle));
+                OnPropertyChanged(nameof(HasMutualInfo));
+                OnPropertyChanged(nameof(MutualSummaryText));
             }
         }
     }
-    public bool HasMutualFriends => MutualFriends.Count > 0;
+    public bool HasMutualFriends => MutualFriends.Count > 0 || MutualFriendsCount > 0;
 
     private List<DiscordActivity> _recentActivities = new();
     public List<DiscordActivity> RecentActivities
@@ -285,6 +317,24 @@ public sealed class DiscordUser : INotifyPropertyChanged
         }
     }
     public bool HasRecentActivities => RecentActivities.Count > 0;
+
+    private int _wishlistCount;
+    public int WishlistCount
+    {
+        get => _wishlistCount;
+        set
+        {
+            if (_wishlistCount != value)
+            {
+                _wishlistCount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasWishlist));
+                OnPropertyChanged(nameof(WishlistTabTitle));
+            }
+        }
+    }
+    public bool HasWishlist => WishlistCount > 0;
+    public string WishlistTabTitle => WishlistCount > 0 ? $"{WishlistCount} Wishlist" : "Wishlist";
 
     private bool _isFriend;
     public bool IsFriend
@@ -305,7 +355,10 @@ public sealed class DiscordUser : INotifyPropertyChanged
 
     public string FriendActionText => IsFriend ? "Message" : "Demande d'ami";
     public string FriendActionGlyph => IsFriend ? "\uE8BD" : "\uE8FA";
-    public string FriendStatusTooltip => IsFriend ? "Ami (cliquez pour voir les options)" : "Ajouter en ami";
+    public string FriendStatusTooltip => IsFriend ? "Envoyer un message" : "Ajouter en ami";
+
+    public bool IsCurrentUser => !string.IsNullOrEmpty(Id) && Id == DiscordClient.CurrentLoggedInUserId;
+    public bool IsNotCurrentUser => !IsCurrentUser;
 
     private string? _friendsSinceText;
     public string? FriendsSinceText
@@ -360,9 +413,10 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public DiscordClan? PrimaryGuild { get; set; }
 
     public DiscordClan? ActiveClan => Clan ?? PrimaryGuild;
-    public bool HasClan => ActiveClan is { IdentityEnabled: true } && !string.IsNullOrWhiteSpace(ActiveClan.Tag);
+    public bool HasClan => ActiveClan != null && !string.IsNullOrWhiteSpace(ActiveClan.Tag) && (ActiveClan.IdentityEnabled || !string.IsNullOrWhiteSpace(ActiveClan.Badge));
     public string ClanTag => ActiveClan?.Tag ?? string.Empty;
     public string? ClanBadgeUrl => ActiveClan?.BadgeUrl;
+    public bool HasClanBadge => !string.IsNullOrEmpty(ClanBadgeUrl);
 
     public List<DiscordBadge> Badges { get; set; } = new();
     public bool HasBadges => Badges.Count > 0;
@@ -410,6 +464,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
     }
 
     public bool HasGameActivity => PrimaryActivity is not null && (PrimaryActivity.Type == 0 || PrimaryActivity.Type == 1);
+    public bool HasNonGameActivitySummary => !HasGameActivity && HasActivityOrCustomStatus;
     public string? CurrentGameName => PrimaryActivity?.Name;
     public string? CurrentGameIconUrl => PrimaryActivity?.SmallImageUrl ?? PrimaryActivity?.LargeImageUrl;
     public bool HasCurrentGameIcon => !string.IsNullOrEmpty(CurrentGameIconUrl);
@@ -916,6 +971,36 @@ public sealed class DiscordMutualGuild : INotifyPropertyChanged
     [JsonPropertyName("icon")]
     public string? Icon { get; set; }
 
-    public string Name { get; set; } = string.Empty;
-    public string? IconUrl { get; set; }
+    private string _name = string.Empty;
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (_name != value)
+            {
+                _name = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Initials));
+            }
+        }
+    }
+
+    private string? _iconUrl;
+    public string? IconUrl
+    {
+        get => _iconUrl;
+        set
+        {
+            if (_iconUrl != value)
+            {
+                _iconUrl = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasIcon));
+            }
+        }
+    }
+
+    public bool HasIcon => !string.IsNullOrEmpty(IconUrl);
+    public string Initials => string.IsNullOrWhiteSpace(Name) ? "?" : string.Concat(Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(w => w[0]));
 }
