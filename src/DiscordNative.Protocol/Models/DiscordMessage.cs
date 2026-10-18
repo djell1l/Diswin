@@ -36,11 +36,37 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     [JsonPropertyName("pinned")]
     public bool Pinned { get; set; }
 
+    private List<DiscordAttachment> _attachments = new();
     [JsonPropertyName("attachments")]
-    public List<DiscordAttachment> Attachments { get; set; } = new();
+    public List<DiscordAttachment> Attachments
+    {
+        get
+        {
+            foreach (var a in _attachments) a.ParentMessage = this;
+            return _attachments;
+        }
+        set
+        {
+            _attachments = value ?? new();
+            foreach (var a in _attachments) a.ParentMessage = this;
+        }
+    }
 
+    private List<DiscordEmbed> _embeds = new();
     [JsonPropertyName("embeds")]
-    public List<DiscordEmbed> Embeds { get; set; } = new();
+    public List<DiscordEmbed> Embeds
+    {
+        get
+        {
+            foreach (var e in _embeds) e.ParentMessage = this;
+            return _embeds;
+        }
+        set
+        {
+            _embeds = value ?? new();
+            foreach (var e in _embeds) e.ParentMessage = this;
+        }
+    }
 
     [JsonPropertyName("sticker_items")]
     public List<DiscordStickerItem> StickerItems { get; set; } = new();
@@ -222,6 +248,9 @@ public sealed class DiscordMessage : INotifyPropertyChanged
 
 public sealed class DiscordAttachment
 {
+    [JsonIgnore]
+    public DiscordMessage? ParentMessage { get; set; }
+
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -274,6 +303,9 @@ public sealed class DiscordAttachment
 
 public sealed class DiscordEmbed
 {
+    [JsonIgnore]
+    public DiscordMessage? ParentMessage { get; set; }
+
     [JsonPropertyName("type")]
     public string? Type { get; set; }
 

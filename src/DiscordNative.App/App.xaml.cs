@@ -58,7 +58,7 @@ public partial class App : Application
         LogCrash("UnhandledException (AppDomain)", e.ExceptionObject as Exception);
     }
 
-    private void OnUnobservedTaskException(object sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
+    private void OnUnobservedTaskException(object? sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
     {
         LogCrash("UnobservedTaskException", e.Exception);
         e.SetObserved();

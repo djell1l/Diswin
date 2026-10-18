@@ -7,12 +7,23 @@ public sealed class StringToImageSourceConverter : IValueConverter
 {
     public object? Convert(object value, Type targetType, object parameter, string language)
     {
-        if (value is string url && !string.IsNullOrEmpty(url))
+        if (value is string url && !string.IsNullOrWhiteSpace(url))
         {
-            var bitmap = new BitmapImage(new Uri(url));
-            // Disable automatic GIF animation playback by default so avatars/guild icons don't play constantly
-            bitmap.AutoPlay = false;
-            return bitmap;
+            try
+            {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    return new BitmapImage(uri) { AutoPlay = false };
+                }
+                else if (Uri.TryCreate($"ms-appx:///{url.TrimStart('/', '\\')}", UriKind.Absolute, out var localUri))
+                {
+                    return new BitmapImage(localUri) { AutoPlay = false };
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
         return null;
     }

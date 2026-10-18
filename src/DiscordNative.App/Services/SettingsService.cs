@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DiscordNative.Protocol.Models;
 using Windows.Security.Credentials;
 using Windows.Storage;
 
@@ -27,6 +28,7 @@ public sealed class AppSettings
     public bool EnableKrispNoiseSuppression { get; set; } = true;
     public bool ShowHiddenChannels { get; set; } = false;
     public Dictionary<string, string> UserNotes { get; set; } = new();
+    public List<DiscordWidgetGame> CustomGameWidgets { get; set; } = new();
 }
 
 /// <summary>
@@ -139,7 +141,7 @@ public sealed class SettingsService
         }
     }
 
-    public async Task<string> ImportBackgroundImageAsync(StorageFile sourceFile)
+    public Task<string> ImportBackgroundImageAsync(StorageFile sourceFile)
     {
         var destFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiscordNative", "Backgrounds");
         System.IO.Directory.CreateDirectory(destFolder);
@@ -147,7 +149,7 @@ public sealed class SettingsService
         System.IO.File.Copy(sourceFile.Path, destPath, true);
         Current.BackgroundImagePath = destPath;
         Save();
-        return destPath;
+        return Task.FromResult(destPath);
     }
 
     public void ClearBackgroundImage()

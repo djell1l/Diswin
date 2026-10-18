@@ -131,11 +131,23 @@ public sealed class DiscordRestClient : IDisposable
                 }
             }
 
+            if (root.TryGetProperty("premium_since", out var psEl) && psEl.ValueKind == JsonValueKind.String)
+            {
+                user.PremiumSince = psEl.GetString();
+            }
+
+            if (root.TryGetProperty("premium_guild_since", out var pgsEl) && pgsEl.ValueKind == JsonValueKind.String)
+            {
+                user.PremiumGuildSince = pgsEl.GetString();
+            }
+
             if (root.TryGetProperty("badges", out var badgesEl) && badgesEl.ValueKind == JsonValueKind.Array)
             {
                 var badges = JsonSerializer.Deserialize<List<DiscordBadge>>(badgesEl.GetRawText());
                 if (badges is not null) user.Badges = badges;
             }
+
+            EnrichBadges(user, root);
 
             if (root.TryGetProperty("connected_accounts", out var connEl) && connEl.ValueKind == JsonValueKind.Array)
             {
@@ -864,11 +876,127 @@ public sealed class DiscordRestClient : IDisposable
         public MessageReferencePayload? MessageReference { get; set; }
     }
 
+    private static void EnrichBadges(DiscordUser user, JsonElement root)
+    {
+        user.Badges ??= new List<DiscordBadge>();
+
+        // Ensure each badge has a valid tooltip description
+        foreach (var b in user.Badges)
+        {
+            if (string.IsNullOrWhiteSpace(b.Description))
+            {
+                b.Description = b.Id.ToLowerInvariant() switch
+                {
+                    "staff" => "Employé Discord",
+                    "partner" => "Propriétaire d'un serveur partenaire",
+                    "hypesquad" => "Événements HypeSquad",
+                    "bug_hunter_level_1" => "Chasseur de bugs Discord",
+                    "bug_hunter_level_2" => "Chasseur de bugs certifié Discord",
+                    "hypesquad_house_1" => "HypeSquad Bravery",
+                    "hypesquad_house_2" => "HypeSquad Brilliance",
+                    "hypesquad_house_3" => "HypeSquad Balance",
+                    "early_supporter" => "Soutien de la première heure",
+                    "active_developer" => "Développeur actif",
+                    "verified_developer" or "early_verified_bot_developer" => "Développeur de bots vérifié de la première heure",
+                    "certified_moderator" => "Modérateur certifié Discord",
+                    var s when s.StartsWith("guild_booster") => "Booster de serveur",
+                    var s when s.StartsWith("premium") => "Abonné Discord Nitro",
+                    var s when s.Contains("gift") || s.Contains("gild") => "Gifting Icon",
+                    _ => "Badge Discord"
+                };
+            }
+            else if (b.Id.Contains("gift", StringComparison.OrdinalIgnoreCase) || b.Id.Contains("gild", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(b.Description)) b.Description = "Gifting Icon";
+            }
+        }
+
+        // Evolutive Nitro Badge
+        if (user.HasFullNitro || !string.IsNullOrWhiteSpace(user.PremiumSince))
+        {
+            if (user.Badges.All(b => !b.Id.StartsWith("premium", StringComparison.OrdinalIgnoreCase)))
+            {
+                string desc = "Abonné Discord Nitro";
+                string iconHash = "2ba85e8026a8614b640c2837bcd2177e"; // Tier 1 par défaut
+                if (!string.IsNullOrWhiteSpace(user.PremiumSince) && DateTimeOffset.TryParse(user.PremiumSince, out var pDate))
+                {
+                    int totalMonths = Math.Max(1, (DateTime.UtcNow.Year - pDate.Year) * 12 + DateTime.UtcNow.Month - pDate.Month);
+                    desc = $"Abonné depuis le {pDate.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))}";
+                    iconHash = totalMonths switch
+                    {
+                        >= 24 => "a2862d66ffab578a169b600f7236d396", // 24+ mois
+                        >= 18 => "32a1e1e913a45c3639433db9b7aa4bc3", // 18 mois
+                        >= 15 => "c57176a9a08e9a6cf71ee1b31ebef1b4", // 15 mois
+                        >= 12 => "0f90e54457e5e791e84a2731174cc73f", // 1 an
+                        >= 9 => "8667a421443217469a71be76007b7194",  // 9 mois
+                        >= 6 => "914fd8d810ff424b5952f481c03da6b3",  // 6 mois
+                        >= 3 => "3aa41de486fa12454c3761e8e223442e",  // 3 mois
+                        >= 2 => "011940fd013da3f7fb926e4a1cd2e618",  // 2 mois
+                        _ => "2ba85e8026a8614b640c2837bcd2177e"     // 1 mois
+                    };
+                }
+                user.Badges.Add(new DiscordBadge
+                {
+                    Id = "premium",
+                    Description = desc,
+                    Icon = iconHash,
+                    Link = "https://discord.com/settings/premium"
+                });
+            }
+        }
+
+        // Evolutive Server Booster Badge
+        if (!string.IsNullOrWhiteSpace(user.PremiumGuildSince))
+        {
+            if (user.Badges.All(b => !b.Id.StartsWith("guild_booster", StringComparison.OrdinalIgnoreCase)))
+            {
+                string desc = "Booste un serveur Discord";
+                string iconHash = "51241296b0b40d403c99b837b471482e";
+                if (DateTimeOffset.TryParse(user.PremiumGuildSince, out var bDate))
+                {
+                    int totalMonths = Math.Max(1, (DateTime.UtcNow.Year - bDate.Year) * 12 + DateTime.UtcNow.Month - bDate.Month);
+                    desc = $"Booste un serveur depuis le {bDate.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))}";
+                    iconHash = totalMonths switch
+                    {
+                        >= 24 => "a2862d66ffab578a169b600f7236d396",
+                        >= 18 => "c57176a9a08e9a6cf71ee1b31ebef1b4",
+                        >= 15 => "0f90e54457e5e791e84a2731174cc73f",
+                        >= 12 => "8667a421443217469a71be76007b7194",
+                        >= 9 => "914fd8d810ff424b5952f481c03da6b3",
+                        >= 6 => "3aa41de486fa12454c3761e8e223442e",
+                        >= 3 => "2ba85e8026a8614b640c2837bcd2177e",
+                        >= 2 => "404c0ea238ca790a3598d6c70126a117",
+                        _ => "51241296b0b40d403c99b837b471482e"
+                    };
+                }
+                user.Badges.Add(new DiscordBadge
+                {
+                    Id = "guild_booster",
+                    Description = desc,
+                    Icon = iconHash
+                });
+            }
+        }
+
+        // Diswin User Badge
+        if (user.IsCurrentUser && user.Badges.All(b => b.Id != "diswin_user"))
+        {
+            user.Badges.Insert(0, new DiscordBadge
+            {
+                Id = "diswin_user",
+                Description = "Diswin User",
+                Icon = "ms-appx:///Assets/Badges/diswin_user.png",
+                Link = "https://github.com/djellil/diswin"
+            });
+        }
+    }
+
     private sealed class MessageReferencePayload
     {
         [JsonPropertyName("channel_id")] public string ChannelId { get; set; } = string.Empty;
         [JsonPropertyName("message_id")] public string MessageId { get; set; } = string.Empty;
     }
 }
+
 
 

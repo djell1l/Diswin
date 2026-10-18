@@ -19,4 +19,15 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
+    <!-- ToolTip style Discord authentique (fond sombre #111214, texte blanc, coins arrondis, bordure discrète) -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="#111214" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="BorderBrush" Value="#2B2D31" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
 </ResourceDictionary>

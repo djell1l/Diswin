@@ -1,9 +1,13 @@
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
 using DiscordNative.App.Services;
 using DiscordNative.App.ViewModels;
 using DiscordNative.Protocol.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -11,8 +15,8 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Media.SpeechSynthesis;
+using Windows.Storage.Streams;
 using Windows.System;
-using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace DiscordNative.App.Views;
 
@@ -1110,6 +1114,11 @@ public sealed partial class MainWindowContent : UserControl
         {
             if (fe.DataContext is DiscordMessage msg) return msg;
             if (fe.Tag is DiscordMessage tagMsg) return tagMsg;
+            if (fe.DataContext is DiscordAttachment att && att.ParentMessage != null) return att.ParentMessage;
+            if (fe.Tag is DiscordAttachment tagAtt && tagAtt.ParentMessage != null) return tagAtt.ParentMessage;
+            if (fe.DataContext is DiscordEmbed emb && emb.ParentMessage != null) return emb.ParentMessage;
+            if (fe.Tag is DiscordEmbed tagEmb && tagEmb.ParentMessage != null) return tagEmb.ParentMessage;
+
             DependencyObject? curr = fe;
             while (curr != null)
             {
@@ -1117,11 +1126,383 @@ public sealed partial class MainWindowContent : UserControl
                 {
                     if (parentFe.DataContext is DiscordMessage parentMsg) return parentMsg;
                     if (parentFe.Tag is DiscordMessage parentTagMsg) return parentTagMsg;
+                    if (parentFe.DataContext is DiscordAttachment pAtt && pAtt.ParentMessage != null) return pAtt.ParentMessage;
+                    if (parentFe.Tag is DiscordAttachment pTagAtt && pTagAtt.ParentMessage != null) return pTagAtt.ParentMessage;
+                    if (parentFe.DataContext is DiscordEmbed pEmb && pEmb.ParentMessage != null) return pEmb.ParentMessage;
+                    if (parentFe.Tag is DiscordEmbed pTagEmb && pTagEmb.ParentMessage != null) return pTagEmb.ParentMessage;
                 }
                 curr = VisualTreeHelper.GetParent(curr);
             }
         }
         return null;
+    }
+
+    private static (string? Url, string? Filename, DiscordMessage? Message) ResolveMediaInfo(object sender)
+    {
+        string? url = null;
+        string? filename = null;
+        DiscordMessage? msg = null;
+
+        if (sender is FrameworkElement fe)
+        {
+            object? target = fe.Tag ?? fe.DataContext;
+            if (target is DiscordAttachment att)
+            {
+                url = att.Url;
+                filename = att.Filename;
+                msg = att.ParentMessage;
+            }
+            else if (target is DiscordEmbed emb)
+            {
+                url = emb.MainImageUrl;
+                filename = "embed_image.png";
+                msg = emb.ParentMessage;
+            }
+
+            msg ??= GetMessageFromSender(fe);
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                DependencyObject? curr = fe;
+                while (curr != null)
+                {
+                    if (curr is FrameworkElement pfe)
+                    {
+                        if (pfe.Tag is DiscordAttachment pAtt)
+                        {
+                            url = pAtt.Url;
+                            filename = pAtt.Filename;
+                            msg ??= pAtt.ParentMessage;
+                            break;
+                        }
+                        if (pfe.Tag is DiscordEmbed pEmb)
+                        {
+                            url = pEmb.MainImageUrl;
+                            filename = "embed_image.png";
+                            msg ??= pEmb.ParentMessage;
+                            break;
+                        }
+                    }
+                    curr = VisualTreeHelper.GetParent(curr);
+                }
+            }
+        }
+
+        return (url, filename, msg);
+    }
+
+    private static async Task CopyImageToClipboardAsync(string url)
+    {
+        try
+        {
+            using var http = new HttpClient();
+            var bytes = await http.GetByteArrayAsync(url);
+            var stream = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(stream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(bytes);
+                await writer.StoreAsync();
+            }
+            var dp = new DataPackage();
+            dp.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
+            Clipboard.SetContent(dp);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Clipboard] CopyImage error: {ex.Message}");
+        }
+    }
+
+    private static async Task SaveImageToDownloadsAsync(string url, string defaultFilename)
+    {
+        try
+        {
+            using var http = new HttpClient();
+            var bytes = await http.GetByteArrayAsync(url);
+            var downloadsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            if (!Directory.Exists(downloadsFolder))
+            {
+                downloadsFolder = Path.GetTempPath();
+            }
+
+            var safeName = string.IsNullOrWhiteSpace(defaultFilename) ? "image.png" : defaultFilename;
+            foreach (var invalid in Path.GetInvalidFileNameChars())
+            {
+                safeName = safeName.Replace(invalid, '_');
+            }
+
+            var targetPath = Path.Combine(downloadsFolder, safeName);
+            int counter = 1;
+            var ext = Path.GetExtension(safeName);
+            var baseName = Path.GetFileNameWithoutExtension(safeName);
+            while (File.Exists(targetPath))
+            {
+                targetPath = Path.Combine(downloadsFolder, $"{baseName}_{counter}{ext}");
+                counter++;
+            }
+
+            await File.WriteAllBytesAsync(targetPath, bytes);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SaveImage] error: {ex.Message}");
+        }
+    }
+
+    private static void OpenInBrowser(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    private void OnImageAttachmentTapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.Tag is DiscordAttachment att && !string.IsNullOrWhiteSpace(att.Url))
+            {
+                ShowAvatarZoom(att.Url);
+            }
+            else if (fe.DataContext is DiscordAttachment dcAtt && !string.IsNullOrWhiteSpace(dcAtt.Url))
+            {
+                ShowAvatarZoom(dcAtt.Url);
+            }
+        }
+    }
+
+    private void OnImageEmbedTapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.Tag is DiscordEmbed emb && !string.IsNullOrWhiteSpace(emb.MainImageUrl))
+            {
+                ShowAvatarZoom(emb.MainImageUrl);
+            }
+            else if (fe.DataContext is DiscordEmbed dcEmb && !string.IsNullOrWhiteSpace(dcEmb.MainImageUrl))
+            {
+                ShowAvatarZoom(dcEmb.MainImageUrl);
+            }
+        }
+    }
+
+    private void OnImageAttachmentContextRequested(UIElement sender, ContextRequestedEventArgs args)
+    {
+        args.Handled = true;
+        if (sender is FrameworkElement fe)
+        {
+            ShowMediaContextMenu(fe, fe.Tag ?? fe.DataContext, args);
+        }
+    }
+
+    private void OnImageEmbedContextRequested(UIElement sender, ContextRequestedEventArgs args)
+    {
+        args.Handled = true;
+        if (sender is FrameworkElement fe)
+        {
+            ShowMediaContextMenu(fe, fe.Tag ?? fe.DataContext, args);
+        }
+    }
+
+    private void ShowMediaContextMenu(FrameworkElement target, object? dataContext, ContextRequestedEventArgs args)
+    {
+        var flyout = new Flyout
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.RightEdgeAlignedTop
+        };
+
+        var presenterStyle = new Style(typeof(FlyoutPresenter));
+        presenterStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(6)));
+        presenterStyle.Setters.Add(new Setter(Control.CornerRadiusProperty, new CornerRadius(8)));
+        presenterStyle.Setters.Add(new Setter(Control.BackgroundProperty, new SolidColorBrush(Windows.UI.Color.FromArgb(255, 17, 18, 20))));
+        presenterStyle.Setters.Add(new Setter(Control.BorderBrushProperty, new SolidColorBrush(Windows.UI.Color.FromArgb(255, 43, 45, 49))));
+        presenterStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+        presenterStyle.Setters.Add(new Setter(FrameworkElement.MinWidthProperty, 230.0));
+        presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, 260.0));
+        flyout.FlyoutPresenterStyle = presenterStyle;
+
+        var sp = new StackPanel { Spacing = 2, Tag = dataContext };
+
+        var reactionBorder = new Border
+        {
+            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 31, 34)),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(4, 2, 4, 2),
+            Margin = new Thickness(2, 2, 2, 4)
+        };
+        var rGrid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
+        rGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        Button CreateReactionBtn(string emoji, RoutedEventHandler clickHandler)
+        {
+            var b = new Button
+            {
+                Content = emoji,
+                FontSize = 16,
+                Height = 32,
+                Width = 46,
+                Padding = new Thickness(0),
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(6),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Tag = dataContext
+            };
+            b.Click += (s, e) => { flyout.Hide(); clickHandler(s, e); };
+            return b;
+        }
+
+        var bClap = CreateReactionBtn("👏", OnQuickReactClapClicked);
+        Grid.SetColumn(bClap, 0); rGrid.Children.Add(bClap);
+
+        var bThumb = CreateReactionBtn("👍", OnQuickReactThumbsUpClicked);
+        Grid.SetColumn(bThumb, 1); rGrid.Children.Add(bThumb);
+
+        var bJoy = CreateReactionBtn("😂", OnQuickReactJoyClicked);
+        Grid.SetColumn(bJoy, 2); rGrid.Children.Add(bJoy);
+
+        var bHeart = CreateReactionBtn("❤️", OnQuickReactHeartClicked);
+        Grid.SetColumn(bHeart, 3); rGrid.Children.Add(bHeart);
+
+        reactionBorder.Child = rGrid;
+        sp.Children.Add(reactionBorder);
+
+        Button CreateMenuBtn(string text, string glyph, RoutedEventHandler handler, bool external = false)
+        {
+            var btn = new Button
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8, 6, 8, 6),
+                CornerRadius = new CornerRadius(4),
+                Height = 34,
+                Margin = new Thickness(2, 0, 2, 0),
+                Tag = dataContext
+            };
+            var g = new Grid();
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            if (external) g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var icon = new FontIcon { Glyph = glyph, FontSize = 14, Opacity = 0.85, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(icon, 0); g.Children.Add(icon);
+
+            var tb = new TextBlock { Text = text, FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(tb, 1); g.Children.Add(tb);
+
+            if (external)
+            {
+                var extIcon = new FontIcon { Glyph = "\uE8A7", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetColumn(extIcon, 2); g.Children.Add(extIcon);
+            }
+
+            btn.Content = g;
+            btn.Click += (s, e) => { flyout.Hide(); handler(s, e); };
+            return btn;
+        }
+
+        Border CreateSep() => new Border { Height = 1, Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 43, 45, 49)), Margin = new Thickness(4, 3, 4, 3) };
+
+        sp.Children.Add(CreateMenuBtn("Reply", "\uE97A", OnReplyFromMediaClicked));
+        sp.Children.Add(CreateMenuBtn("Copy Message Link", "\uE71B", OnCopyMessageLinkFromMediaClicked));
+        sp.Children.Add(CreateSep());
+        sp.Children.Add(CreateMenuBtn("Copy Image", "\uEB9F", OnCopyImageFromAttachmentClicked));
+        sp.Children.Add(CreateMenuBtn("Save Image", "\uE74E", OnSaveImageFromAttachmentClicked));
+        sp.Children.Add(CreateSep());
+        sp.Children.Add(CreateMenuBtn("Copy Image Link", "\uE71B", OnCopyImageLinkFromAttachmentClicked));
+        sp.Children.Add(CreateMenuBtn("Open Image Link", "\uE774", OnOpenImageLinkFromAttachmentClicked, external: true));
+        sp.Children.Add(CreateSep());
+        sp.Children.Add(CreateMenuBtn("Copy Message ID", "\uE943", OnCopyMessageIdFromMediaClicked));
+
+        flyout.Content = sp;
+        if (args.TryGetPosition(target, out var pt))
+        {
+            flyout.ShowAt(target, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions { Position = pt });
+        }
+        else
+        {
+            flyout.ShowAt(target);
+        }
+    }
+
+    private async void OnCopyImageFromAttachmentClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (url, _, _) = ResolveMediaInfo(sender);
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            await CopyImageToClipboardAsync(url);
+        }
+    }
+
+    private async void OnSaveImageFromAttachmentClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (url, filename, _) = ResolveMediaInfo(sender);
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            await SaveImageToDownloadsAsync(url, filename ?? "image.png");
+        }
+    }
+
+    private void OnCopyImageLinkFromAttachmentClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (url, _, _) = ResolveMediaInfo(sender);
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            CopyToClipboard(url);
+        }
+    }
+
+    private void OnOpenImageLinkFromAttachmentClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (url, _, _) = ResolveMediaInfo(sender);
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            OpenInBrowser(url);
+        }
+    }
+
+    private void OnReplyFromMediaClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (_, _, msg) = ResolveMediaInfo(sender);
+        if (msg != null)
+        {
+            ViewModel.ReplyingToMessage = msg;
+            MessageInput.Focus(FocusState.Programmatic);
+        }
+    }
+
+    private void OnCopyMessageLinkFromMediaClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (_, _, msg) = ResolveMediaInfo(sender);
+        if (msg != null)
+        {
+            var guildPart = string.IsNullOrWhiteSpace(msg.GuildId) ? "@me" : msg.GuildId;
+            var link = $"https://discord.com/channels/{guildPart}/{msg.ChannelId}/{msg.Id}";
+            CopyToClipboard(link);
+        }
+    }
+
+    private void OnCopyMessageIdFromMediaClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var (_, _, msg) = ResolveMediaInfo(sender);
+        if (msg != null)
+        {
+            CopyToClipboard(msg.Id);
+        }
     }
 
     private void OnReplyMessageClicked(object sender, RoutedEventArgs e)
@@ -1386,11 +1767,14 @@ public sealed partial class MainWindowContent : UserControl
     private void OnFullUserProfileBackdropPointerPressed(object sender, PointerRoutedEventArgs e) => HideFullUserProfileModal();
     private void OnFullUserProfileModalContainerPointerPressed(object sender, PointerRoutedEventArgs e) => e.Handled = true;
 
+    private string? _currentZoomMediaUrl;
+
     public void ShowAvatarZoom(string? avatarUrl)
     {
         if (string.IsNullOrWhiteSpace(avatarUrl)) return;
         try
         {
+            _currentZoomMediaUrl = avatarUrl;
             AvatarZoomImage.Source = new BitmapImage(new Uri(avatarUrl));
             AvatarZoomOverlay.Visibility = Visibility.Visible;
         }
@@ -1401,6 +1785,15 @@ public sealed partial class MainWindowContent : UserControl
     {
         AvatarZoomOverlay.Visibility = Visibility.Collapsed;
         AvatarZoomImage.Source = null;
+        _currentZoomMediaUrl = null;
+    }
+
+    private void OnMediaZoomOpenOriginalClicked(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(_currentZoomMediaUrl))
+        {
+            OpenInBrowser(_currentZoomMediaUrl);
+        }
     }
 
     private void OnZoomAvatarClicked(object sender, RoutedEventArgs e)
@@ -1705,6 +2098,162 @@ public sealed partial class MainWindowContent : UserControl
         ShowDiscordFullProfileEditor();
     }
 
+    private async Task ShowAddWidgetGameDialogAsync(DiscordWidgetGame? existingGame = null, Action? onUpdated = null)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = existingGame is null ? "Ajouter un jeu au profil" : "Modifier le jeu du profil",
+            PrimaryButtonText = existingGame is null ? "Ajouter" : "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (existingGame is not null)
+        {
+            dialog.SecondaryButtonText = "Supprimer";
+        }
+
+        var stack = new StackPanel { Spacing = 14, Width = 400 };
+
+        var presets = new (string Name, string CoverUrl)[]
+        {
+            ("Need for Speed™ Heat", "https://cdn2.steamgriddb.com/grid/9bca6a1fe3b1daea118c8198f1262d22.png"),
+            ("Need for Speed™ Unbound", "https://cdn2.steamgriddb.com/grid/67aa887c2688f19da525f00e95c1a84f.png"),
+            ("Naruto to Boruto: Shinobi Striker", "https://cdn2.steamgriddb.com/grid/0ca53bebc2961d368e7d800fc773d12f.png"),
+            ("Apex Legends", "https://cdn2.steamgriddb.com/grid/2e40049dfb37c0500e28e4e94b293671.png"),
+            ("VALORANT", "https://cdn2.steamgriddb.com/grid/61fdf9fa76a26df0f8daea8d609139fc.png"),
+            ("Grand Theft Auto V", "https://cdn2.steamgriddb.com/grid/0b1b1102ebc0082ea0884d5db4bb4739.png"),
+            ("Cyberpunk 2077", "https://cdn2.steamgriddb.com/grid/fecb160d268571fa0179a6136fa5e6b7.png"),
+            ("Roblox", "https://cdn2.steamgriddb.com/grid/644fb91d295f54315ec20bbdaae17e84.png"),
+            ("Counter-Strike 2", "https://cdn2.steamgriddb.com/grid/c0a6bfe611fffc647038e8ec4344598a.png"),
+            ("Minecraft", "https://cdn2.steamgriddb.com/grid/b0e5da48d672801e09520a2327cefd47.png"),
+            ("League of Legends", "https://cdn2.steamgriddb.com/grid/7ea2687130eb5a73eef46c2ce8019b1b.png")
+        };
+
+        var comboPreset = new ComboBox
+        {
+            Header = "Jeux populaires",
+            PlaceholderText = "Sélectionner un jeu ou personnaliser...",
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        foreach (var p in presets) comboPreset.Items.Add(p.Name);
+        comboPreset.Items.Add("Autre jeu personnalisé...");
+
+        var nameBox = new TextBox
+        {
+            Header = "Nom du jeu",
+            PlaceholderText = "Ex: Need for Speed™ Heat",
+            Text = existingGame?.Name ?? ""
+        };
+
+        var coverBox = new TextBox
+        {
+            Header = "URL de l'image de jaquette",
+            PlaceholderText = "https://...",
+            Text = existingGame?.IconUrl ?? ""
+        };
+
+        var commentBox = new TextBox
+        {
+            Header = "Votre avis / commentaire personnel",
+            PlaceholderText = "Ex: Mon jeu de course arcade préféré",
+            Text = existingGame?.Comment ?? ""
+        };
+
+        var favCheck = new CheckBox
+        {
+            Content = "Définir comme jeu favori à la une (Favorite Game)",
+            IsChecked = existingGame?.IsFavorite ?? (ViewModel.CurrentUserFavoriteGame is null)
+        };
+
+        comboPreset.SelectionChanged += (_, _) =>
+        {
+            int idx = comboPreset.SelectedIndex;
+            if (idx >= 0 && idx < presets.Length)
+            {
+                nameBox.Text = presets[idx].Name;
+                coverBox.Text = presets[idx].CoverUrl;
+            }
+        };
+
+        stack.Children.Add(comboPreset);
+        stack.Children.Add(nameBox);
+        stack.Children.Add(coverBox);
+        stack.Children.Add(commentBox);
+        stack.Children.Add(favCheck);
+        dialog.Content = stack;
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            var gName = nameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(gName)) return;
+
+            var gUrl = string.IsNullOrWhiteSpace(coverBox.Text.Trim())
+                ? "https://cdn2.steamgriddb.com/grid/9bca6a1fe3b1daea118c8198f1262d22.png"
+                : coverBox.Text.Trim();
+            var isFav = favCheck.IsChecked == true;
+
+            var list = App.Settings.Current.CustomGameWidgets;
+            if (existingGame is not null)
+            {
+                var target = list.FirstOrDefault(g => g.GameId == existingGame.GameId || g.Name == existingGame.Name);
+                if (target is not null)
+                {
+                    target.Name = gName;
+                    target.IconUrl = gUrl;
+                    target.Comment = commentBox.Text.Trim();
+                    if (isFav)
+                    {
+                        foreach (var g in list) g.IsFavorite = false;
+                        target.IsFavorite = true;
+                    }
+                    else
+                    {
+                        target.IsFavorite = false;
+                    }
+                }
+            }
+            else
+            {
+                if (isFav)
+                {
+                    foreach (var g in list) g.IsFavorite = false;
+                }
+                var newGame = new DiscordWidgetGame
+                {
+                    GameId = Guid.NewGuid().ToString("N")[..8],
+                    Name = gName,
+                    IconUrl = gUrl,
+                    Comment = commentBox.Text.Trim(),
+                    IsFavorite = isFav
+                };
+                list.Add(newGame);
+            }
+
+            App.Settings.Save();
+
+            ViewModel.CurrentUserGameWidgets.Clear();
+            foreach (var gw in list) ViewModel.CurrentUserGameWidgets.Add(gw);
+            ViewModel.RefreshCurrentUserGameWidgets();
+
+            onUpdated?.Invoke();
+        }
+        else if (result == ContentDialogResult.Secondary && existingGame is not null)
+        {
+            var list = App.Settings.Current.CustomGameWidgets;
+            list.RemoveAll(g => g.GameId == existingGame.GameId || g.Name == existingGame.Name);
+            App.Settings.Save();
+
+            ViewModel.CurrentUserGameWidgets.Clear();
+            foreach (var gw in list) ViewModel.CurrentUserGameWidgets.Add(gw);
+            ViewModel.RefreshCurrentUserGameWidgets();
+
+            onUpdated?.Invoke();
+        }
+    }
+
     private void ShowDiscordFullProfileEditor()
     {
         if (ProfileEditorOverlay is null) return;
@@ -1828,79 +2377,11 @@ public sealed partial class MainWindowContent : UserControl
         }
 
         // 2. Section Nameplate (Nitro)
-        var nameplateSection = new StackPanel { Spacing = 8 };
-        var nameplateHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        nameplateHeader.Children.Add(new TextBlock { Text = "Nameplate", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
-        if (!hasNitro)
-        {
-            nameplateHeader.Children.Add(new FontIcon { Glyph = "\uE72E", FontSize = 11, Opacity = 0.65 });
-        }
-        nameplateSection.Children.Add(nameplateHeader);
-
-        var nameplateBox = new Border
-        {
-            Height = 46,
-            CornerRadius = new CornerRadius(10),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
-            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x38, 0x3A, 0x40)),
-            BorderThickness = new Thickness(1),
-            Padding = new Thickness(10, 0, 10, 0)
-        };
-        var nameplateGrid = new Grid();
-        nameplateGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        nameplateGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        nameplateGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var npAvatar = new Microsoft.UI.Xaml.Shapes.Ellipse
-        {
-            Width = 26,
-            Height = 26,
-            Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x58, 0x65, 0xF2)),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        var npBar = new Border
-        {
-            Height = 10,
-            CornerRadius = new CornerRadius(5),
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x4E, 0x50, 0x58)),
-            Margin = new Thickness(10, 0, 12, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        var npPlus = new Border
-        {
-            Width = 22,
-            Height = 22,
-            CornerRadius = new CornerRadius(11),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.White),
-            VerticalAlignment = VerticalAlignment.Center,
-            Child = new FontIcon
-            {
-                Glyph = "\uE710",
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x1E, 0x1F, 0x22)),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
-        };
-        Grid.SetColumn(npAvatar, 0);
-        Grid.SetColumn(npBar, 1);
-        Grid.SetColumn(npPlus, 2);
-        nameplateGrid.Children.Add(npAvatar);
-        nameplateGrid.Children.Add(npBar);
-        nameplateGrid.Children.Add(npPlus);
-        nameplateBox.Child = nameplateGrid;
-        nameplateSection.Children.Add(WrapNitroCosmetic(nameplateBox, "Nameplate (Disponible avec Nitro)"));
-        leftStack.Children.Add(nameplateSection);
-
-        // 3. Section Avatar & Decoration
+        // 2. Section Avatar
         var avatarDecoSection = new StackPanel { Spacing = 8 };
-        avatarDecoSection.Children.Add(new TextBlock { Text = "Avatar & Decoration", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
+        avatarDecoSection.Children.Add(new TextBlock { Text = "Avatar", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
 
-        var avatarDecoGrid = new Grid { ColumnSpacing = 10 };
-        avatarDecoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        avatarDecoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        // Tuile gauche : Avatar cliquable (ouvre le sélecteur + recadrage)
+        // Tuile Avatar cliquable (ouvre le sélecteur + recadrage)
         var leftAvatarTileImg = new Image { Width = 68, Height = 68, Stretch = Stretch.UniformToFill };
         if (!string.IsNullOrWhiteSpace(ViewModel.CurrentUserAvatarUrl))
         {
@@ -1927,54 +2408,10 @@ public sealed partial class MainWindowContent : UserControl
             Content = leftAvatarClip
         };
         ToolTipService.SetToolTip(leftAvatarTileBtn, "Cliquez pour changer ou recadrer votre Avatar");
-        Grid.SetColumn(leftAvatarTileBtn, 0);
-
-        // Tuile droite : Décoration d'avatar (grisée si non-Nitro)
-        var decoCircle = new Grid { Width = 68, Height = 68, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        decoCircle.Children.Add(new Microsoft.UI.Xaml.Shapes.Ellipse
-        {
-            Width = 68,
-            Height = 68,
-            Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x4E, 0x50, 0x58)),
-            StrokeThickness = 2,
-            StrokeDashArray = new DoubleCollection { 3, 2 },
-            Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x23, 0x24, 0x28))
-        });
-        decoCircle.Children.Add(new Border
-        {
-            Width = 22,
-            Height = 22,
-            CornerRadius = new CornerRadius(11),
-            Background = new SolidColorBrush(Microsoft.UI.Colors.White),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Child = new FontIcon
-            {
-                Glyph = "\uE710",
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x1E, 0x1F, 0x22)),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
-        });
-        var rightDecoTile = new Border
-        {
-            Height = 96,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
-            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x38, 0x3A, 0x40)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Child = decoCircle
-        };
-        var wrappedDecoTile = WrapNitroCosmetic(rightDecoTile, "Avatar Decoration (Disponible avec Nitro)");
-        Grid.SetColumn(wrappedDecoTile, 1);
-
-        avatarDecoGrid.Children.Add(leftAvatarTileBtn);
-        avatarDecoGrid.Children.Add(wrappedDecoTile);
-        avatarDecoSection.Children.Add(avatarDecoGrid);
+        avatarDecoSection.Children.Add(leftAvatarTileBtn);
         leftStack.Children.Add(avatarDecoSection);
 
-        // 4. Section Banner Color & Image Banner (Nitro pour image/GIF)
+        // 3. Section Banner Color & Image Banner
         var bannerColorSection = new StackPanel { Spacing = 8 };
         bannerColorSection.Children.Add(new TextBlock { Text = "Banner Color", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
 
@@ -2025,127 +2462,6 @@ public sealed partial class MainWindowContent : UserControl
         }
         bannerColorSection.Children.Add(changeBannerImgBtn);
         leftStack.Children.Add(bannerColorSection);
-
-        // 5. Section Profile Effect & Frame (Nitro — grisé sans popup si !hasNitro)
-        var effectFrameSection = new StackPanel { Spacing = 8 };
-        var effectHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        effectHeader.Children.Add(new TextBlock { Text = "Profile Effect & Frame", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
-        if (!hasNitro)
-        {
-            effectHeader.Children.Add(new FontIcon { Glyph = "\uE72E", FontSize = 11, Opacity = 0.65 });
-        }
-        effectFrameSection.Children.Add(effectHeader);
-
-        var effectFrameGrid = new Grid { ColumnSpacing = 10 };
-        effectFrameGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        effectFrameGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        Border CreatePlusMockTile()
-        {
-            var inner = new Border
-            {
-                Width = 64,
-                Height = 76,
-                CornerRadius = new CornerRadius(8),
-                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x23, 0x24, 0x28)),
-                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x38, 0x3A, 0x40)),
-                BorderThickness = new Thickness(1),
-                Child = new Border
-                {
-                    Width = 22,
-                    Height = 22,
-                    CornerRadius = new CornerRadius(11),
-                    Background = new SolidColorBrush(Microsoft.UI.Colors.White),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Child = new FontIcon
-                    {
-                        Glyph = "\uE710",
-                        FontSize = 11,
-                        Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x1E, 0x1F, 0x22)),
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center
-                    }
-                }
-            };
-            return new Border
-            {
-                Height = 96,
-                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
-                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x38, 0x3A, 0x40)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Child = inner
-            };
-        }
-
-        var effectTile = WrapNitroCosmetic(CreatePlusMockTile(), "Profile Effect (Disponible avec Nitro)");
-        var frameTile = WrapNitroCosmetic(CreatePlusMockTile(), "Profile Frame (Disponible avec Nitro)");
-        Grid.SetColumn(effectTile, 0);
-        Grid.SetColumn(frameTile, 1);
-        effectFrameGrid.Children.Add(effectTile);
-        effectFrameGrid.Children.Add(frameTile);
-        effectFrameSection.Children.Add(effectFrameGrid);
-        leftStack.Children.Add(effectFrameSection);
-
-        // 6. Séparateur cadenas discret & Display Name Style (comme en bas à gauche de la capture, SANS bouton/popup Nitro intrusif)
-        var lockDividerGrid = new Grid { Margin = new Thickness(0, 4, 0, 0) };
-        lockDividerGrid.Children.Add(new Border
-        {
-            Height = 1,
-            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x38, 0x3A, 0x40)),
-            VerticalAlignment = VerticalAlignment.Center
-        });
-        if (!hasNitro)
-        {
-            lockDividerGrid.Children.Add(new Border
-            {
-                Width = 28,
-                Height = 28,
-                CornerRadius = new CornerRadius(14),
-                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Child = new FontIcon { Glyph = "\uE72E", FontSize = 12, Opacity = 0.75, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
-            });
-        }
-        leftStack.Children.Add(lockDividerGrid);
-
-        if (!hasNitro)
-        {
-            var nitroCard = new Border
-            {
-                CornerRadius = new CornerRadius(10),
-                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2A, 0x1F, 0x45)),
-                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x48, 0x36, 0x73)),
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(12, 10, 12, 10)
-            };
-            var nitroStack = new StackPanel { Spacing = 8 };
-            nitroStack.Children.Add(new TextBlock
-            {
-                Text = "Level up your look, only with Nitro",
-                FontSize = 12,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
-                TextWrapping = TextWrapping.Wrap
-            });
-            var previewNitroBtn = new Button
-            {
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                CornerRadius = new CornerRadius(6),
-                Background = new SolidColorBrush(Microsoft.UI.Colors.White),
-                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x1E, 0x1F, 0x22)),
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                Padding = new Thickness(8, 5, 8, 5)
-            };
-            var previewBtnStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Center };
-            previewBtnStack.Children.Add(new FontIcon { Glyph = "\uE7B3", FontSize = 12 });
-            previewBtnStack.Children.Add(new TextBlock { Text = "Preview Nitro", FontSize = 12 });
-            previewNitroBtn.Content = previewBtnStack;
-            nitroStack.Children.Add(previewNitroBtn);
-            nitroCard.Child = nitroStack;
-            leftStack.Children.Add(nitroCard);
-        }
 
         var dnsSection = new StackPanel { Spacing = 8 };
         dnsSection.Children.Add(new TextBlock { Text = "Display Name Style", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Opacity = 0.85 });
@@ -2814,6 +3130,7 @@ public sealed partial class MainWindowContent : UserControl
             FontSize = 12,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
         };
+        addWidgetBtn.Click += async (_, _) => await ShowAddWidgetGameDialogAsync(null, () => ShowDiscordFullProfileEditor());
         Grid.SetColumn(addWidgetBtn, 1);
         yourWidgetsHeader.Children.Add(addWidgetBtn);
         rightWidgetsColumn.Children.Add(yourWidgetsHeader);
@@ -2844,12 +3161,14 @@ public sealed partial class MainWindowContent : UserControl
             Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
             Child = new FontIcon { Glyph = "\uE710", FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
         };
+        ToolTipService.SetToolTip(plusGameBtn, "Ajouter un jeu");
+        plusGameBtn.Tapped += async (_, _) => await ShowAddWidgetGameDialogAsync(null, () => ShowDiscordFullProfileEditor());
         Grid.SetColumn(plusGameBtn, 1);
         gamesILikeHeader.Children.Add(plusGameBtn);
         gamesILikeStack.Children.Add(gamesILikeHeader);
 
         var gamesCoversRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        foreach (var gw in ViewModel.CurrentUserGameWidgets.Take(4))
+        foreach (var gw in ViewModel.CurrentUserGameWidgets.Take(6))
         {
             var coverBorder = new Border
             {
@@ -2863,7 +3182,9 @@ public sealed partial class MainWindowContent : UserControl
                     Stretch = Stretch.UniformToFill
                 }
             };
-            ToolTipService.SetToolTip(coverBorder, gw.TooltipText);
+            var capturedGw = gw;
+            coverBorder.Tapped += async (_, _) => await ShowAddWidgetGameDialogAsync(capturedGw, () => ShowDiscordFullProfileEditor());
+            ToolTipService.SetToolTip(coverBorder, $"{gw.TooltipText}\n(Cliquez pour modifier ou supprimer)");
             gamesCoversRow.Children.Add(coverBorder);
         }
         gamesILikeStack.Children.Add(gamesCoversRow);
@@ -2882,6 +3203,9 @@ public sealed partial class MainWindowContent : UserControl
                 CornerRadius = new CornerRadius(14),
                 Padding = new Thickness(18)
             };
+            favGameCard.Tapped += async (_, _) => await ShowAddWidgetGameDialogAsync(favGame, () => ShowDiscordFullProfileEditor());
+            ToolTipService.SetToolTip(favGameCard, "Cliquez pour modifier votre jeu favori");
+
             var favStack = new StackPanel { Spacing = 12 };
             var favHeaderStack = new StackPanel { Spacing = 2 };
             favHeaderStack.Children.Add(new TextBlock { Text = "Favorite Game", FontSize = 15, FontWeight = Microsoft.UI.Text.FontWeights.Bold });
@@ -2913,14 +3237,6 @@ public sealed partial class MainWindowContent : UserControl
             {
                 favDetails.Children.Add(new TextBlock { Text = favGame.Comment, FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap });
             }
-            favDetails.Children.Add(new Border
-            {
-                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2B, 0x2D, 0x31)),
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(8, 3, 8, 3),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Child = new TextBlock { Text = "+ Tags", FontSize = 11, Opacity = 0.75 }
-            });
             Grid.SetColumn(favDetails, 1);
             favContentGrid.Children.Add(favDetails);
 

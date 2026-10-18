@@ -235,6 +235,13 @@ public sealed partial class MainViewModel : ObservableObject
     public DiscordWidgetGame? CurrentUserFavoriteGame => CurrentUserGameWidgets.FirstOrDefault(g => g.IsFavorite);
     public Microsoft.UI.Xaml.Visibility CurrentUserFavoriteGameVisibility => CurrentUserFavoriteGame is not null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
+    public void RefreshCurrentUserGameWidgets()
+    {
+        OnPropertyChanged(nameof(CurrentUserFavoriteGame));
+        OnPropertyChanged(nameof(CurrentUserFavoriteGameVisibility));
+        OnPropertyChanged(nameof(CurrentUserGameWidgetsVisibility));
+    }
+
     public Microsoft.UI.Xaml.Visibility ShowingGuildChannels => _showingFriends ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
     public Microsoft.UI.Xaml.Visibility ShowingFriendsView => _showingFriends ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
@@ -477,11 +484,38 @@ public sealed partial class MainViewModel : ObservableObject
         {
             foreach (var b in _client.CurrentUser.Badges) CurrentUserBadges.Add(b);
         }
+        if (CurrentUserBadges.All(b => b.Id != "diswin_user"))
+        {
+            CurrentUserBadges.Insert(0, new DiscordBadge
+            {
+                Id = "diswin_user",
+                Description = "Diswin User",
+                Icon = "ms-appx:///Assets/Badges/diswin_user.png",
+                Link = "https://github.com/djellil/diswin"
+            });
+        }
 
         CurrentUserGameWidgets.Clear();
-        if (_client.CurrentUser?.GameWidgets is not null)
+        if (_client.CurrentUser?.GameWidgets is not null && _client.CurrentUser.GameWidgets.Count > 0)
         {
             foreach (var gw in _client.CurrentUser.GameWidgets) CurrentUserGameWidgets.Add(gw);
+        }
+        else if (App.Settings.Current.CustomGameWidgets.Count > 0)
+        {
+            foreach (var gw in App.Settings.Current.CustomGameWidgets) CurrentUserGameWidgets.Add(gw);
+        }
+        else
+        {
+            var defaultGames = new List<DiscordWidgetGame>
+            {
+                new() { GameId = "nfs_heat", Name = "Need for Speed™ Heat", IconUrl = "https://cdn2.steamgriddb.com/grid/9bca6a1fe3b1daea118c8198f1262d22.png", Comment = "Mon jeu de course arcade préféré", IsFavorite = true },
+                new() { GameId = "nfs_unbound", Name = "Need for Speed™ Unbound", IconUrl = "https://cdn2.steamgriddb.com/grid/67aa887c2688f19da525f00e95c1a84f.png", Comment = "Style graphique incroyable" },
+                new() { GameId = "naruto_shinobi", Name = "Naruto to Boruto: Shinobi Striker", IconUrl = "https://cdn2.steamgriddb.com/grid/0ca53bebc2961d368e7d800fc773d12f.png", Comment = "Combats ninja en équipe" },
+                new() { GameId = "apex_legends", Name = "Apex Legends", IconUrl = "https://cdn2.steamgriddb.com/grid/2e40049dfb37c0500e28e4e94b293671.png", Comment = "Battle Royale compétitif" }
+            };
+            App.Settings.Current.CustomGameWidgets = defaultGames;
+            App.Settings.Save();
+            foreach (var gw in defaultGames) CurrentUserGameWidgets.Add(gw);
         }
 
         CurrentUserConnectedAccounts.Clear();
