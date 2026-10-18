@@ -1210,6 +1210,34 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception) { }
     }
 
+    public async Task RemoveReactionAsync(string messageId, string emoji)
+    {
+        if (_selectedChannel is null) return;
+        try
+        {
+            await _client.Rest.RemoveReactionAsync(_selectedChannel.Id, messageId, emoji);
+        }
+        catch (Exception) { }
+    }
+
+    public async Task ToggleReactionAsync(string messageId, DiscordReaction reaction)
+    {
+        if (_selectedChannel is null) return;
+        try
+        {
+            var code = reaction.Emoji.ReactionCode;
+            if (reaction.Me)
+            {
+                await _client.Rest.RemoveReactionAsync(_selectedChannel.Id, messageId, code);
+            }
+            else
+            {
+                await _client.Rest.AddReactionAsync(_selectedChannel.Id, messageId, code);
+            }
+        }
+        catch (Exception) { }
+    }
+
     public async Task DeleteMessageAsync(string messageId)
     {
         if (_selectedChannel is null) return;

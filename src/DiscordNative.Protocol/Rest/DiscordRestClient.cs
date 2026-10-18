@@ -548,6 +548,18 @@ public sealed class DiscordRestClient : IDisposable
     public async Task<List<DiscordGuild>> GetGuildsAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<DiscordGuild>>($"{ApiBase}/users/@me/guilds", ct) ?? new();
 
+    public async Task<List<DiscordEmoji>> GetGuildEmojisAsync(string guildId, CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<List<DiscordEmoji>>($"{ApiBase}/guilds/{guildId}/emojis", ct) ?? new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
     /// <summary>
     /// Récupère l'ordre officiel des serveurs et dossiers tel que défini dans les paramètres utilisateur Discord (guild_folders / guild_positions).
     /// </summary>

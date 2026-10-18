@@ -278,6 +278,15 @@ public sealed class DiscordClient : IAsyncDisposable
                 var guild = evt.Data.Deserialize<DiscordGuild>(JsonOptions);
                 if (guild is not null && !string.IsNullOrEmpty(guild.Name))
                 {
+                    if (guild.Emojis != null)
+                    {
+                        foreach (var em in guild.Emojis)
+                        {
+                            em.GuildId = guild.Id;
+                            em.GuildName = guild.Name;
+                            em.GuildIconUrl = guild.IconUrl;
+                        }
+                    }
                     App.RunOnUiThread(() =>
                     {
                         var existing = Guilds.FirstOrDefault(g => g.Id == guild.Id);
@@ -294,6 +303,31 @@ public sealed class DiscordClient : IAsyncDisposable
                             SyncGuildsCollection(sorted);
                         }
                     });
+                }
+                break;
+            case "GUILD_EMOJIS_UPDATE":
+                if (evt.Data.TryGetProperty("guild_id", out var geGIdEl) &&
+                    evt.Data.TryGetProperty("emojis", out var geEmojisEl))
+                {
+                    var gId = geGIdEl.GetString();
+                    var emojis = geEmojisEl.Deserialize<List<DiscordEmoji>>(JsonOptions);
+                    if (gId != null && emojis != null)
+                    {
+                        App.RunOnUiThread(() =>
+                        {
+                            var targetGuild = Guilds.FirstOrDefault(g => g.Id == gId);
+                            if (targetGuild != null)
+                            {
+                                foreach (var em in emojis)
+                                {
+                                    em.GuildId = targetGuild.Id;
+                                    em.GuildName = targetGuild.Name;
+                                    em.GuildIconUrl = targetGuild.IconUrl;
+                                }
+                                targetGuild.Emojis = emojis;
+                            }
+                        });
+                    }
                 }
                 break;
             case "GUILD_MEMBERS_CHUNK":
@@ -1525,6 +1559,10 @@ public sealed class DiscordClient : IAsyncDisposable
                 if (targetGuild.Roles != null && targetGuild.Roles.Count > 0)
                 {
                     existing.Roles = targetGuild.Roles;
+                }
+                if (targetGuild.Emojis != null && targetGuild.Emojis.Count > 0)
+                {
+                    existing.Emojis = targetGuild.Emojis;
                 }
                 if (targetGuild.MentionCount > 0) existing.MentionCount = targetGuild.MentionCount;
                 if (targetGuild.HasUnread) existing.HasUnread = true;

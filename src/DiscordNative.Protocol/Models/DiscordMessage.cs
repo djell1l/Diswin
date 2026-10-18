@@ -412,8 +412,12 @@ public sealed class DiscordReaction
     [JsonPropertyName("me")] public bool Me { get; set; }
     [JsonPropertyName("emoji")] public DiscordEmoji Emoji { get; set; } = new();
 
-    public string EmojiText => Emoji.Name ?? string.Empty;
-    public string CountText => Count > 1 ? Count.ToString() : string.Empty;
+    public bool IsCustom => Emoji?.IsCustom ?? false;
+    public string? ImageUrl => Emoji?.ImageUrl;
+    public string EmojiText => Emoji?.Name ?? string.Empty;
+    public string CountText => Count.ToString();
+    public string BorderBrushHex => Me ? "#5865F2" : "#383A40";
+    public string BackgroundBrushHex => Me ? "#3C4270" : "#2B2D31";
 }
 
 public sealed class DiscordEmoji
@@ -421,10 +425,19 @@ public sealed class DiscordEmoji
     [JsonPropertyName("id")] public string? Id { get; set; }
     [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("animated")] public bool Animated { get; set; }
+    [JsonPropertyName("available")] public bool? Available { get; set; } = true;
+    [JsonPropertyName("require_colons")] public bool? RequireColons { get; set; }
+
+    public string? GuildId { get; set; }
+    public string? GuildName { get; set; }
+    public string? GuildIconUrl { get; set; }
 
     public bool IsCustom => Id is not null;
     public bool IsUnicode => Id is null;
     public string? ImageUrl => Id is null ? null : $"https://cdn.discordapp.com/emojis/{Id}.{(Animated ? "gif" : "png")}?size=48";
+    public string FormattedTag => IsCustom ? (Animated ? $"<a:{Name}:{Id}>" : $"<:{Name}:{Id}>") : (Name ?? string.Empty);
+    public string ReactionCode => IsCustom ? $"{Name}:{Id}" : (Name ?? string.Empty);
+    public string TooltipText => IsCustom ? $":{Name}: ({GuildName ?? "Serveur"})" : $":{Name}:";
 }
 
 public sealed class DiscordPoll

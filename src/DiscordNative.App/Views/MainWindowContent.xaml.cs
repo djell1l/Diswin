@@ -399,6 +399,21 @@ public sealed partial class MainWindowContent : UserControl
         MessageInput.Text = string.Empty;
     }
 
+    private void OnComposerEmojiPickerOpening(object sender, object e)
+    {
+        ComposerEmojiPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id);
+    }
+
+    private void OnComposerEmojiSelected(EmojiItemViewModel emoji)
+    {
+        ComposerEmojiFlyout.Hide();
+        int selStart = MessageInput.SelectionStart;
+        string insertText = emoji.TagToInsert + " ";
+        MessageInput.Text = MessageInput.Text.Insert(selStart, insertText);
+        MessageInput.SelectionStart = selStart + insertText.Length;
+        MessageInput.Focus(FocusState.Programmatic);
+    }
+
     private void OnQuickEmojiInsertClicked(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Content: string emoji })
@@ -1685,6 +1700,41 @@ public sealed partial class MainWindowContent : UserControl
         if (msg == null) return;
         string emoji = (sender as Button)?.Content?.ToString() ?? (sender as FrameworkElement)?.Tag?.ToString() ?? "👍";
         _ = ViewModel.AddReactionAsync(msg.Id, emoji);
+    }
+
+    private string? _reactionTargetMessageId;
+
+    private void OnOpenFullReactionPickerClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var msg = GetMessageFromSender(sender);
+        if (msg != null && sender is FrameworkElement targetElement)
+        {
+            _reactionTargetMessageId = msg.Id;
+            ReactionFullEmojiPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id);
+            ReactionFullEmojiFlyout.ShowAt(targetElement);
+        }
+    }
+
+    private void OnReactionFullEmojiSelected(EmojiItemViewModel emoji)
+    {
+        ReactionFullEmojiFlyout.Hide();
+        if (!string.IsNullOrEmpty(_reactionTargetMessageId))
+        {
+            _ = ViewModel.AddReactionAsync(_reactionTargetMessageId, emoji.ReactionCode);
+        }
+    }
+
+    private void OnExistingReactionClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: DiscordReaction reaction })
+        {
+            var msg = GetMessageFromSender(sender);
+            if (msg != null)
+            {
+                _ = ViewModel.ToggleReactionAsync(msg.Id, reaction);
+            }
+        }
     }
 
     private void OnCreateReminder20mClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
