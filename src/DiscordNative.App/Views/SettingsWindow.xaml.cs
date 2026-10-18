@@ -65,6 +65,7 @@ public sealed partial class SettingsWindow : Window
         ScaleSlider.Value = Math.Clamp(current.InterfaceScale, 0.85, 1.25);
         BubbleStyleToggle.IsOn = current.BubbleMessageStyle;
         CompactModeToggle.IsOn = current.CompactMode;
+        ForceAccentColorOnProfilesToggle.IsOn = current.ForceAccentColorOnProfileCards;
         AnonymizeUploadsToggle.IsOn = current.AnonymizeUploads;
         ConvertLongMessagesToggle.IsOn = current.ConvertLongMessagesToFile;
         KrispToggle.IsOn = current.EnableKrispNoiseSuppression;
@@ -113,6 +114,13 @@ public sealed partial class SettingsWindow : Window
         {
             mwc.ViewModel.SetKrispEnabled(KrispToggle.IsOn);
         }
+    }
+
+    private void OnForceAccentColorOnProfilesToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.ForceAccentColorOnProfileCards = ForceAccentColorOnProfilesToggle.IsOn;
+        _settings.Save();
     }
 
     private async void OnChooseBackgroundClicked(object sender, RoutedEventArgs e)

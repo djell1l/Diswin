@@ -27,6 +27,7 @@ public sealed class AppSettings
     public bool StartMinimized { get; set; } = false;
     public bool EnableKrispNoiseSuppression { get; set; } = true;
     public bool ShowHiddenChannels { get; set; } = false;
+    public bool ForceAccentColorOnProfileCards { get; set; } = false;
     public Dictionary<string, string> UserNotes { get; set; } = new();
     public List<DiscordWidgetGame> CustomGameWidgets { get; set; } = new();
 }
@@ -52,6 +53,7 @@ public sealed class SettingsService
     {
         Current = Load();
         Current.SavedToken = TryReadTokenFromVault();
+        DiscordUser.ForceAccentColorOnAllProfiles = Current.ForceAccentColorOnProfileCards;
     }
 
     /// <summary>
@@ -115,6 +117,7 @@ public sealed class SettingsService
     {
         try
         {
+            DiscordUser.ForceAccentColorOnAllProfiles = Current.ForceAccentColorOnProfileCards;
             var path = GetSettingsPath();
             var json = JsonSerializer.Serialize(Current, JsonOptions);
             System.IO.File.WriteAllText(path, json);

@@ -46,11 +46,23 @@ public sealed class DiscordUser : INotifyPropertyChanged
         OnPropertyChanged(nameof(AccentColor));
         OnPropertyChanged(nameof(ThemeColors));
         OnPropertyChanged(nameof(HasCustomThemeColors));
+        OnPropertyChanged(nameof(HasEffectiveCustomTheme));
+        OnPropertyChanged(nameof(BannerColorHex));
         OnPropertyChanged(nameof(ProfilePrimaryColorHex));
         OnPropertyChanged(nameof(ProfileSecondaryColorHex));
         OnPropertyChanged(nameof(ProfileBorderColorHex));
         OnPropertyChanged(nameof(ProfilePillBackgroundColorHex));
+        OnPropertyChanged(nameof(ProfilePillBorderColorHex));
         OnPropertyChanged(nameof(ProfileTextForegroundColorHex));
+        OnPropertyChanged(nameof(ProfileSecondaryTextColorHex));
+        OnPropertyChanged(nameof(ProfileMutedTextColorHex));
+        OnPropertyChanged(nameof(ProfileCardInnerBackgroundColorHex));
+        OnPropertyChanged(nameof(ProfileCardInnerBorderColorHex));
+        OnPropertyChanged(nameof(ProfileInputBackgroundColorHex));
+        OnPropertyChanged(nameof(ProfileInputBorderColorHex));
+        OnPropertyChanged(nameof(ProfileAvatarCutoutStrokeColorHex));
+        OnPropertyChanged(nameof(ProfileCardBackgroundColorHex));
+        OnPropertyChanged(nameof(ProfileCardBorderColorHex));
         OnPropertyChanged(nameof(MutualFriendsCount));
         OnPropertyChanged(nameof(MutualGuildsCount));
         OnPropertyChanged(nameof(HasMutualInfo));
@@ -164,44 +176,94 @@ public sealed class DiscordUser : INotifyPropertyChanged
 
     public string QuickMessagePlaceholder => $"Message @{DisplayName}";
 
+    public static bool ForceAccentColorOnAllProfiles { get; set; } = false;
+
+    public static double CalculateLuminance(int rgb)
+    {
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        return (0.299 * r) + (0.587 * g) + (0.114 * b);
+    }
+
     public List<int> ThemeColors { get; set; } = new();
     public bool HasCustomThemeColors => ThemeColors.Count >= 2;
+    public bool HasEffectiveCustomTheme => HasCustomThemeColors || (ForceAccentColorOnAllProfiles && AccentColor.HasValue);
 
-    public string ProfilePrimaryColorHex => HasCustomThemeColors
-        ? $"#{ThemeColors[0]:X6}"
-        : (AccentColor is int ac ? $"#{ac:X6}" : "#232428");
-
-    public string ProfileSecondaryColorHex => HasCustomThemeColors
-        ? $"#{ThemeColors[1]:X6}"
-        : (AccentColor is int ac ? $"#{ac:X6}" : "#111214");
-
-    public string ProfileBorderColorHex => HasCustomThemeColors
-        ? $"#{ThemeColors[0]:X6}"
-        : (AccentColor is int ac ? $"#{ac:X6}" : "#383A40");
-
-    public string ProfilePillBackgroundColorHex
+    public string BannerColorHex
     {
         get
         {
-            if (!HasCustomThemeColors) return "#33FFFFFF";
-            return IsThemeLight ? "#55FFFFFF" : "#44000000";
+            if (AccentColor is int ac) return $"#{ac:X6}";
+            if (HasCustomThemeColors) return $"#{ThemeColors[0]:X6}";
+            return "#232428";
         }
     }
 
-    public string ProfileTextForegroundColorHex => (HasCustomThemeColors && IsThemeLight) ? "#1E1F22" : "#FFFFFF";
+    public string ProfilePrimaryColorHex
+    {
+        get
+        {
+            if (HasCustomThemeColors) return $"#{ThemeColors[0]:X6}";
+            if (ForceAccentColorOnAllProfiles && AccentColor is int ac) return $"#{ac:X6}";
+            return "#232428";
+        }
+    }
+
+    public string ProfileSecondaryColorHex
+    {
+        get
+        {
+            if (HasCustomThemeColors) return $"#{ThemeColors[1]:X6}";
+            if (ForceAccentColorOnAllProfiles && AccentColor is int ac) return $"#{ac:X6}";
+            return "#111214";
+        }
+    }
+
+    public string ProfileBorderColorHex
+    {
+        get
+        {
+            if (HasCustomThemeColors) return $"#{ThemeColors[0]:X6}";
+            if (ForceAccentColorOnAllProfiles && AccentColor is int ac) return $"#{ac:X6}";
+            return "#383A40";
+        }
+    }
 
     public bool IsThemeLight
     {
         get
         {
-            if (!HasCustomThemeColors) return false;
-            int c0 = ThemeColors[0];
-            int c1 = ThemeColors[1];
-            double lum0 = (0.299 * ((c0 >> 16) & 0xFF)) + (0.587 * ((c0 >> 8) & 0xFF)) + (0.114 * (c0 & 0xFF));
-            double lum1 = (0.299 * ((c1 >> 16) & 0xFF)) + (0.587 * ((c1 >> 8) & 0xFF)) + (0.114 * (c1 & 0xFF));
-            return ((lum0 + lum1) / 2.0) > 145.0;
+            if (!HasEffectiveCustomTheme) return false;
+            if (HasCustomThemeColors)
+            {
+                int c0 = ThemeColors[0];
+                int c1 = ThemeColors[1];
+                double lum0 = CalculateLuminance(c0);
+                double lum1 = CalculateLuminance(c1);
+                double avg = (lum0 + lum1) / 2.0;
+                return avg >= 125.0 || (Math.Max(lum0, lum1) >= 170.0 && avg >= 115.0);
+            }
+            if (ForceAccentColorOnAllProfiles && AccentColor is int ac)
+            {
+                return CalculateLuminance(ac) >= 125.0;
+            }
+            return false;
         }
     }
+
+    public string ProfileTextForegroundColorHex => IsThemeLight ? "#111214" : "#FFFFFF";
+    public string ProfileSecondaryTextColorHex => IsThemeLight ? "#313338" : "#DBDEE1";
+    public string ProfileMutedTextColorHex => IsThemeLight ? "#5C5E66" : "#949BA4";
+    public string ProfilePillBackgroundColorHex => IsThemeLight ? "#1F000000" : "#33FFFFFF";
+    public string ProfilePillBorderColorHex => IsThemeLight ? "#2F000000" : "#33FFFFFF";
+    public string ProfileCardInnerBackgroundColorHex => IsThemeLight ? "#14000000" : "#33000000";
+    public string ProfileCardInnerBorderColorHex => IsThemeLight ? "#22000000" : "#22FFFFFF";
+    public string ProfileInputBackgroundColorHex => IsThemeLight ? "#18000000" : "#33000000";
+    public string ProfileInputBorderColorHex => IsThemeLight ? "#35000000" : "#22FFFFFF";
+    public string ProfileAvatarCutoutStrokeColorHex => ProfilePrimaryColorHex;
+    public string ProfileCardBackgroundColorHex => IsThemeLight ? "#18000000" : "#2B2D31";
+    public string ProfileCardBorderColorHex => IsThemeLight ? "#22000000" : "#35373C";
 
     private int _mutualFriendsCount;
     public int MutualFriendsCount
@@ -427,7 +489,22 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public List<DiscordBadge> Badges { get; set; } = new();
     public bool HasBadges => Badges.Count > 0;
 
-    public List<DiscordConnectedAccount> ConnectedAccounts { get; set; } = new();
+    private List<DiscordConnectedAccount> _connectedAccounts = new();
+    [JsonPropertyName("connected_accounts")]
+    public List<DiscordConnectedAccount> ConnectedAccounts
+    {
+        get => _connectedAccounts;
+        set
+        {
+            _connectedAccounts = value ?? new();
+            foreach (var ca in _connectedAccounts)
+            {
+                ca.ParentUser = this;
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasConnectedAccounts));
+        }
+    }
     public bool HasConnectedAccounts => ConnectedAccounts.Count > 0;
 
     public List<DiscordWidgetGame> GameWidgets { get; set; } = new();
@@ -851,6 +928,17 @@ public sealed class DiscordBadge
 
 public sealed class DiscordConnectedAccount
 {
+    [JsonIgnore]
+    public DiscordUser? ParentUser { get; set; }
+
+    public string TextColorHex => (ParentUser?.IsThemeLight == true) ? "#111214" : "#FFFFFF";
+    public string SecondaryTextColorHex => (ParentUser?.IsThemeLight == true) ? "#4E5058" : "#949BA4";
+    public string CardBackgroundColorHex => (ParentUser?.IsThemeLight == true) ? "#14000000" : "#33000000";
+    public string CardBorderColorHex => (ParentUser?.IsThemeLight == true) ? "#22000000" : "#22FFFFFF";
+    public string IconBadgeBackgroundColorHex => (ParentUser?.IsThemeLight == true) ? "#E3E5E8" : "#1E1F22";
+    public string IconBadgeBorderColorHex => (ParentUser?.IsThemeLight == true) ? "#C4C9CE" : "#383A40";
+    public string IconGlyphColorHex => (ParentUser?.IsThemeLight == true) ? "#2E3035" : "#DBDEE1";
+
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
