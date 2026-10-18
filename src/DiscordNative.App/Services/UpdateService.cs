@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -38,10 +39,36 @@ public sealed class UpdateInfo
 
 public static class UpdateService
 {
-    public const string CurrentVersion = "v0.5.3";
+    public static string CurrentVersion { get; } = ResolveCurrentVersion();
     private const string RepoOwner = "djell1l";
     private const string RepoName = "Diswin";
     private static readonly HttpClient Http = new();
+
+    private static string ResolveCurrentVersion()
+    {
+        try
+        {
+            var asm = typeof(UpdateService).Assembly;
+            var infoVer = asm.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (!string.IsNullOrWhiteSpace(infoVer))
+            {
+                var clean = infoVer.Split('+')[0].Trim();
+                if (!string.IsNullOrWhiteSpace(clean) && clean != "1.0.0" && clean != "1.0.0.0")
+                {
+                    return clean.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? clean : "v" + clean;
+                }
+            }
+
+            var ver = asm.GetName().Version;
+            if (ver is not null && ver != new Version(1, 0, 0, 0) && ver != new Version(0, 0, 0, 0))
+            {
+                return $"v{ver.Major}.{ver.Minor}.{ver.Build}";
+            }
+        }
+        catch { }
+
+        return "v0.5.3";
+    }
 
     public static async Task<UpdateInfo?> CheckForUpdatesAsync()
     {
@@ -88,10 +115,10 @@ public static class UpdateService
         return null;
     }
 
-    private static bool IsNewerVersion(string remoteTag, string localTag)
+    public static bool IsNewerVersion(string remoteTag, string localTag)
     {
         if (string.IsNullOrWhiteSpace(remoteTag)) return false;
-        if (string.IsNullOrWhiteSpace(localTag)) return true;
+        if (string.IsNullOrWhiteSpace(localTag)) return false;
 
         string rClean = remoteTag.Trim().TrimStart('v', 'V');
         string lClean = localTag.Trim().TrimStart('v', 'V');
@@ -102,30 +129,38 @@ public static class UpdateService
         var rParts = rClean.Split('-', 2);
         var lParts = lClean.Split('-', 2);
 
-        string rBase = rParts[0];
-        string lBase = lParts[0];
+        var (rMaj, rMin, rPat) = ParseTriple(rParts[0]);
+        var (lMaj, lMin, lPat) = ParseTriple(lParts[0]);
 
-        bool rHasSuffix = rParts.Length > 1;
-        bool lHasSuffix = lParts.Length > 1;
+        if (rMaj != lMaj) return rMaj > lMaj;
+        if (rMin != lMin) return rMin > lMin;
+        if (rPat != lPat) return rPat > lPat;
 
-        if (Version.TryParse(rBase, out var vRemote) && Version.TryParse(lBase, out var vLocal))
+        bool rHasSuffix = rParts.Length > 1 && !string.IsNullOrWhiteSpace(rParts[1]);
+        bool lHasSuffix = lParts.Length > 1 && !string.IsNullOrWhiteSpace(lParts[1]);
+
+        // Versions majeures.mineures.patch identiques (ex: 0.5.3 vs 0.5.3)
+        // Une release stable (sans suffixe) est plus récente qu'une pré-release/edge du même numéro
+        if (!rHasSuffix && lHasSuffix) return true;
+        if (rHasSuffix && !lHasSuffix) return false;
+
+        // Deux suffixes présents (ex: edge.2 vs edge.1)
+        if (rHasSuffix && lHasSuffix)
         {
-            if (vRemote > vLocal) return true;
-            if (vRemote < vLocal) return false;
-
-            // Base versions identiques (ex: 0.5.4 vs 0.5.4)
-            // Une release stable (sans suffixe) est plus récente qu'une pré-release/edge du même numéro
-            if (!rHasSuffix && lHasSuffix) return true;
-            if (rHasSuffix && !lHasSuffix) return false;
-
-            // Deux suffixes présents (ex: edge.2 vs edge.1)
-            if (rHasSuffix && lHasSuffix)
-            {
-                return CompareSuffixes(rParts[1], lParts[1]) > 0;
-            }
+            return CompareSuffixes(rParts[1], lParts[1]) > 0;
         }
 
-        return !string.Equals(rClean, lClean, StringComparison.OrdinalIgnoreCase);
+        // Versions strictement identiques : aucune mise à jour nécessaire
+        return false;
+    }
+
+    private static (int major, int minor, int patch) ParseTriple(string verStr)
+    {
+        var parts = verStr.Split('.');
+        int maj = parts.Length > 0 && int.TryParse(parts[0], out var m) ? m : 0;
+        int min = parts.Length > 1 && int.TryParse(parts[1], out var n) ? n : 0;
+        int pat = parts.Length > 2 && int.TryParse(parts[2], out var p) ? p : 0;
+        return (maj, min, pat);
     }
 
     private static int CompareSuffixes(string rSuffix, string lSuffix)

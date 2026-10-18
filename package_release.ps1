@@ -72,7 +72,7 @@ Write-Host "Utilisation de MSBuild : $msbuild" -ForegroundColor Cyan
 Write-Host "Utilisation de CSC     : $csc" -ForegroundColor Cyan
 
 Write-Host "1. Building DiscordNative.App (Release x64 Self-Contained)..."
-& $msbuild "src\DiscordNative.App\DiscordNative.App.csproj" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+& $msbuild "src\DiscordNative.App\DiscordNative.App.csproj" /p:Configuration=Release /p:Platform=x64 /p:Version=$version /p:PackageVersion=$version /p:InformationalVersion=$version /m /v:minimal
 
 # Bundle Discord's official Krisp binary + neural models if present locally so Krisp works standalone anywhere
 $localDiscordKrisp = Get-ChildItem "$env:LOCALAPPDATA\Discord*\app-*\modules\discord_krisp*\discord_krisp\discord_krisp.node" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
@@ -86,7 +86,7 @@ if ($localDiscordKrisp) {
 }
 
 Write-Host "2. Building DiscordNative.Installer (WinUI 3 Setup.exe)..."
-& $msbuild "src\DiscordNative.Installer\DiscordNative.Installer.csproj" /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+& $msbuild "src\DiscordNative.Installer\DiscordNative.Installer.csproj" /p:Configuration=Release /p:Platform=x64 /p:Version=$version /p:PackageVersion=$version /p:InformationalVersion=$version /m /v:minimal
 
 # Clean up satellite culture clutter folders
 $knownLangs = @("fr-FR", "fr", "en-US", "en")

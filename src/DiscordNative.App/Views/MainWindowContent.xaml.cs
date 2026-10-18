@@ -245,6 +245,11 @@ public sealed partial class MainWindowContent : UserControl
             XamlRoot = this.XamlRoot
         };
 
+        dialog.CloseButtonClick += (_, _) =>
+        {
+            UpdateInfoBar.IsOpen = false;
+        };
+
         dialog.PrimaryButtonClick += async (_, args) =>
         {
             var deferral = args.GetDeferral();
