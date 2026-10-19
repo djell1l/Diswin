@@ -21,6 +21,11 @@ public sealed partial class MainViewModel : ObservableObject
     {
         CloseSplitViewThread();
         ChannelActiveThreads.Clear();
+        IsForumChannelSelected = false;
+        IsCreatingForumPost = false;
+        ForumPosts.Clear();
+        FilteredForumPosts.Clear();
+        ForumAvailableTags.Clear();
         _selectedChannel = null;
         SelectedChannelName = "Sélectionnez un salon";
         SelectedChannelTopic = string.Empty;
@@ -71,6 +76,45 @@ public sealed partial class MainViewModel : ObservableObject
     public bool HasChannelActiveThreads => ChannelActiveThreads.Count > 0;
     public string ChannelActiveThreadsCountText => $"{ChannelActiveThreads.Count} fil{(ChannelActiveThreads.Count > 1 ? "s" : "")}";
     public Microsoft.UI.Xaml.Visibility SplitThreadPanelVisibility => IsSplitThreadOpen && ActiveSplitThread != null
+        ? Microsoft.UI.Xaml.Visibility.Visible
+        : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    [ObservableProperty]
+    private bool isForumChannelSelected;
+
+    partial void OnIsForumChannelSelectedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ForumViewVisibility));
+        OnPropertyChanged(nameof(TextViewVisibility));
+        OnPropertyChanged(nameof(MemberListVisibility));
+    }
+
+    [ObservableProperty]
+    private bool isCreatingForumPost;
+
+    [ObservableProperty]
+    private string forumSearchQuery = string.Empty;
+
+    partial void OnForumSearchQueryChanged(string value)
+    {
+        ApplyForumFilter();
+    }
+
+    [ObservableProperty]
+    private DiscordForumTag? selectedForumFilterTag;
+
+    partial void OnSelectedForumFilterTagChanged(DiscordForumTag? value)
+    {
+        ApplyForumFilter();
+    }
+
+    public ObservableCollection<DiscordChannel> ForumPosts { get; } = new();
+    public ObservableCollection<DiscordChannel> FilteredForumPosts { get; } = new();
+    public ObservableCollection<DiscordForumTag> ForumAvailableTags { get; } = new();
+    public bool HasFilteredForumPosts => FilteredForumPosts.Count > 0;
+    public string ForumPostsCountText => $"{FilteredForumPosts.Count} post{(FilteredForumPosts.Count > 1 ? "s" : "")}";
+
+    public Microsoft.UI.Xaml.Visibility ForumViewVisibility => IsForumChannelSelected && !IsVoiceChannelSelected
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
 
@@ -338,8 +382,8 @@ public sealed partial class MainViewModel : ObservableObject
         : "Activer la caméra vidéo";
 
     public Microsoft.UI.Xaml.Visibility VoiceViewVisibility => IsVoiceChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-    public Microsoft.UI.Xaml.Visibility TextViewVisibility => IsVoiceChannelSelected ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
-    public Microsoft.UI.Xaml.Visibility MemberListVisibility => IsMemberListOpen && !IsVoiceChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility TextViewVisibility => IsVoiceChannelSelected || IsForumChannelSelected ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+    public Microsoft.UI.Xaml.Visibility MemberListVisibility => IsMemberListOpen && !IsVoiceChannelSelected && !IsForumChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility TopicVisibility => string.IsNullOrWhiteSpace(SelectedChannelTopic) ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
 
     public DiscordUser? CurrentUser => _client.CurrentUser;
@@ -1240,8 +1284,10 @@ public sealed partial class MainViewModel : ObservableObject
         if (channel.Type == DiscordChannelType.GuildVoice)
         {
             IsVoiceChannelSelected = true;
+            IsForumChannelSelected = false;
             OnPropertyChanged(nameof(VoiceViewVisibility));
             OnPropertyChanged(nameof(TextViewVisibility));
+            OnPropertyChanged(nameof(ForumViewVisibility));
             OnPropertyChanged(nameof(MemberListVisibility));
 
             var targetGuildId = channel.GuildId ?? _selectedGuild?.Id;
@@ -1260,11 +1306,24 @@ public sealed partial class MainViewModel : ObservableObject
 
             RefreshVoiceParticipants(channel.Id);
         }
+        else if (channel.Type == DiscordChannelType.GuildForum)
+        {
+            IsVoiceChannelSelected = false;
+            IsForumChannelSelected = true;
+            OnPropertyChanged(nameof(VoiceViewVisibility));
+            OnPropertyChanged(nameof(TextViewVisibility));
+            OnPropertyChanged(nameof(ForumViewVisibility));
+            OnPropertyChanged(nameof(MemberListVisibility));
+
+            _ = LoadForumPostsAsync(channel.Id);
+        }
         else
         {
             IsVoiceChannelSelected = false;
+            IsForumChannelSelected = false;
             OnPropertyChanged(nameof(VoiceViewVisibility));
             OnPropertyChanged(nameof(TextViewVisibility));
+            OnPropertyChanged(nameof(ForumViewVisibility));
             OnPropertyChanged(nameof(MemberListVisibility));
 
             try
@@ -1471,6 +1530,110 @@ public sealed partial class MainViewModel : ObservableObject
                 });
                 await OpenThreadInSplitViewAsync(thread);
                 return thread;
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public async Task LoadForumPostsAsync(string channelId)
+    {
+        try
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                ForumPosts.Clear();
+                FilteredForumPosts.Clear();
+                ForumAvailableTags.Clear();
+                if (_selectedChannel?.AvailableTags != null)
+                {
+                    foreach (var tag in _selectedChannel.AvailableTags)
+                    {
+                        ForumAvailableTags.Add(tag);
+                    }
+                }
+            });
+
+            var active = await _client.Rest.GetActiveThreadsAsync(channelId);
+            var archived = await _client.Rest.GetArchivedThreadsAsync(channelId);
+            var all = active.Concat(archived)
+                            .GroupBy(t => t.Id)
+                            .Select(g => g.First())
+                            .OrderByDescending(t => t.ThreadMetadata?.ArchiveTimestamp ?? DateTimeOffset.MinValue)
+                            .ToList();
+
+            Protocol.App.RunOnUiThread(() =>
+            {
+                ForumPosts.Clear();
+                foreach (var post in all)
+                {
+                    post.ResolvedTags.Clear();
+                    if (_selectedChannel?.AvailableTags != null && post.AppliedTags != null)
+                    {
+                        foreach (var tagId in post.AppliedTags)
+                        {
+                            var tag = _selectedChannel.AvailableTags.FirstOrDefault(t => t.Id == tagId);
+                            if (tag != null) post.ResolvedTags.Add(tag);
+                        }
+                    }
+                    ForumPosts.Add(post);
+                }
+                ApplyForumFilter();
+            });
+        }
+        catch { }
+    }
+
+    public void ApplyForumFilter()
+    {
+        FilteredForumPosts.Clear();
+        var query = ForumSearchQuery?.Trim();
+        var tagId = SelectedForumFilterTag?.Id;
+
+        foreach (var post in ForumPosts)
+        {
+            if (!string.IsNullOrEmpty(query) && !post.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(tagId) && (post.AppliedTags == null || !post.AppliedTags.Contains(tagId)))
+            {
+                continue;
+            }
+
+            FilteredForumPosts.Add(post);
+        }
+
+        OnPropertyChanged(nameof(HasFilteredForumPosts));
+        OnPropertyChanged(nameof(ForumPostsCountText));
+    }
+
+    public async Task<DiscordChannel?> CreateForumPostAsync(string title, string content, List<string>? tags = null)
+    {
+        if (_selectedChannel == null || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content)) return null;
+        try
+        {
+            var post = await _client.Rest.CreateForumPostAsync(_selectedChannel.Id, title, content, tags);
+            if (post != null)
+            {
+                Protocol.App.RunOnUiThread(() =>
+                {
+                    post.ResolvedTags.Clear();
+                    if (_selectedChannel?.AvailableTags != null && post.AppliedTags != null)
+                    {
+                        foreach (var tagId in post.AppliedTags)
+                        {
+                            var tag = _selectedChannel.AvailableTags.FirstOrDefault(t => t.Id == tagId);
+                            if (tag != null) post.ResolvedTags.Add(tag);
+                        }
+                    }
+                    ForumPosts.Insert(0, post);
+                    ApplyForumFilter();
+                    IsCreatingForumPost = false;
+                });
+                await OpenThreadInSplitViewAsync(post);
+                return post;
             }
         }
         catch { }

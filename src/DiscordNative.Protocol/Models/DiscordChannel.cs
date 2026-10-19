@@ -83,6 +83,12 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     [JsonPropertyName("member_count")]
     public int? MemberCount { get; set; }
 
+    [JsonPropertyName("available_tags")]
+    public List<DiscordForumTag>? AvailableTags { get; set; }
+
+    [JsonPropertyName("applied_tags")]
+    public List<string>? AppliedTags { get; set; }
+
 
     private bool _canView = true;
     [JsonIgnore]
@@ -136,6 +142,13 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     public bool IsCategory => Type == DiscordChannelType.GuildCategory;
     public bool IsNotCategory => Type != DiscordChannelType.GuildCategory;
     public bool IsThread => Type is DiscordChannelType.PublicThread or DiscordChannelType.PrivateThread or DiscordChannelType.AnnouncementThread;
+    public bool IsForumChannel => Type == DiscordChannelType.GuildForum;
+    public bool ShowHashIcon => !IsVoiceChannel && !IsForumChannel;
+    public bool HasTags => AppliedTags != null && AppliedTags.Count > 0;
+    [JsonIgnore]
+    public ObservableCollection<DiscordForumTag> ResolvedTags { get; } = new();
+    [JsonIgnore]
+    public bool HasResolvedTags => ResolvedTags.Count > 0;
     public string ThreadMessageCountText => MessageCount.HasValue ? $"{MessageCount.Value} message{(MessageCount.Value > 1 ? "s" : "")}" : "Fil actif";
     public bool IsInParentCategory => !IsCategory && !string.IsNullOrEmpty(ParentId);
     public string ChannelRowMargin => IsInParentCategory ? "12,0,0,0" : "0,0,0,0";

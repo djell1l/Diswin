@@ -537,10 +537,14 @@
                                                 <FontIcon Glyph="&#xE767;" FontSize="13"
                                                           Foreground="{x:Bind VoiceSpeakerColorBrush, Mode=OneWay}"
                                                           Visibility="{x:Bind ShowVoiceSpeakerIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                <!-- Icône Salon Forum -->
+                                                <FontIcon Glyph="&#xE8BD;" FontSize="13" Foreground="#949BA4"
+                                                          Visibility="{x:Bind IsForumChannel, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                          ToolTipService.ToolTip="Salon Forum" />
                                                 <!-- Dièse si salon texte -->
                                                 <TextBlock Text="#" FontSize="15" FontWeight="Bold" Foreground="#949BA4"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"
-                                                           Visibility="{x:Bind IsVoiceChannel, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                                           Visibility="{x:Bind ShowHashIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                             </Grid>
 
                                             <TextBlock Text="{x:Bind DisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" />
@@ -4916,6 +4920,207 @@
                         </Grid>
 
                     </StackPanel>
+
+                    <!-- VUE FORUM (Discord GuildForum Type 15) -->
+                    <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="0"
+                          Visibility="{x:Bind ViewModel.ForumViewVisibility, Mode=OneWay}"
+                          Background="#313338">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- 1. En-tête Forum : Titre, Topic & Filtres par tags + Bouton Nouveau Post -->
+                        <Border Grid.Row="0" Background="#2B2D31" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+                            <StackPanel Spacing="12">
+                                <!-- Ligne titre du forum + Bouton Nouveau Post -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="#5865F2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE8BD;" FontSize="18" Foreground="White" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedChannelName, Mode=OneWay}" FontSize="18" FontWeight="Bold" Foreground="#F2F3F5" />
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedChannelTopic, Mode=OneWay}" FontSize="12" Foreground="#949BA4"
+                                                       Visibility="{x:Bind ViewModel.TopicVisibility, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxWidth="500" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1" Click="OnToggleCreateForumPostClicked"
+                                            Background="#5865F2" CornerRadius="8" Padding="14,8" BorderThickness="0">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE710;" FontSize="13" Foreground="White" />
+                                            <TextBlock Text="Nouveau post" FontWeight="SemiBold" Foreground="White" FontSize="13" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Ligne de Recherche + Filtres par Tags -->
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="280" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox Grid.Column="0" x:Name="ForumSearchBox"
+                                             PlaceholderText="Rechercher une publication..."
+                                             CornerRadius="8" Background="#1E1F22" BorderThickness="0"
+                                             Padding="12,8" TextChanged="OnForumSearchTextChanged" />
+
+                                    <!-- Tags disponibles pour le filtrage -->
+                                    <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Button Content="Tous" FontSize="12" Padding="12,5" CornerRadius="14"
+                                                    Background="#1E1F22" BorderThickness="0" Foreground="#F2F3F5"
+                                                    Click="OnClearForumFilterClicked" />
+                                            <ItemsControl ItemsSource="{x:Bind ViewModel.ForumAvailableTags, Mode=OneWay}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:DiscordForumTag">
+                                                        <Button Content="{x:Bind DisplayText}" Tag="{x:Bind}" FontSize="12" Padding="12,5"
+                                                                CornerRadius="14" Background="#1E1F22" BorderThickness="0" Foreground="#DBDEE1"
+                                                                Click="OnForumFilterTagClicked" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 2. Corps du Forum : Panneau de Création (si actif) + Liste des Posts -->
+                        <ScrollViewer Grid.Row="1" Padding="20,16" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="16">
+
+                                <!-- Panneau Création de Post (Card) -->
+                                <Border Background="#2B2D31" BorderBrush="#383A40" BorderThickness="1" CornerRadius="12" Padding="16"
+                                        Visibility="{x:Bind ViewModel.IsCreatingForumPost, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <StackPanel Spacing="12">
+                                        <Grid>
+                                            <TextBlock Text="Créer une publication" FontWeight="Bold" FontSize="15" Foreground="#F2F3F5" VerticalAlignment="Center" />
+                                            <Button HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6"
+                                                    Click="OnCancelCreateForumPostClicked">
+                                                <FontIcon Glyph="&#xE711;" FontSize="12" Opacity="0.7" />
+                                            </Button>
+                                        </Grid>
+
+                                        <TextBox x:Name="ForumNewPostTitleInput" PlaceholderText="Titre de la publication"
+                                                 FontSize="14" FontWeight="SemiBold" CornerRadius="8" Background="#1E1F22" BorderThickness="0" Padding="12,8" />
+
+                                        <!-- Sélecteur de tags pour le nouveau post -->
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Sélectionner des tags :" FontSize="11" Foreground="#949BA4" FontWeight="SemiBold" />
+                                            <ItemsControl x:Name="ForumNewPostTagsControl" ItemsSource="{x:Bind ViewModel.ForumAvailableTags, Mode=OneWay}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:DiscordForumTag">
+                                                        <ToggleButton Content="{x:Bind DisplayText}" Tag="{x:Bind Id}"
+                                                                      Checked="OnForumComposerTagChecked" Unchecked="OnForumComposerTagUnchecked"
+                                                                      FontSize="11" Padding="10,4" CornerRadius="12"
+                                                                      Background="#1E1F22" BorderThickness="0" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <TextBox x:Name="ForumNewPostContentInput" PlaceholderText="Écrivez le message de départ..."
+                                                 AcceptsReturn="True" MinHeight="100" TextWrapping="Wrap"
+                                                 CornerRadius="8" Background="#1E1F22" BorderThickness="0" Padding="12,8" />
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                                            <Button Content="Annuler" Click="OnCancelCreateForumPostClicked"
+                                                    CornerRadius="8" Padding="14,6" Background="Transparent" BorderThickness="0" />
+                                            <Button Content="Publier" Click="OnPublishForumPostClicked"
+                                                    Background="#5865F2" Foreground="White" FontWeight="SemiBold"
+                                                    CornerRadius="8" Padding="18,6" BorderThickness="0" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- En-tête de décompte des posts -->
+                                <Grid Margin="0,0,0,4">
+                                    <TextBlock Text="{x:Bind ViewModel.ForumPostsCountText, Mode=OneWay}"
+                                               FontSize="12" FontWeight="SemiBold" Foreground="#949BA4" />
+                                </Grid>
+
+                                <!-- État vide si 0 post -->
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,40,0,40" Spacing="10"
+                                            Visibility="{x:Bind ViewModel.HasFilteredForumPosts, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                    <FontIcon Glyph="&#xE8BD;" FontSize="40" Foreground="#4E5058" HorizontalAlignment="Center" />
+                                    <TextBlock Text="Aucune publication trouvée" FontWeight="Bold" FontSize="16" Foreground="#F2F3F5" HorizontalAlignment="Center" />
+                                    <TextBlock Text="Soyez le premier à poser une question ou lancer une discussion !" FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                </StackPanel>
+
+                                <!-- Liste des Cartes de Publications (Forum Posts) -->
+                                <ListView ItemsSource="{x:Bind ViewModel.FilteredForumPosts, Mode=OneWay}"
+                                          SelectionMode="None" Padding="0">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DiscordChannel">
+                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    Background="#2B2D31" BorderBrush="#35373C" BorderThickness="1"
+                                                    CornerRadius="10" Padding="16,14" Margin="0,0,0,10"
+                                                    Tag="{x:Bind}" Click="OnForumPostCardClicked">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Détails du post : Titre, Tags, Auteur/Infos -->
+                                                    <StackPanel Grid.Column="0" Spacing="8">
+                                                        <TextBlock Text="{x:Bind DisplayName}" FontWeight="Bold" FontSize="15" Foreground="#F2F3F5"
+                                                                   TextTrimming="CharacterEllipsis" MaxWidth="620" />
+
+                                                        <!-- Tags appliqués sur le post -->
+                                                        <ItemsControl ItemsSource="{x:Bind ResolvedTags, Mode=OneWay}"
+                                                                      Visibility="{x:Bind HasResolvedTags, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:DiscordForumTag">
+                                                                    <Border Background="#1E1F22" CornerRadius="10" Padding="8,3">
+                                                                        <TextBlock Text="{x:Bind DisplayText}" FontSize="11" Foreground="#B5BAC1" />
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <!-- Badge messages & statut à droite -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                                                        <Border Background="#1E1F22" CornerRadius="8" Padding="10,6">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                <FontIcon Glyph="&#xE8BD;" FontSize="13" Foreground="#5865F2" />
+                                                                <TextBlock Text="{x:Bind ThreadMessageCountText, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="#DBDEE1" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <FontIcon Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
 
                 </Grid>
             </Grid>

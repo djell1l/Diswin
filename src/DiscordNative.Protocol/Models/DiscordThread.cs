@@ -42,3 +42,24 @@ public sealed class DiscordThreadMetadata
     [JsonPropertyName("locked")]
     public bool Locked { get; set; }
 }
+
+public sealed class DiscordForumTag
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("moderated")]
+    public bool Moderated { get; set; }
+
+    [JsonPropertyName("emoji_id")]
+    public string? EmojiId { get; set; }
+
+    [JsonPropertyName("emoji_name")]
+    public string? EmojiName { get; set; }
+
+    [JsonIgnore]
+    public string DisplayText => !string.IsNullOrEmpty(EmojiName) ? $"{EmojiName} {Name}" : Name;
+}

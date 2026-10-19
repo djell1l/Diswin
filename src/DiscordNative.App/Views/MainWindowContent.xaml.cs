@@ -1120,6 +1120,95 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
+    private readonly HashSet<string> _newForumPostSelectedTagIds = new();
+
+    private void OnForumSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            ViewModel.ForumSearchQuery = tb.Text;
+        }
+    }
+
+    private void OnClearForumFilterClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SelectedForumFilterTag = null;
+        ViewModel.ForumSearchQuery = string.Empty;
+        if (ForumSearchBox != null) ForumSearchBox.Text = string.Empty;
+    }
+
+    private void OnForumFilterTagClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordForumTag tag)
+        {
+            if (ViewModel.SelectedForumFilterTag?.Id == tag.Id)
+            {
+                ViewModel.SelectedForumFilterTag = null;
+            }
+            else
+            {
+                ViewModel.SelectedForumFilterTag = tag;
+            }
+        }
+    }
+
+    private void OnToggleCreateForumPostClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.IsCreatingForumPost = !ViewModel.IsCreatingForumPost;
+        if (ViewModel.IsCreatingForumPost)
+        {
+            _newForumPostSelectedTagIds.Clear();
+            if (ForumNewPostTitleInput != null) ForumNewPostTitleInput.Text = string.Empty;
+            if (ForumNewPostContentInput != null) ForumNewPostContentInput.Text = string.Empty;
+        }
+    }
+
+    private void OnCancelCreateForumPostClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.IsCreatingForumPost = false;
+        _newForumPostSelectedTagIds.Clear();
+    }
+
+    private void OnForumComposerTagChecked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string tagId)
+        {
+            _newForumPostSelectedTagIds.Add(tagId);
+        }
+    }
+
+    private void OnForumComposerTagUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string tagId)
+        {
+            _newForumPostSelectedTagIds.Remove(tagId);
+        }
+    }
+
+    private async void OnPublishForumPostClicked(object sender, RoutedEventArgs e)
+    {
+        var title = ForumNewPostTitleInput?.Text?.Trim();
+        var content = ForumNewPostContentInput?.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        var tags = _newForumPostSelectedTagIds.Count > 0 ? _newForumPostSelectedTagIds.ToList() : null;
+        await ViewModel.CreateForumPostAsync(title, content, tags);
+        _newForumPostSelectedTagIds.Clear();
+        if (ForumNewPostTitleInput != null) ForumNewPostTitleInput.Text = string.Empty;
+        if (ForumNewPostContentInput != null) ForumNewPostContentInput.Text = string.Empty;
+    }
+
+    private async void OnForumPostCardClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordChannel post)
+        {
+            await ViewModel.OpenThreadInSplitViewAsync(post);
+        }
+    }
+
     private static DiscordUser? ExtractDiscordUser(object? sender)
     {
         if (sender is FrameworkElement fe)

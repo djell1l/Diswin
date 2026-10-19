@@ -946,6 +946,41 @@ public sealed class DiscordRestClient : IDisposable
         return null;
     }
 
+    public async Task<DiscordChannel?> CreateForumPostAsync(string channelId, string title, string content, List<string>? appliedTags = null, int autoArchiveDuration = 4320, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                name = title,
+                auto_archive_duration = autoArchiveDuration,
+                applied_tags = appliedTags ?? new List<string>(),
+                message = new
+                {
+                    content = content
+                }
+            };
+            var response = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/threads", payload, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct);
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public async Task<List<DiscordChannel>> GetArchivedThreadsAsync(string channelId, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<DiscordActiveThreadsResponse>($"{ApiBase}/channels/{channelId}/threads/archived/public", ct);
+            if (res?.Threads != null) return res.Threads;
+        }
+        catch { }
+        return new();
+    }
+
 
 
     public async Task<DiscordChannel?> CreateDmAsync(string recipientUserId, CancellationToken ct = default)
