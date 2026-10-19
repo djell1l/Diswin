@@ -220,6 +220,24 @@ public sealed class DiscordClient : IAsyncDisposable
         catch { }
     }
 
+    public async Task<DiscordGuild> CreateGuildAsync(
+        string name,
+        string? iconBase64 = null,
+        List<Dictionary<string, object>>? channels = null,
+        CancellationToken ct = default)
+    {
+        var guild = await Rest.CreateGuildAsync(name, iconBase64, channels, ct);
+        await RefreshGuildsAsync(ct);
+        return guild;
+    }
+
+    public async Task<DiscordGuild?> JoinInviteAsync(string inviteCodeOrUrl, CancellationToken ct = default)
+    {
+        var guild = await Rest.JoinInviteAsync(inviteCodeOrUrl, ct);
+        await RefreshGuildsAsync(ct);
+        return guild;
+    }
+
     private void OnDispatchEvent(DiscordDispatchEvent evt)
     {
         switch (evt.Name)

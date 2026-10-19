@@ -145,6 +145,12 @@ public sealed partial class MainWindowContent : UserControl
                     e.Handled = true;
                     return;
                 }
+                if (CreateServerModalOverlay?.Visibility == Visibility.Visible)
+                {
+                    HideCreateServerModal();
+                    e.Handled = true;
+                    return;
+                }
             }
         };
 
@@ -1450,40 +1456,301 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
-    // --- Rejoindre / Quitter un serveur ---
-    private async void OnJoinServerClicked(object sender, RoutedEventArgs e)
+    // --- Modale 1:1 Discord : Ajouter / Créer un serveur (Modèles + Rejoindre) ---
+    private string? _newServerIconDataUri;
+    private string? _selectedCreateServerTemplate;
+
+    private void OnAddServerClicked(object sender, RoutedEventArgs e)
     {
-        var input = new TextBox
+        ShowCreateServerModal();
+    }
+
+    private void OnJoinServerClicked(object sender, RoutedEventArgs e)
+    {
+        ShowCreateServerModal();
+        ShowCreateServerStage3();
+    }
+
+    private void ShowCreateServerModal()
+    {
+        _newServerIconDataUri = null;
+        _selectedCreateServerTemplate = null;
+        if (CreateServerIconPreview != null)
         {
-            PlaceholderText = "https://discord.gg/exemple ou code d'invitation",
-            CornerRadius = new CornerRadius(8)
-        };
-        var dialog = new ContentDialog
+            CreateServerIconPreview.Source = null;
+            CreateServerIconPreview.Visibility = Visibility.Collapsed;
+        }
+        if (CreateServerIconPlaceholder != null)
         {
-            Title = "Rejoindre un serveur",
-            Content = input,
-            PrimaryButtonText = "Rejoindre",
-            CloseButtonText = "Annuler",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = this.XamlRoot
-        };
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(input.Text))
+            CreateServerIconPlaceholder.Visibility = Visibility.Visible;
+        }
+        if (CreateServerRemoveIconBtn != null)
         {
-            try
+            CreateServerRemoveIconBtn.Visibility = Visibility.Collapsed;
+        }
+        if (CreateServerErrorText != null)
+        {
+            CreateServerErrorText.Visibility = Visibility.Collapsed;
+            CreateServerErrorText.Text = string.Empty;
+        }
+        if (JoinServerErrorText != null)
+        {
+            JoinServerErrorText.Visibility = Visibility.Collapsed;
+            JoinServerErrorText.Text = string.Empty;
+        }
+        if (JoinServerInviteInput != null)
+        {
+            JoinServerInviteInput.Text = string.Empty;
+        }
+        ShowCreateServerStage1();
+        CreateServerModalOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void HideCreateServerModal()
+    {
+        CreateServerModalOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowCreateServerStage1()
+    {
+        CreateServerModalTitle.Text = "Crée ton serveur";
+        CreateServerModalSubtitle.Text = "Ton serveur est l'endroit où toi et tes amis pouvez passer du temps ensemble. Crée le tien et commence à parler.";
+        CreateServerStage1_Templates.Visibility = Visibility.Visible;
+        CreateServerStage2_Customize.Visibility = Visibility.Collapsed;
+        CreateServerStage3_Join.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage1.Visibility = Visibility.Visible;
+        CreateServerFooterStage2.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage3.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowCreateServerStage2(string templateId)
+    {
+        _selectedCreateServerTemplate = templateId;
+        CreateServerModalTitle.Text = "Personnalise ton serveur";
+        CreateServerModalSubtitle.Text = "Donne un nom et une icône à ton nouveau serveur. Tu pourras toujours les modifier plus tard.";
+
+        var userDisplayName = ViewModel?.CurrentUser?.DisplayName ?? ViewModel?.CurrentUser?.Username ?? "Moi";
+        CreateServerNameInput.Text = $"Serveur de {userDisplayName}";
+        CreateServerErrorText.Visibility = Visibility.Collapsed;
+
+        CreateServerStage1_Templates.Visibility = Visibility.Collapsed;
+        CreateServerStage2_Customize.Visibility = Visibility.Visible;
+        CreateServerStage3_Join.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage1.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage2.Visibility = Visibility.Visible;
+        CreateServerFooterStage3.Visibility = Visibility.Collapsed;
+
+        CreateServerNameInput.Focus(FocusState.Programmatic);
+        CreateServerNameInput.SelectAll();
+    }
+
+    private void ShowCreateServerStage3()
+    {
+        CreateServerModalTitle.Text = "Rejoindre un serveur";
+        CreateServerModalSubtitle.Text = "Saisis un lien ou un code d'invitation ci-dessous pour rejoindre un serveur existant.";
+        JoinServerErrorText.Visibility = Visibility.Collapsed;
+        JoinServerErrorText.Text = string.Empty;
+        JoinServerInviteInput.Text = string.Empty;
+
+        CreateServerStage1_Templates.Visibility = Visibility.Collapsed;
+        CreateServerStage2_Customize.Visibility = Visibility.Collapsed;
+        CreateServerStage3_Join.Visibility = Visibility.Visible;
+        CreateServerFooterStage1.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage2.Visibility = Visibility.Collapsed;
+        CreateServerFooterStage3.Visibility = Visibility.Visible;
+
+        JoinServerInviteInput.Focus(FocusState.Programmatic);
+    }
+
+    private void OnSelectCreateMyOwnClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("custom");
+    private void OnSelectGamingTemplateClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("gaming");
+    private void OnSelectSchoolTemplateClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("school");
+    private void OnSelectFriendsTemplateClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("friends");
+    private void OnSelectCreatorsTemplateClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("creators");
+    private void OnSelectLocalTemplateClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage2("local");
+    private void OnOpenJoinServerStageClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage3();
+    private void OnBackToTemplatesStageClicked(object sender, RoutedEventArgs e) => ShowCreateServerStage1();
+
+    private void OnCreateServerBackdropPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        HideCreateServerModal();
+    }
+
+    private void OnCreateServerCardPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void OnCloseCreateServerModalClicked(object sender, RoutedEventArgs e)
+    {
+        HideCreateServerModal();
+    }
+
+    private async void OnPickServerIconClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picked = await PickImageBytesAsync();
+            if (picked == null) return;
+
+            var mime = picked.Value.ext switch
             {
-                await ViewModel.JoinServerByInviteAsync(input.Text);
-            }
-            catch (Exception ex)
+                ".gif" => "image/gif",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => "image/png"
+            };
+            _newServerIconDataUri = $"data:{mime};base64,{Convert.ToBase64String(picked.Value.bytes)}";
+
+            using var ms = new MemoryStream(picked.Value.bytes);
+            var bitmap = new BitmapImage();
+            await bitmap.SetSourceAsync(ms.AsRandomAccessStream());
+
+            CreateServerIconPreview.Source = bitmap;
+            CreateServerIconPreview.Visibility = Visibility.Visible;
+            CreateServerIconPlaceholder.Visibility = Visibility.Collapsed;
+            CreateServerRemoveIconBtn.Visibility = Visibility.Visible;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CreateServer] Error picking icon: {ex.Message}");
+        }
+    }
+
+    private void OnRemoveServerIconClicked(object sender, RoutedEventArgs e)
+    {
+        _newServerIconDataUri = null;
+        CreateServerIconPreview.Source = null;
+        CreateServerIconPreview.Visibility = Visibility.Collapsed;
+        CreateServerIconPlaceholder.Visibility = Visibility.Visible;
+        CreateServerRemoveIconBtn.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnCreateServerNameChanged(object sender, TextChangedEventArgs e)
+    {
+        if (CreateServerErrorText != null)
+        {
+            CreateServerErrorText.Visibility = Visibility.Collapsed;
+            CreateServerErrorText.Text = string.Empty;
+        }
+    }
+
+    private void OnJoinServerInviteChanged(object sender, TextChangedEventArgs e)
+    {
+        if (JoinServerErrorText != null)
+        {
+            JoinServerErrorText.Visibility = Visibility.Collapsed;
+            JoinServerErrorText.Text = string.Empty;
+        }
+    }
+
+    private async void OnSubmitCreateServerClicked(object sender, RoutedEventArgs e)
+    {
+        var name = CreateServerNameInput.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            CreateServerErrorText.Text = "Veuillez entrer un nom de serveur valide.";
+            CreateServerErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        CreateServerSubmitBtn.IsEnabled = false;
+        CreateServerSubmitBtn.Content = "Création...";
+
+        try
+        {
+            List<(string Name, DiscordChannelType Type)>? templateChannels = _selectedCreateServerTemplate switch
             {
-                var err = new ContentDialog
+                "gaming" => new List<(string, DiscordChannelType)>
                 {
-                    Title = "Invitation invalide",
-                    Content = $"Impossible de rejoindre le serveur : {ex.Message}",
-                    CloseButtonText = "OK",
-                    XamlRoot = this.XamlRoot
-                };
-                await err.ShowAsync();
-            }
+                    ("general", DiscordChannelType.GuildText),
+                    ("clips-et-moments", DiscordChannelType.GuildText),
+                    ("recherche-de-groupe", DiscordChannelType.GuildText),
+                    ("Salon vocal 1", DiscordChannelType.GuildVoice),
+                    ("Salon vocal 2", DiscordChannelType.GuildVoice),
+                    ("Stream & Jeux", DiscordChannelType.GuildVoice)
+                },
+                "school" => new List<(string, DiscordChannelType)>
+                {
+                    ("general", DiscordChannelType.GuildText),
+                    ("cours-et-notes", DiscordChannelType.GuildText),
+                    ("devoirs-aide", DiscordChannelType.GuildText),
+                    ("Salle de révision 1", DiscordChannelType.GuildVoice),
+                    ("Salle de révision 2", DiscordChannelType.GuildVoice)
+                },
+                "friends" => new List<(string, DiscordChannelType)>
+                {
+                    ("general", DiscordChannelType.GuildText),
+                    ("memes", DiscordChannelType.GuildText),
+                    ("musique", DiscordChannelType.GuildText),
+                    ("Salon vocal", DiscordChannelType.GuildVoice),
+                    ("Chill & Blabla", DiscordChannelType.GuildVoice)
+                },
+                "creators" => new List<(string, DiscordChannelType)>
+                {
+                    ("general", DiscordChannelType.GuildText),
+                    ("galerie-creations", DiscordChannelType.GuildText),
+                    ("conseils-retours", DiscordChannelType.GuildText),
+                    ("Atelier vocal", DiscordChannelType.GuildVoice),
+                    ("Chill", DiscordChannelType.GuildVoice)
+                },
+                "local" => new List<(string, DiscordChannelType)>
+                {
+                    ("general", DiscordChannelType.GuildText),
+                    ("annonces-locales", DiscordChannelType.GuildText),
+                    ("evenements", DiscordChannelType.GuildText),
+                    ("Reunions", DiscordChannelType.GuildVoice),
+                    ("Discussions", DiscordChannelType.GuildVoice)
+                },
+                _ => new List<(string, DiscordChannelType)>
+                {
+                    ("general", DiscordChannelType.GuildText),
+                    ("Salon vocal", DiscordChannelType.GuildVoice)
+                }
+            };
+
+            await ViewModel.CreateGuildAsync(name, _newServerIconDataUri, templateChannels);
+            HideCreateServerModal();
+        }
+        catch (Exception ex)
+        {
+            CreateServerErrorText.Text = $"Erreur lors de la création du serveur : {ex.Message}";
+            CreateServerErrorText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            CreateServerSubmitBtn.IsEnabled = true;
+            CreateServerSubmitBtn.Content = "Créer";
+        }
+    }
+
+    private async void OnSubmitJoinServerClicked(object sender, RoutedEventArgs e)
+    {
+        var invite = JoinServerInviteInput.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(invite))
+        {
+            JoinServerErrorText.Text = "Veuillez entrer un lien ou un code d'invitation.";
+            JoinServerErrorText.Visibility = Visibility.Visible;
+            return;
+        }
+
+        JoinServerSubmitBtn.IsEnabled = false;
+        JoinServerSubmitBtn.Content = "Connexion...";
+
+        try
+        {
+            var joined = await ViewModel.JoinServerByInviteAsync(invite);
+            HideCreateServerModal();
+        }
+        catch (Exception ex)
+        {
+            JoinServerErrorText.Text = $"Impossible de rejoindre ce serveur : {ex.Message}";
+            JoinServerErrorText.Visibility = Visibility.Visible;
+        }
+        finally
+        {
+            JoinServerSubmitBtn.IsEnabled = true;
+            JoinServerSubmitBtn.Content = "Rejoindre le serveur";
         }
     }
 

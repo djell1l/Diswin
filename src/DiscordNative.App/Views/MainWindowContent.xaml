@@ -365,10 +365,10 @@
                         </ListView.ItemTemplate>
                     </ListView>
 
-                    <!-- Bouton Rejoindre un serveur par invitation (+) -->
-                    <Button Grid.Row="2" Margin="12,4,12,0" Width="48" Height="48" CornerRadius="16"
-                            Click="OnJoinServerClicked" ToolTipService.ToolTip="Rejoindre un serveur (Invitation)">
-                        <FontIcon Glyph="&#xE710;" />
+                    <!-- Bouton Ajouter un serveur (+) -->
+                    <Button Grid.Row="2" Margin="12,4,12,0" Width="48" Height="48" CornerRadius="24"
+                            Click="OnAddServerClicked" ToolTipService.ToolTip="Ajouter un serveur">
+                        <FontIcon Glyph="&#xE710;" FontSize="18" Foreground="#23A55A" />
                     </Button>
 
                     <!-- Bouton Découverte de serveurs publics (Boussole Discord) -->
@@ -6572,6 +6572,277 @@
                                         Background="#5865F2" Foreground="White" BorderThickness="0"
                                         Click="OnSaveCustomStatusClicked" />
                             </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Modal Overlay 1:1 Discord : Ajouter / Créer un serveur (Modèles + Rejoindre) -->
+        <Grid x:Name="CreateServerModalOverlay" Visibility="Collapsed" Background="#B3000000" Canvas.ZIndex="985"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              PointerPressed="OnCreateServerBackdropPointerPressed">
+            <Border Width="460" MaxHeight="600" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#313338" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="12"
+                    PointerPressed="OnCreateServerCardPointerPressed">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- En-tête avec bouton fermer -->
+                    <Grid Grid.Row="0" Padding="24,20,16,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                            <TextBlock x:Name="CreateServerModalTitle" Text="Crée ton serveur"
+                                       FontSize="24" FontWeight="Bold" Foreground="White" TextAlignment="Center" />
+                            <TextBlock x:Name="CreateServerModalSubtitle"
+                                       Text="Ton serveur est l'endroit où toi et tes amis pouvez passer du temps ensemble. Crée le tien et commence à parler."
+                                       FontSize="13" Foreground="#949BA4" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Width="32" Height="32" Padding="0" CornerRadius="16"
+                                Background="Transparent" BorderThickness="0" VerticalAlignment="Top"
+                                Click="OnCloseCreateServerModalClicked" ToolTipService.ToolTip="Fermer (Échap)">
+                            <FontIcon Glyph="&#xE711;" FontSize="12" Opacity="0.7" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Corps de la modale (Stages 1, 2, 3) -->
+                    <Grid Grid.Row="1" Padding="24,8,24,16">
+                        <!-- Étape 1 : Choix Créer ou Modèles -->
+                        <ScrollViewer x:Name="CreateServerStage1_Templates" Visibility="Visible" MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="8">
+                                <!-- Option 1 : Créer le mien -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectCreateMyOwnClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE70F;" FontSize="18" Foreground="#5865F2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Créer le mien" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <TextBlock Text="COMMENCER À PARTIR D'UN MODÈLE" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" Margin="0,12,0,4" />
+
+                                <!-- Modèle Jeux vidéo -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectGamingTemplateClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE7FC;" FontSize="18" Foreground="#23A55A" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Jeux vidéo" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Modèle Groupe scolaire -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectSchoolTemplateClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE7BE;" FontSize="18" Foreground="#F0B232" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Groupe scolaire" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Modèle Groupe d'amis -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectFriendsTemplateClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE77B;" FontSize="18" Foreground="#5865F2" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Groupe d'amis" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Modèle Artistes et créateurs -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectCreatorsTemplateClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE790;" FontSize="18" Foreground="#EB459E" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Artistes et créateurs" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+
+                                <!-- Modèle Communauté locale -->
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Padding="12,10" Background="#2B2D31" BorderBrush="#3F4147" BorderThickness="1" CornerRadius="8"
+                                        Click="OnSelectLocalTemplateClicked">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="#35373C" Margin="0,0,14,0">
+                                            <FontIcon Glyph="&#xE707;" FontSize="18" Foreground="#57F287" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Communauté locale" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Étape 2 : Personnalisation du serveur -->
+                        <StackPanel x:Name="CreateServerStage2_Customize" Visibility="Collapsed" Spacing="16">
+                            <!-- Sélecteur d'icône du serveur -->
+                            <StackPanel HorizontalAlignment="Center" Spacing="8">
+                                <Button Width="88" Height="88" CornerRadius="44" Padding="0"
+                                        Background="#2B2D31" BorderBrush="#5865F2" BorderThickness="2"
+                                        Click="OnPickServerIconClicked"
+                                        ToolTipService.ToolTip="Ajouter une icône de serveur">
+                                    <Grid Width="88" Height="88">
+                                        <StackPanel x:Name="CreateServerIconPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="4">
+                                            <FontIcon Glyph="&#xE722;" FontSize="24" Foreground="#949BA4" HorizontalAlignment="Center" />
+                                            <TextBlock Text="AJOUTER" FontSize="9" FontWeight="Bold" Foreground="#B5BAC1" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                        <Image x:Name="CreateServerIconPreview" Width="88" Height="88" Stretch="UniformToFill" Visibility="Collapsed" />
+                                    </Grid>
+                                </Button>
+                                <Button x:Name="CreateServerRemoveIconBtn" Content="Retirer l'icône" FontSize="11" Foreground="#F23F43"
+                                        Background="Transparent" BorderThickness="0" Padding="4,2" HorizontalAlignment="Center"
+                                        Visibility="Collapsed" Click="OnRemoveServerIconClicked" />
+                            </StackPanel>
+
+                            <!-- Saisie du nom du serveur -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="NOM DU SERVEUR" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                                <TextBox x:Name="CreateServerNameInput" MaxLength="100" CornerRadius="6" Height="40"
+                                         Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1"
+                                         Foreground="White" FontSize="14" TextChanged="OnCreateServerNameChanged" />
+                                <TextBlock x:Name="CreateServerErrorText" FontSize="12" Foreground="#F23F43" Visibility="Collapsed" />
+                            </StackPanel>
+
+                            <!-- Mentions et règles Discord -->
+                            <TextBlock Text="En créant un serveur, tu acceptes les Règles de la communauté de Discord."
+                                       FontSize="11" Foreground="#949BA4" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Étape 3 : Rejoindre un serveur avec lien/code -->
+                        <StackPanel x:Name="CreateServerStage3_Join" Visibility="Collapsed" Spacing="16">
+                            <!-- Saisie du lien ou code d'invitation -->
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="LIEN D'INVITATION *" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                                <TextBox x:Name="JoinServerInviteInput" MaxLength="200" CornerRadius="6" Height="40"
+                                         PlaceholderText="https://discord.gg/hTKzmak ou hTKzmak"
+                                         Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1"
+                                         Foreground="White" FontSize="14" TextChanged="OnJoinServerInviteChanged" />
+                                <TextBlock x:Name="JoinServerErrorText" FontSize="12" Foreground="#F23F43" Visibility="Collapsed" />
+                            </StackPanel>
+
+                            <!-- Exemples d'invitations valides -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="LES INVITATIONS DEVRAIENT RESSEMBLER À" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                                <TextBlock Text="hTKzmak&#x0a;https://discord.gg/hTKzmak&#x0a;https://discord.gg/cool-people"
+                                           FontSize="12" Foreground="#949BA4" LineHeight="18" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Pied de page avec actions -->
+                    <Border Grid.Row="2" Background="#2B2D31" Padding="20,14" CornerRadius="0,0,12,12">
+                        <Grid>
+                            <!-- Pied de page Étape 1 : Rejoindre -->
+                            <Grid x:Name="CreateServerFooterStage1" Visibility="Visible">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="Tu as déjà une invitation ?" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="White" TextAlignment="Center" Margin="0,0,0,10" />
+                                <Button Grid.Row="1" Content="Rejoindre un serveur" FontSize="14" FontWeight="SemiBold"
+                                        HorizontalAlignment="Stretch" Height="38" CornerRadius="6"
+                                        Background="#4E5058" Foreground="White" BorderThickness="0"
+                                        Click="OnOpenJoinServerStageClicked" />
+                            </Grid>
+
+                            <!-- Pied de page Étape 2 : Créer / Retour -->
+                            <Grid x:Name="CreateServerFooterStage2" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="Retour" FontSize="13" Padding="14,8" CornerRadius="6"
+                                        Background="Transparent" BorderThickness="0" Foreground="White"
+                                        Click="OnBackToTemplatesStageClicked" />
+                                <Button x:Name="CreateServerSubmitBtn" Grid.Column="1" Content="Créer" FontSize="13" FontWeight="Bold"
+                                        HorizontalAlignment="Right" Padding="26,8" CornerRadius="6"
+                                        Background="#5865F2" Foreground="White" BorderThickness="0"
+                                        Click="OnSubmitCreateServerClicked" />
+                            </Grid>
+
+                            <!-- Pied de page Étape 3 : Rejoindre / Retour -->
+                            <Grid x:Name="CreateServerFooterStage3" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="Retour" FontSize="13" Padding="14,8" CornerRadius="6"
+                                        Background="Transparent" BorderThickness="0" Foreground="White"
+                                        Click="OnBackToTemplatesStageClicked" />
+                                <Button x:Name="JoinServerSubmitBtn" Grid.Column="1" Content="Rejoindre le serveur" FontSize="13" FontWeight="Bold"
+                                        HorizontalAlignment="Right" Padding="20,8" CornerRadius="6"
+                                        Background="#5865F2" Foreground="White" BorderThickness="0"
+                                        Click="OnSubmitJoinServerClicked" />
+                            </Grid>
                         </Grid>
                     </Border>
                 </Grid>

@@ -1246,11 +1246,21 @@ public sealed class DiscordRestClient : IDisposable
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task JoinInviteAsync(string inviteCodeOrUrl, CancellationToken ct = default)
+    public async Task<DiscordGuild?> JoinInviteAsync(string inviteCodeOrUrl, CancellationToken ct = default)
     {
         var code = ExtractInviteCode(inviteCodeOrUrl);
         var response = await _http.PostAsJsonAsync($"{ApiBase}/invites/{code}", new { }, ct);
         response.EnsureSuccessStatusCode();
+        try
+        {
+            using var doc = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            if (doc.RootElement.TryGetProperty("guild", out var guildElem))
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<DiscordGuild>(guildElem.GetRawText());
+            }
+        }
+        catch { }
+        return null;
     }
 
     public async Task<string> CreateChannelInviteAsync(string channelId, CancellationToken ct = default)
@@ -1260,6 +1270,32 @@ public sealed class DiscordRestClient : IDisposable
         using var doc = await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
         var code = doc.RootElement.TryGetProperty("code", out var c) ? c.GetString() : null;
         return string.IsNullOrEmpty(code) ? string.Empty : $"https://discord.gg/{code}";
+    }
+
+    public async Task<DiscordGuild> CreateGuildAsync(
+        string name,
+        string? iconBase64 = null,
+        List<Dictionary<string, object>>? channels = null,
+        CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["name"] = name.Trim(),
+        };
+        if (!string.IsNullOrWhiteSpace(iconBase64))
+        {
+            payload["icon"] = iconBase64;
+        }
+        if (channels != null && channels.Count > 0)
+        {
+            payload["channels"] = channels;
+        }
+
+        var response = await _http.PostAsJsonAsync($"{ApiBase}/guilds", payload, ct);
+        response.EnsureSuccessStatusCode();
+        var guild = await response.Content.ReadFromJsonAsync<DiscordGuild>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("Impossible de lire la réponse du serveur créé.");
+        return guild;
     }
 
     public async Task<DiscordChannel> CreateGuildChannelAsync(

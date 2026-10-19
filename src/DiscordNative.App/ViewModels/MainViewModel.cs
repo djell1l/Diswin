@@ -2530,10 +2530,61 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
     }
 
-    public async Task JoinServerByInviteAsync(string inviteCodeOrUrl)
+    public async Task<DiscordGuild> CreateGuildAsync(
+        string name,
+        string? iconBase64 = null,
+        List<(string Name, DiscordChannelType Type)>? templateChannels = null)
     {
-        await _client.Rest.JoinInviteAsync(inviteCodeOrUrl);
-        await _client.RefreshGuildsAsync();
+        var channelsPayload = templateChannels?.Select(c => new Dictionary<string, object>
+        {
+            ["name"] = c.Name,
+            ["type"] = (int)c.Type
+        }).ToList();
+
+        var guild = await _client.CreateGuildAsync(name, iconBase64, channelsPayload);
+        await SelectGuildAsync(guild);
+
+        // Ensure template channels are created if guild only has default channels
+        if (templateChannels != null && templateChannels.Count > 0)
+        {
+            foreach (var ch in templateChannels)
+            {
+                try
+                {
+                    if (Channels != null && Channels.Any(c => c.Name.Equals(ch.Name, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+                    await CreateChannelAsync(ch.Name, ch.Type);
+                }
+                catch { }
+            }
+        }
+
+        return guild;
+    }
+
+    public async Task<DiscordGuild?> JoinServerByInviteAsync(string inviteCodeOrUrl)
+    {
+        var joinedGuild = await _client.JoinInviteAsync(inviteCodeOrUrl);
+        if (joinedGuild != null)
+        {
+            var match = Guilds.FirstOrDefault(g => g.Id == joinedGuild.Id);
+            if (match != null)
+            {
+                await SelectGuildAsync(match);
+                return match;
+            }
+        }
+        else if (Guilds.Count > 0)
+        {
+            // If API didn't return full guild object, select the latest guild if one was added
+            var last = Guilds.LastOrDefault();
+            if (last != null)
+            {
+                await SelectGuildAsync(last);
+                return last;
+            }
+        }
+        return joinedGuild;
     }
 
     public async Task LeaveGuildAsync(DiscordGuild guild)
