@@ -26,6 +26,13 @@ public sealed class AppSettings
     public bool ShowNotifications { get; set; } = true;
     public bool StartMinimized { get; set; } = false;
     public bool EnableKrispNoiseSuppression { get; set; } = true;
+    public double InputVolume { get; set; } = 1.0;
+    public double OutputVolume { get; set; } = 1.0;
+    public string InputMode { get; set; } = "VoiceActivity"; // VoiceActivity | PushToTalk
+    public bool AutoVoiceSensitivity { get; set; } = true;
+    public double VoiceSensitivityLevel { get; set; } = 50.0;
+    public bool EchoCancellation { get; set; } = true;
+    public bool AdvancedNoiseReduction { get; set; } = true;
     public bool ShowHiddenChannels { get; set; } = false;
     public bool ForceAccentColorOnProfileCards { get; set; } = false;
     public Dictionary<string, string> UserNotes { get; set; } = new();

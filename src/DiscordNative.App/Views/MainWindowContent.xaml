@@ -402,34 +402,55 @@
 
                     <!-- Haut gauche : Titre de serveur & Recherche de salons (Quick Switcher) -->
                     <StackPanel Grid.Row="0" Margin="8,6,8,8" Spacing="6">
-                        <!-- En-tête de Serveur Interactif avec Menu Déroulant officiel Discord -->
+                        <!-- En-tête de Serveur Interactif avec Menu Déroulant officiel Discord & Bannière -->
                         <Button x:Name="ServerHeaderButton"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                                Padding="12,10" CornerRadius="8" Background="Transparent" BorderThickness="0"
+                                Padding="0" CornerRadius="8" Background="Transparent" BorderThickness="0"
                                 Visibility="{x:Bind ViewModel.ShowingGuildChannels, Mode=OneWay}"
                                 ToolTipService.ToolTip="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}">
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+                            <Grid>
+                                <!-- Bannière officielle du serveur (si présente) -->
+                                <Border Height="135" CornerRadius="8"
+                                        Visibility="{x:Bind ViewModel.HasSelectedGuildBanner, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Grid>
+                                        <Image Source="{x:Bind ViewModel.SelectedGuildBannerUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}"
+                                               Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <Border CornerRadius="8">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                    <GradientStop Color="#B3000000" Offset="0.0" />
+                                                    <GradientStop Color="#22000000" Offset="0.4" />
+                                                    <GradientStop Color="#CC000000" Offset="1.0" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                </Border>
 
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <!-- Badge Boost du serveur si présent -->
-                                    <Border Background="#33F47FFF" CornerRadius="4" Padding="4,1" VerticalAlignment="Center"
-                                            Visibility="{x:Bind ViewModel.HasSelectedGuildBoosts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                                            <FontIcon Glyph="&#xE735;" FontSize="10" Foreground="#F47FFF" />
-                                            <TextBlock Text="{x:Bind ViewModel.SelectedGuildBoostBadge, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#F47FFF" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Text="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}"
-                                               FontWeight="Bold" FontSize="15" Foreground="#F2F3F5"
-                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                </StackPanel>
+                                <!-- Barre de titre du serveur et chevron -->
+                                <Grid Padding="12,10" VerticalAlignment="Top" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
 
-                                <!-- Chevron vers le bas comme sur Discord officiel -->
-                                <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <!-- Badge Boost du serveur si présent -->
+                                        <Border Background="#33F47FFF" CornerRadius="4" Padding="4,1" VerticalAlignment="Center"
+                                                Visibility="{x:Bind ViewModel.HasSelectedGuildBoosts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <FontIcon Glyph="&#xE735;" FontSize="10" Foreground="#F47FFF" />
+                                                <TextBlock Text="{x:Bind ViewModel.SelectedGuildBoostBadge, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#F47FFF" />
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock Text="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}"
+                                                   FontWeight="Bold" FontSize="15" Foreground="#F2F3F5"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <!-- Chevron vers le bas comme sur Discord officiel -->
+                                    <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="12" Foreground="#F2F3F5" VerticalAlignment="Center" />
+                                </Grid>
                             </Grid>
 
                             <!-- Menu d'actions du serveur officiel Discord -->

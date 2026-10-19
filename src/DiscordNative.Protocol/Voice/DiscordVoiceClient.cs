@@ -70,6 +70,13 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
 
     public bool IsKrispEnabled { get; set; } = true;
 
+    public static float GlobalInputVolume { get; set; } = 1.0f;
+    public static float GlobalOutputVolume { get; set; } = 1.0f;
+    public static bool GlobalAutoVoiceSensitivity { get; set; } = true;
+    public static double GlobalVoiceSensitivityLevel { get; set; } = 50.0;
+    public static string GlobalInputMode { get; set; } = "VoiceActivity";
+    public static bool IsPushToTalkActive { get; set; } = false;
+
     private bool _isSystemAudioSharingEnabled;
     public bool IsSystemAudioSharingEnabled
     {
@@ -516,7 +523,16 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
             }
         }
 
-        // 2. Détection d'activité vocale (VAD) avec maintien de 280ms pour éviter tout clignotement
+        // 2. Échelle de volume du micro si configurée
+        if (Math.Abs(GlobalInputVolume - 1.0f) > 0.001f)
+        {
+            for (int i = 0; i < pcmFrame.Length; i++)
+            {
+                pcmFrame[i] = (short)Math.Clamp((int)(pcmFrame[i] * GlobalInputVolume), short.MinValue, short.MaxValue);
+            }
+        }
+
+        // 3. Détection d'activité vocale (VAD) ou Push-To-Talk
         long sumSq = 0;
         for (int i = 0; i < pcmFrame.Length; i += 4)
         {
@@ -525,12 +541,19 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
         }
         double rms = Math.Sqrt((double)sumSq / (pcmFrame.Length / 4));
         var now = DateTime.UtcNow;
-        double vadThreshold = IsKrispEnabled ? 130.0 : 190.0;
+
+        double vadThreshold = GlobalAutoVoiceSensitivity
+            ? (IsKrispEnabled ? 130.0 : 190.0)
+            : Math.Max(20.0, (100.0 - GlobalVoiceSensitivityLevel) * 3.5 + 40.0);
+
         if (rms > vadThreshold)
         {
             _lastLocalVoiceActivityUtc = now;
         }
-        bool active = (now - _lastLocalVoiceActivityUtc).TotalMilliseconds < 280;
+
+        bool active = string.Equals(GlobalInputMode, "PushToTalk", StringComparison.OrdinalIgnoreCase)
+            ? IsPushToTalkActive
+            : (rms > vadThreshold || (now - _lastLocalVoiceActivityUtc).TotalMilliseconds < 280);
 
         if (active && !_isSpeaking)
         {
@@ -676,10 +699,10 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
 #pragma warning restore CS0618
         if (samples > 0)
         {
-            float volume = 1.0f;
+            float volume = GlobalOutputVolume;
             if (_ssrcToUserId.TryGetValue(ssrc, out var uid) && _userVolumes.TryGetValue(uid, out var userVol))
             {
-                volume = userVol;
+                volume *= userVol;
             }
 
             if (volume <= 0.001f)

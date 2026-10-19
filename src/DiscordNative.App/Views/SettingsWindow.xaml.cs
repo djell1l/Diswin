@@ -70,6 +70,31 @@ public sealed partial class SettingsWindow : Window
         ConvertLongMessagesToggle.IsOn = current.ConvertLongMessagesToFile;
         KrispToggle.IsOn = current.EnableKrispNoiseSuppression;
         UpdateKrispStatusText();
+
+        InputVolumeSlider.Value = Math.Clamp(current.InputVolume * 100.0, 0, 100);
+        InputVolumeLabel.Text = $"{(int)(current.InputVolume * 100.0)}%";
+        OutputVolumeSlider.Value = Math.Clamp(current.OutputVolume * 100.0, 0, 200);
+        OutputVolumeLabel.Text = $"{(int)(current.OutputVolume * 100.0)}%";
+
+        InputModeCombo.SelectedItem = InputModeCombo.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(i => (string)i.Tag == current.InputMode) ?? InputModeCombo.Items[0];
+
+        AutoSensitivityToggle.IsOn = current.AutoVoiceSensitivity;
+        SensitivitySlider.Value = Math.Clamp(current.VoiceSensitivityLevel, 0, 100);
+        SensitivityLabel.Text = $"-{(int)(100 - current.VoiceSensitivityLevel)} dB";
+        ManualSensitivitySliderPanel.Visibility = current.AutoVoiceSensitivity ? Visibility.Collapsed : Visibility.Visible;
+        VoiceSensitivityPanel.Visibility = current.InputMode == "PushToTalk" ? Visibility.Collapsed : Visibility.Visible;
+
+        EchoCancellationToggle.IsOn = current.EchoCancellation;
+        AdvancedNoiseReductionToggle.IsOn = current.AdvancedNoiseReduction;
+
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalInputVolume = (float)current.InputVolume;
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalOutputVolume = (float)current.OutputVolume;
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalAutoVoiceSensitivity = current.AutoVoiceSensitivity;
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalVoiceSensitivityLevel = current.VoiceSensitivityLevel;
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalInputMode = current.InputMode;
+
         OpacitySlider.Value = current.BackgroundOpacity;
         BlurSlider.Value = current.BackgroundBlurRadius;
 
@@ -114,6 +139,68 @@ public sealed partial class SettingsWindow : Window
         {
             mwc.ViewModel.SetKrispEnabled(KrispToggle.IsOn);
         }
+    }
+
+    private void OnInputVolumeChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.InputVolume = e.NewValue / 100.0;
+        InputVolumeLabel.Text = $"{(int)e.NewValue}%";
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalInputVolume = (float)_settings.Current.InputVolume;
+        _settings.Save();
+    }
+
+    private void OnOutputVolumeChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.OutputVolume = e.NewValue / 100.0;
+        OutputVolumeLabel.Text = $"{(int)e.NewValue}%";
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalOutputVolume = (float)_settings.Current.OutputVolume;
+        _settings.Save();
+    }
+
+    private void OnInputModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+        if (InputModeCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+        {
+            _settings.Current.InputMode = tag;
+            DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalInputMode = tag;
+            VoiceSensitivityPanel.Visibility = tag == "PushToTalk" ? Visibility.Collapsed : Visibility.Visible;
+            _settings.Save();
+        }
+    }
+
+    private void OnAutoSensitivityToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.AutoVoiceSensitivity = AutoSensitivityToggle.IsOn;
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalAutoVoiceSensitivity = AutoSensitivityToggle.IsOn;
+        ManualSensitivitySliderPanel.Visibility = AutoSensitivityToggle.IsOn ? Visibility.Collapsed : Visibility.Visible;
+        _settings.Save();
+    }
+
+    private void OnSensitivityChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.VoiceSensitivityLevel = e.NewValue;
+        SensitivityLabel.Text = $"-{(int)(100 - e.NewValue)} dB";
+        DiscordNative.Protocol.Voice.DiscordVoiceClient.GlobalVoiceSensitivityLevel = e.NewValue;
+        _settings.Save();
+    }
+
+    private void OnEchoCancellationToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.EchoCancellation = EchoCancellationToggle.IsOn;
+        _settings.Save();
+    }
+
+    private void OnAdvancedNoiseReductionToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.AdvancedNoiseReduction = AdvancedNoiseReductionToggle.IsOn;
+        _settings.Save();
     }
 
     private void OnForceAccentColorOnProfilesToggled(object sender, RoutedEventArgs e)
