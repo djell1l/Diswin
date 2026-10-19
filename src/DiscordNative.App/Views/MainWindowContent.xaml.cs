@@ -304,8 +304,14 @@ public sealed partial class MainWindowContent : UserControl
 
     private async void OnChannelSelected(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is ListView { SelectedItem: DiscordChannel channel })
+        if (sender is ListView lv && lv.SelectedItem is DiscordChannel channel)
         {
+            if (channel.IsCategory)
+            {
+                lv.SelectedItem = null;
+                ViewModel.ToggleCategoryCollapse(channel);
+                return;
+            }
             HookMessageListScroll();
             await ViewModel.SelectChannelAsync(channel);
             if (ViewModel.Messages.Count > 0)
@@ -2407,7 +2413,7 @@ public sealed partial class MainWindowContent : UserControl
         await dialog.ShowAsync();
     }
 
-    private async void OnCreateChannelHeaderClicked(object sender, RoutedEventArgs e)
+    private async Task PromptCreateChannelAsync(string? parentId = null)
     {
         if (ViewModel?.SelectedGuild == null) return;
 
@@ -2484,13 +2490,129 @@ public sealed partial class MainWindowContent : UserControl
 
             try
             {
-                await ViewModel.CreateChannelAsync(cleanName, channelType, topic);
+                await ViewModel.CreateChannelAsync(cleanName, channelType, topic, parentId);
             }
             catch (Exception ex)
             {
                 var err = new ContentDialog
                 {
                     Title = "Impossible de créer le salon",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
+    private async void OnCreateChannelHeaderClicked(object sender, RoutedEventArgs e)
+    {
+        await PromptCreateChannelAsync(null);
+    }
+
+    private void OnCategoryHeaderTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is DiscordChannel channel && channel.IsCategory)
+        {
+            ChannelList.SelectedItem = null;
+            ViewModel?.ToggleCategoryCollapse(channel);
+        }
+    }
+
+    private async void OnCreateChannelInCategoryClicked(object sender, RoutedEventArgs e)
+    {
+        var channel = (sender as FrameworkElement)?.Tag as DiscordChannel 
+                   ?? (sender as FrameworkElement)?.DataContext as DiscordChannel;
+        if (channel != null && ViewModel?.SelectedGuild != null)
+        {
+            await PromptCreateChannelAsync(channel.IsCategory ? channel.Id : channel.ParentId);
+        }
+    }
+
+    private void OnCopyCategoryIdClicked(object sender, RoutedEventArgs e)
+    {
+        var channel = (sender as FrameworkElement)?.Tag as DiscordChannel 
+                   ?? (sender as FrameworkElement)?.DataContext as DiscordChannel;
+        if (channel != null)
+        {
+            CopyToClipboard(channel.Id);
+        }
+    }
+
+    private async void OnEditCategoryClicked(object sender, RoutedEventArgs e)
+    {
+        var cat = (sender as FrameworkElement)?.Tag as DiscordChannel 
+               ?? (sender as FrameworkElement)?.DataContext as DiscordChannel;
+        if (cat == null) return;
+
+        var nameBox = new TextBox
+        {
+            Header = "NOM DE LA CATÉGORIE",
+            Text = cat.Name ?? string.Empty,
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var stack = new StackPanel { Spacing = 12, Width = 360 };
+        stack.Children.Add(nameBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Modifier la catégorie",
+            Content = stack,
+            PrimaryButtonText = "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(nameBox.Text))
+        {
+            try
+            {
+                await ViewModel.ModifyChannelAsync(cat.Id, nameBox.Text.Trim().ToUpperInvariant(), null);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de modifier la catégorie",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
+    private async void OnDeleteCategoryClicked(object sender, RoutedEventArgs e)
+    {
+        var cat = (sender as FrameworkElement)?.Tag as DiscordChannel 
+               ?? (sender as FrameworkElement)?.DataContext as DiscordChannel;
+        if (cat == null) return;
+
+        var dialog = new ContentDialog
+        {
+            Title = "Supprimer la catégorie",
+            Content = $"Êtes-vous sûr de vouloir supprimer la catégorie '{cat.Name}' ? Les salons associés ne seront pas supprimés.",
+            PrimaryButtonText = "Supprimer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            try
+            {
+                await ViewModel.DeleteChannelAsync(cat.Id);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de supprimer la catégorie",
                     Content = ex.Message,
                     CloseButtonText = "OK",
                     XamlRoot = this.XamlRoot

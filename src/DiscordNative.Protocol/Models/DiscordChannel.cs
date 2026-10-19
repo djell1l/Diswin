@@ -33,8 +33,22 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     [JsonPropertyName("guild_id")]
     public string? GuildId { get; set; }
 
+    private string? _name;
     [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    public string? Name
+    {
+        get => _name;
+        set
+        {
+            if (_name != value)
+            {
+                _name = value;
+                OnPropertyChanged(nameof(Name));
+                OnPropertyChanged(nameof(DisplayName));
+                OnPropertyChanged(nameof(CategoryNameUpper));
+            }
+        }
+    }
 
     [JsonPropertyName("topic")]
     public string? Topic { get; set; }
@@ -109,6 +123,44 @@ public sealed class DiscordChannel : INotifyPropertyChanged
         or DiscordChannelType.AnnouncementThread;
 
     public bool IsVoiceChannel => Type is DiscordChannelType.GuildVoice or DiscordChannelType.GuildStageVoice;
+    public bool IsCategory => Type == DiscordChannelType.GuildCategory;
+    public bool IsNotCategory => Type != DiscordChannelType.GuildCategory;
+    public bool IsInParentCategory => !IsCategory && !string.IsNullOrEmpty(ParentId);
+    public string CategoryNameUpper => (Name ?? DisplayName).ToUpperInvariant();
+
+    private bool _isCollapsed;
+    [JsonIgnore]
+    public bool IsCollapsed
+    {
+        get => _isCollapsed;
+        set
+        {
+            if (_isCollapsed != value)
+            {
+                _isCollapsed = value;
+                OnPropertyChanged(nameof(IsCollapsed));
+                OnPropertyChanged(nameof(CategoryChevronGlyph));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string CategoryChevronGlyph => _isCollapsed ? "\uE76C" : "\uE70D";
+
+    private bool _isCategoryVisible = true;
+    [JsonIgnore]
+    public bool IsCategoryVisible
+    {
+        get => _isCategoryVisible;
+        set
+        {
+            if (_isCategoryVisible != value)
+            {
+                _isCategoryVisible = value;
+                OnPropertyChanged(nameof(IsCategoryVisible));
+            }
+        }
+    }
 
     [JsonIgnore]
     public ObservableCollection<DiscordUser> ConnectedVoiceMembers { get; } = new();

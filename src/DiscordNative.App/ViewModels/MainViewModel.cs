@@ -961,37 +961,63 @@ public sealed partial class MainViewModel : ObservableObject
 
         bool showHidden = App.Settings.Current.ShowHiddenChannels;
 
-        // Trier logiquement : salons texte d'abord, puis salons vocaux (groupés par catégorie si applicable)
-        var categories = rawChannels.Where(c => c.Type == DiscordChannelType.GuildCategory).ToDictionary(c => c.Id, c => c.Position);
+        // Groupement hiérarchique par catégories (Discord 1:1)
+        var categoryChannels = rawChannels
+            .Where(c => c.Type == DiscordChannelType.GuildCategory)
+            .OrderBy(c => c.Position)
+            .ToList();
 
-        int GetCategoryPos(DiscordChannel ch)
+        var uncategorized = rawChannels
+            .Where(c => (c.IsTextLike || c.IsVoiceChannel) && string.IsNullOrEmpty(c.ParentId) && (c.CanView || showHidden))
+            .OrderBy(c => c.IsVoiceChannel ? 1 : 0)
+            .ThenBy(c => c.Position)
+            .ToList();
+
+        void AddChannelWithUnreadCheck(DiscordChannel ch)
         {
-            if (!string.IsNullOrEmpty(ch.ParentId) && categories.TryGetValue(ch.ParentId, out var pos))
-                return pos;
-            return -1;
-        }
-
-        int GetTypeOrder(DiscordChannel ch) => ch.IsVoiceChannel ? 1 : 0;
-
-        var sortedChannels = rawChannels
-            .Where(c => (c.IsTextLike || c.IsVoiceChannel) && (c.CanView || showHidden))
-            .OrderBy(c => GetCategoryPos(c))
-            .ThenBy(c => GetTypeOrder(c))
-            .ThenBy(c => c.Position);
-
-        foreach (var channel in sortedChannels)
-        {
-            channel.GuildId ??= guild.Id;
-            if (!string.IsNullOrEmpty(channel.LastMessageId) && _client.ReadLastMessages.TryGetValue(channel.Id, out var rMid))
+            ch.GuildId ??= guild.Id;
+            if (!string.IsNullOrEmpty(ch.LastMessageId) && _client.ReadLastMessages.TryGetValue(ch.Id, out var rMid))
             {
-                if (ulong.TryParse(channel.LastMessageId, out var cMid) &&
+                if (ulong.TryParse(ch.LastMessageId, out var cMid) &&
                     ulong.TryParse(rMid, out var readMid) &&
                     cMid > readMid)
                 {
-                    channel.HasUnread = true;
+                    ch.HasUnread = true;
                 }
             }
-            Channels.Add(channel);
+            Channels.Add(ch);
+        }
+
+        // 1. Canaux non catégorisés d'abord
+        foreach (var ch in uncategorized)
+        {
+            AddChannelWithUnreadCheck(ch);
+        }
+
+        // 2. Chaque catégorie avec ses salons enfants
+        foreach (var cat in categoryChannels)
+        {
+            cat.GuildId ??= guild.Id;
+            Channels.Add(cat);
+
+            var children = rawChannels
+                .Where(c => (c.IsTextLike || c.IsVoiceChannel) && c.ParentId == cat.Id && (c.CanView || showHidden))
+                .OrderBy(c => c.IsVoiceChannel ? 1 : 0)
+                .ThenBy(c => c.Position);
+
+            foreach (var child in children)
+            {
+                AddChannelWithUnreadCheck(child);
+            }
+        }
+
+        // S'il n'y avait aucune catégorie sur le serveur, s'assurer que tous les salons sont ajoutés
+        if (categoryChannels.Count == 0 && uncategorized.Count == 0)
+        {
+            foreach (var ch in rawChannels.Where(c => (c.IsTextLike || c.IsVoiceChannel) && (c.CanView || showHidden)))
+            {
+                AddChannelWithUnreadCheck(ch);
+            }
         }
 
         foreach (var ch in Channels.Where(c => c.IsVoiceChannel))
@@ -1006,8 +1032,48 @@ public sealed partial class MainViewModel : ObservableObject
         RefreshRecentMemberActivities();
     }
 
+    public void ToggleCategoryCollapse(DiscordChannel category)
+    {
+        if (!category.IsCategory) return;
+        category.IsCollapsed = !category.IsCollapsed;
+        bool isCollapsed = category.IsCollapsed;
+        var children = Channels.Where(c => c.ParentId == category.Id).ToList();
+        foreach (var ch in children)
+        {
+            ch.IsCategoryVisible = !isCollapsed;
+        }
+
+        if (string.IsNullOrWhiteSpace(SearchFilterText))
+        {
+            if (isCollapsed)
+            {
+                foreach (var child in children)
+                {
+                    FilteredChannels.Remove(child);
+                }
+            }
+            else
+            {
+                int catIndex = FilteredChannels.IndexOf(category);
+                if (catIndex >= 0)
+                {
+                    for (int i = 0; i < children.Count; i++)
+                    {
+                        FilteredChannels.Insert(catIndex + 1 + i, children[i]);
+                    }
+                }
+            }
+        }
+    }
+
     public async Task SelectChannelAsync(DiscordChannel channel)
     {
+        if (channel.IsCategory)
+        {
+            ToggleCategoryCollapse(channel);
+            return;
+        }
+
         if (channel.IsVoiceChannel && channel.IsLocked)
         {
             return;
@@ -1538,9 +1604,60 @@ public sealed partial class MainViewModel : ObservableObject
         if (_selectedGuild == null) return;
         var newChannel = await _client.Rest.CreateGuildChannelAsync(_selectedGuild.Id, name, type, topic, parentId);
         newChannel.GuildId = _selectedGuild.Id;
-        Channels.Add(newChannel);
-        FilteredChannels.Add(newChannel);
-        await SelectChannelAsync(newChannel);
+        newChannel.ParentId = parentId;
+
+        if (type == DiscordChannelType.GuildCategory)
+        {
+            Channels.Add(newChannel);
+            FilteredChannels.Add(newChannel);
+        }
+        else if (!string.IsNullOrEmpty(parentId))
+        {
+            var cat = Channels.FirstOrDefault(c => c.Id == parentId);
+            var lastChild = Channels.LastOrDefault(c => c.ParentId == parentId);
+            var target = lastChild ?? cat;
+            if (target != null)
+            {
+                int idx = Channels.IndexOf(target);
+                Channels.Insert(idx + 1, newChannel);
+                int fIdx = FilteredChannels.IndexOf(target);
+                if (fIdx >= 0)
+                {
+                    FilteredChannels.Insert(fIdx + 1, newChannel);
+                }
+                else if (cat != null && !cat.IsCollapsed)
+                {
+                    FilteredChannels.Add(newChannel);
+                }
+            }
+            else
+            {
+                Channels.Add(newChannel);
+                FilteredChannels.Add(newChannel);
+            }
+        }
+        else
+        {
+            var firstCat = Channels.FirstOrDefault(c => c.IsCategory);
+            if (firstCat != null)
+            {
+                int idx = Channels.IndexOf(firstCat);
+                Channels.Insert(idx, newChannel);
+                int fIdx = FilteredChannels.IndexOf(firstCat);
+                if (fIdx >= 0) FilteredChannels.Insert(fIdx, newChannel);
+                else FilteredChannels.Add(newChannel);
+            }
+            else
+            {
+                Channels.Add(newChannel);
+                FilteredChannels.Add(newChannel);
+            }
+        }
+
+        if (type != DiscordChannelType.GuildCategory)
+        {
+            await SelectChannelAsync(newChannel);
+        }
     }
 
     public async Task ModifyChannelAsync(string channelId, string newName, string? newTopic)
