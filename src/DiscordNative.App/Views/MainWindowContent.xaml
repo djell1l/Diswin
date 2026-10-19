@@ -2127,6 +2127,101 @@
                         </ListView.ItemTemplate>
                     </ListView>
 
+                    <!-- Popup d'Autocomplétion Flottant Discord (@ Membres, Rôles, Émojis) -->
+                    <Border Grid.Row="1" Grid.Column="0"
+                            VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                            Margin="16,0,16,4" Canvas.ZIndex="150"
+                            Background="#2B2D31"
+                            BorderBrush="#1F2023" BorderThickness="1"
+                            CornerRadius="8" MaxHeight="340"
+                            Visibility="{x:Bind ViewModel.IsAutocompleteOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- En-tête de la catégorie (ex: "MEMBRES DU SERVEUR" ou "ÉMOJIS") -->
+                            <Border Grid.Row="0" Background="#232428" Padding="12,8" CornerRadius="8,8,0,0" BorderBrush="#1F2023" BorderThickness="0,0,0,1">
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind ViewModel.AutocompleteCategoryTitle, Mode=OneWay}"
+                                               FontSize="11" FontWeight="Bold" Foreground="#949BA4" />
+                                    <TextBlock Text="• Utilisez ↑ ↓ pour naviguer, Entrée ou Tab pour valider"
+                                               FontSize="11" Foreground="#80848E" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Liste déroulante des suggestions -->
+                            <ListView Grid.Row="1"
+                                      ItemsSource="{x:Bind ViewModel.AutocompleteSuggestions, Mode=OneWay}"
+                                      SelectionMode="None"
+                                      Padding="6,4">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AutocompleteItemViewModel">
+                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                Padding="8,6" Margin="0,1" CornerRadius="6"
+                                                Background="{x:Bind BackgroundHex, Mode=OneWay}"
+                                                BorderThickness="0"
+                                                Tag="{x:Bind}"
+                                                Click="OnAutocompleteItemClicked">
+                                            <Grid ColumnSpacing="10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Cas 1 : Avatar de membre avec pastille de statut -->
+                                                <Grid Grid.Column="0" Width="26" Height="26"
+                                                      Visibility="{x:Bind HasAvatar, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <Ellipse Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <Ellipse.Fill>
+                                                            <ImageBrush ImageSource="{x:Bind AvatarUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                        </Ellipse.Fill>
+                                                    </Ellipse>
+                                                    <Ellipse Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                             Fill="{x:Bind StatusColor, Mode=OneWay}" Stroke="#2B2D31" StrokeThickness="1.5"
+                                                             Visibility="{x:Bind HasStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </Grid>
+
+                                                <!-- Cas 2 : Émoji personnalisé (image animée ou statique) -->
+                                                <Border Grid.Column="0" Width="24" Height="24"
+                                                        Visibility="{x:Bind IsCustomEmoji, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <Image Source="{x:Bind EmojiImageUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
+                                                </Border>
+
+                                                <!-- Cas 3 : Émoji Unicode standard -->
+                                                <TextBlock Grid.Column="0" Text="{x:Bind EmojiUnicode, Mode=OneWay}" FontSize="18"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Visibility="{x:Bind IsEmoji, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                                <!-- Titre et sous-titre -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock Text="{x:Bind Title, Mode=OneWay}"
+                                                               FontWeight="SemiBold" FontSize="13"
+                                                               Foreground="{x:Bind TitleColorHex, Mode=OneWay}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}"
+                                                               FontSize="11" Foreground="#949BA4"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Visibility="{x:Bind HasSubtitle, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </StackPanel>
+
+                                                <!-- Touche Tab / Entrée d'aide sur l'élément sélectionné -->
+                                                <Border Grid.Column="2" Background="#1E1F22" CornerRadius="4" Padding="6,2"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{x:Bind IsSelected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="Tab ↵" FontSize="10" FontWeight="Bold" Foreground="#949BA4" />
+                                                </Border>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Border>
+
+
                     <!-- Panneau latéral droit : Activités récentes du serveur & Liste des Membres (En ligne / Hors ligne) -->
                     <Border Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" Width="240"
                             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="1,0,0,0"
@@ -3472,6 +3567,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <Button Grid.Column="0" Width="40" Height="40" CornerRadius="20" Padding="0"
@@ -3500,8 +3596,76 @@
                                      TextChanged="OnMessageInputTextChanged"
                                      KeyDown="OnMessageInputKeyDown" />
 
-                            <!-- Sélecteur d'Emojis complet Discord (Serveurs + Catégories + Recherche) -->
+                            <!-- Bouton GIF Tenor Discord -->
                             <Button Grid.Column="4" Width="40" Height="40" CornerRadius="20" Padding="0"
+                                    Background="{ThemeResource ControlFillColorDefaultBrush}" BorderThickness="0"
+                                    ToolTipService.ToolTip="Rechercher un GIF">
+                                <TextBlock Text="GIF" FontSize="13" FontWeight="ExtraBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <Button.Flyout>
+                                    <Flyout x:Name="ComposerGifFlyout" Placement="Top" Opening="OnComposerGifFlyoutOpening">
+                                        <Flyout.FlyoutPresenterStyle>
+                                            <Style TargetType="FlyoutPresenter">
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="CornerRadius" Value="12" />
+                                                <Setter Property="Background" Value="#2B2D31" />
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="BorderBrush" Value="#1F2023" />
+                                                <Setter Property="MaxWidth" Value="460" />
+                                                <Setter Property="MaxHeight" Value="500" />
+                                            </Style>
+                                        </Flyout.FlyoutPresenterStyle>
+                                        <Grid Width="430" Height="460">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Barre de recherche GIF -->
+                                            <TextBox Grid.Row="0" x:Name="GifSearchBox"
+                                                     PlaceholderText="Rechercher des GIFs..."
+                                                     Margin="12,12,12,8" CornerRadius="8"
+                                                     Background="#1E1F22" BorderBrush="#1F2023"
+                                                     Padding="10,6"
+                                                     TextChanged="OnGifSearchTextChanged" />
+
+                                            <!-- Catégories rapides de GIFs -->
+                                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                                          Padding="12,0,12,8">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Button Content="Tendances" CornerRadius="6" Padding="8,4" FontSize="11" Tag="trending" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Anime" CornerRadius="6" Padding="8,4" FontSize="11" Tag="anime" Click="OnGifCategoryClicked" />
+                                                    <Button Content="LOL" CornerRadius="6" Padding="8,4" FontSize="11" Tag="lol" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Love" CornerRadius="6" Padding="8,4" FontSize="11" Tag="love" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Cat" CornerRadius="6" Padding="8,4" FontSize="11" Tag="cat" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Dance" CornerRadius="6" Padding="8,4" FontSize="11" Tag="dance" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Happy" CornerRadius="6" Padding="8,4" FontSize="11" Tag="happy" Click="OnGifCategoryClicked" />
+                                                    <Button Content="Sad" CornerRadius="6" Padding="8,4" FontSize="11" Tag="sad" Click="OnGifCategoryClicked" />
+                                                </StackPanel>
+                                            </ScrollViewer>
+
+                                            <!-- Grille de résultats GIFs -->
+                                            <ScrollViewer Grid.Row="2" Padding="12,0,12,12">
+                                                <GridView ItemsSource="{x:Bind ViewModel.GifResults, Mode=OneWay}" SelectionMode="None">
+                                                    <GridView.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:DiscordGifItem">
+                                                            <Button Width="194" Height="124" Padding="0" Margin="2"
+                                                                    CornerRadius="8" BorderThickness="0"
+                                                                    Tag="{x:Bind}" Click="OnGifResultItemClicked">
+                                                                <Image Source="{x:Bind PreviewUrl, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                       Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </GridView.ItemTemplate>
+                                                </GridView>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- Sélecteur d'Emojis complet Discord (Serveurs + Catégories + Recherche) -->
+                            <Button Grid.Column="5" Width="40" Height="40" CornerRadius="20" Padding="0"
                                      Background="{ThemeResource ControlFillColorDefaultBrush}" BorderThickness="0"
                                      ToolTipService.ToolTip="Insérer un émoji">
                                 <FontIcon Glyph="&#xED54;" FontSize="16" />
@@ -3518,15 +3682,16 @@
                                             </Style>
                                         </Flyout.FlyoutPresenterStyle>
                                         <controls:DiscordEmojiPickerControl x:Name="ComposerEmojiPicker"
-                                                                           EmojiSelected="OnComposerEmojiSelected" />
+                                                                            EmojiSelected="OnComposerEmojiSelected" />
                                     </Flyout>
                                 </Button.Flyout>
                             </Button>
 
-                            <Button Grid.Column="5" Content="Envoyer" Click="OnSendClicked"
+                            <Button Grid.Column="6" Content="Envoyer" Click="OnSendClicked"
                                     CornerRadius="10"
                                     Style="{StaticResource AccentButtonStyle}" />
                         </Grid>
+
                     </StackPanel>
 
                 </Grid>

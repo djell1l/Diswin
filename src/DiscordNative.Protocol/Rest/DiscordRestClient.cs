@@ -560,6 +560,32 @@ public sealed class DiscordRestClient : IDisposable
         }
     }
 
+    public async Task<List<DiscordGifItem>> GetTrendingGifsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/trending?media_format=webm&locale=fr-FR", ct) ?? new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    public async Task<List<DiscordGifItem>> SearchGifsAsync(string query, CancellationToken ct = default)
+    {
+        try
+        {
+            var encoded = Uri.EscapeDataString(query);
+            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/search?q={encoded}&media_format=webm&locale=fr-FR", ct) ?? new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+
     /// <summary>
     /// Récupère l'ordre officiel des serveurs et dossiers tel que défini dans les paramètres utilisateur Discord (guild_folders / guild_positions).
     /// </summary>

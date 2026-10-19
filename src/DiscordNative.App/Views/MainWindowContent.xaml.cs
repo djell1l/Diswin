@@ -363,14 +363,50 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnMessageInputTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (sender is TextBox tb && !string.IsNullOrWhiteSpace(tb.Text))
+        if (sender is TextBox tb)
         {
-            ViewModel.NotifyTypingInCurrentChannel();
+            if (!string.IsNullOrWhiteSpace(tb.Text))
+            {
+                ViewModel.NotifyTypingInCurrentChannel();
+            }
+            ViewModel.UpdateAutocomplete(tb.Text, tb.SelectionStart);
         }
     }
 
     private async void OnMessageInputKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (ViewModel.IsAutocompleteOpen)
+        {
+            if (e.Key == VirtualKey.Up)
+            {
+                ViewModel.SelectPreviousAutocomplete();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == VirtualKey.Down)
+            {
+                ViewModel.SelectNextAutocomplete();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == VirtualKey.Enter || e.Key == VirtualKey.Tab)
+            {
+                var selected = ViewModel.GetSelectedAutocompleteItem();
+                if (selected != null)
+                {
+                    CommitAutocomplete(selected);
+                    e.Handled = true;
+                    return;
+                }
+            }
+            if (e.Key == VirtualKey.Escape)
+            {
+                ViewModel.CloseAutocomplete();
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key == VirtualKey.Escape && ViewModel.HasComposerBanner)
         {
             e.Handled = true;
@@ -382,6 +418,98 @@ public sealed partial class MainWindowContent : UserControl
         {
             e.Handled = true;
             await SendCurrentMessageAsync();
+        }
+    }
+
+    private void CommitAutocomplete(AutocompleteItemViewModel? item)
+    {
+        if (item is null) return;
+        int cursor = MessageInput.SelectionStart;
+        string text = MessageInput.Text ?? string.Empty;
+
+        int triggerIdx = -1;
+        for (int i = Math.Min(cursor - 1, text.Length - 1); i >= 0; i--)
+        {
+            char c = text[i];
+            if (c == ' ' || c == '\n' || c == '\r') break;
+            if (c == '@' || c == ':')
+            {
+                triggerIdx = i;
+                break;
+            }
+        }
+
+        string replacement = item.TextToInsert + " ";
+        if (triggerIdx >= 0)
+        {
+            string prefix = text.Substring(0, triggerIdx);
+            string suffix = cursor <= text.Length ? text.Substring(cursor) : string.Empty;
+            MessageInput.Text = prefix + replacement + suffix;
+            MessageInput.SelectionStart = prefix.Length + replacement.Length;
+        }
+        else
+        {
+            MessageInput.Text = text.Insert(cursor, replacement);
+            MessageInput.SelectionStart = cursor + replacement.Length;
+        }
+
+        ViewModel.CloseAutocomplete();
+        MessageInput.Focus(FocusState.Programmatic);
+    }
+
+    private void OnAutocompleteItemClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is AutocompleteItemViewModel item)
+        {
+            CommitAutocomplete(item);
+        }
+    }
+
+    private void OnComposerGifFlyoutOpening(object sender, object e)
+    {
+        if (GifSearchBox != null)
+        {
+            GifSearchBox.Text = string.Empty;
+        }
+        _ = ViewModel.LoadTrendingGifsAsync();
+    }
+
+    private void OnGifSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            string query = tb.Text?.Trim() ?? string.Empty;
+            _ = ViewModel.SearchGifsAsync(query);
+        }
+    }
+
+    private void OnGifCategoryClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string tag)
+        {
+            if (tag.Equals("trending", StringComparison.OrdinalIgnoreCase))
+            {
+                if (GifSearchBox != null) GifSearchBox.Text = string.Empty;
+                _ = ViewModel.LoadTrendingGifsAsync();
+            }
+            else
+            {
+                if (GifSearchBox != null) GifSearchBox.Text = tag;
+                _ = ViewModel.SearchGifsAsync(tag);
+            }
+        }
+    }
+
+    private async void OnGifResultItemClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordGifItem gif)
+        {
+            ComposerGifFlyout?.Hide();
+            string sendUrl = gif.MediaSendUrl;
+            if (!string.IsNullOrWhiteSpace(sendUrl))
+            {
+                await ViewModel.SendMessageAsync(sendUrl);
+            }
         }
     }
 

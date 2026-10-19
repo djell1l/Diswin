@@ -35,6 +35,23 @@ public sealed partial class MainViewModel : ObservableObject
     public int OfflineMembersCount => OfflineMembers.Count;
     public bool HasOfflineMembers => OfflineMembers.Count > 0;
 
+    public ObservableCollection<AutocompleteItemViewModel> AutocompleteSuggestions { get; } = new();
+
+    [ObservableProperty]
+    private bool isAutocompleteOpen;
+
+    [ObservableProperty]
+    private string autocompleteCategoryTitle = "MEMBRES DU SERVEUR";
+
+    [ObservableProperty]
+    private int autocompleteSelectedIndex = -1;
+
+    public ObservableCollection<DiscordGifItem> GifResults { get; } = new();
+
+    [ObservableProperty]
+    private bool isLoadingGifs;
+
+
     [ObservableProperty]
     private string selectedGuildName = "Sélectionnez un serveur";
 
@@ -1639,4 +1656,287 @@ public sealed partial class MainViewModel : ObservableObject
             catch { }
         }
     }
+
+    public void UpdateAutocomplete(string text, int cursor)
+    {
+        if (string.IsNullOrEmpty(text) || cursor <= 0 || cursor > text.Length)
+        {
+            CloseAutocomplete();
+            return;
+        }
+
+        // Find the word being typed backwards from cursor
+        int start = cursor - 1;
+        while (start >= 0 && !char.IsWhiteSpace(text[start]))
+        {
+            start--;
+        }
+        start++; // start of the word
+
+        if (start >= cursor)
+        {
+            CloseAutocomplete();
+            return;
+        }
+
+        string word = text.Substring(start, cursor - start);
+
+        if (word.StartsWith("@"))
+        {
+            string query = word.Substring(1).Trim().ToLowerInvariant();
+            var matches = new List<AutocompleteItemViewModel>();
+
+            // 1. @everyone and @here if query matches
+            if ("everyone".StartsWith(query, StringComparison.OrdinalIgnoreCase))
+            {
+                matches.Add(new AutocompleteItemViewModel
+                {
+                    ItemType = AutocompleteItemType.SpecialMention,
+                    Title = "@everyone",
+                    Subtitle = "Notifie tous les membres du serveur",
+                    RoleColorHex = "#FEE75C",
+                    TextToInsert = "@everyone"
+                });
+            }
+            if ("here".StartsWith(query, StringComparison.OrdinalIgnoreCase))
+            {
+                matches.Add(new AutocompleteItemViewModel
+                {
+                    ItemType = AutocompleteItemType.SpecialMention,
+                    Title = "@here",
+                    Subtitle = "Notifie les membres en ligne",
+                    RoleColorHex = "#FEE75C",
+                    TextToInsert = "@here"
+                });
+            }
+
+            // 2. Roles in current guild
+            if (_selectedGuild?.Roles != null)
+            {
+                foreach (var role in _selectedGuild.Roles.OrderByDescending(r => r.Position))
+                {
+                    if (string.IsNullOrWhiteSpace(role.Name) || role.Name == "@everyone") continue;
+                    if (role.Name.ToLowerInvariant().Contains(query))
+                    {
+                        matches.Add(new AutocompleteItemViewModel
+                        {
+                            ItemType = AutocompleteItemType.Role,
+                            Title = $"@{role.Name}",
+                            Subtitle = "Mentionner ce rôle",
+                            RoleColorHex = role.ColorHex,
+                            TextToInsert = $"<@&{role.Id}>"
+                        });
+                        if (matches.Count >= 10) break;
+                    }
+                }
+            }
+
+            // 3. Members in current guild / channel
+            var memberSource = new List<DiscordUser>(ChannelMembers);
+            if (_selectedGuild != null)
+            {
+                var cached = _client.GetCachedGuildMembers(_selectedGuild.Id);
+                var seen = new HashSet<string>(memberSource.Select(m => m.Id));
+                foreach (var m in cached)
+                {
+                    if (seen.Add(m.Id)) memberSource.Add(m);
+                }
+            }
+
+            var filteredMembers = memberSource.Where(m =>
+                (m.DisplayName != null && m.DisplayName.ToLowerInvariant().Contains(query)) ||
+                (m.Username != null && m.Username.ToLowerInvariant().Contains(query)) ||
+                (m.GlobalName != null && m.GlobalName.ToLowerInvariant().Contains(query))
+            ).Take(15).ToList();
+
+            foreach (var m in filteredMembers)
+            {
+                matches.Add(new AutocompleteItemViewModel
+                {
+                    ItemType = AutocompleteItemType.Member,
+                    Title = m.DisplayName,
+                    Subtitle = $"@{m.Username}",
+                    AvatarUrl = m.AvatarUrl,
+                    StatusColor = m.StatusColor,
+                    TextToInsert = $"<@{m.Id}>"
+                });
+            }
+
+            if (matches.Count > 0)
+            {
+                AutocompleteSuggestions.Clear();
+                foreach (var item in matches) AutocompleteSuggestions.Add(item);
+                AutocompleteCategoryTitle = "MEMBRES DU SERVEUR";
+                SetAutocompleteIndex(0);
+                IsAutocompleteOpen = true;
+                return;
+            }
+        }
+        else if (word.StartsWith(":") && word.Length >= 2)
+        {
+            string query = word.Substring(1).Trim().ToLowerInvariant();
+            var matches = new List<AutocompleteItemViewModel>();
+
+            // 1. Search in current guild emojis
+            if (_selectedGuild?.Emojis != null)
+            {
+                foreach (var em in _selectedGuild.Emojis)
+                {
+                    if (string.IsNullOrEmpty(em.Name)) continue;
+                    if (em.Name.ToLowerInvariant().Contains(query))
+                    {
+                        matches.Add(new AutocompleteItemViewModel
+                        {
+                            ItemType = AutocompleteItemType.Emoji,
+                            Title = $":{em.Name}:",
+                            Subtitle = _selectedGuild.Name ?? "Serveur",
+                            IsCustomEmoji = true,
+                            EmojiImageUrl = em.ImageUrl,
+                            TextToInsert = em.FormattedTag
+                        });
+                        if (matches.Count >= 12) break;
+                    }
+                }
+            }
+
+            // 2. Search in all guilds emojis
+            if (matches.Count < 12)
+            {
+                foreach (var g in Guilds)
+                {
+                    if (g.Id == _selectedGuild?.Id || g.Emojis == null) continue;
+                    foreach (var em in g.Emojis)
+                    {
+                        if (string.IsNullOrEmpty(em.Name)) continue;
+                        if (em.Name.ToLowerInvariant().Contains(query))
+                        {
+                            matches.Add(new AutocompleteItemViewModel
+                            {
+                                ItemType = AutocompleteItemType.Emoji,
+                                Title = $":{em.Name}:",
+                                Subtitle = g.Name ?? "Serveur",
+                                IsCustomEmoji = true,
+                                EmojiImageUrl = em.ImageUrl,
+                                TextToInsert = em.FormattedTag
+                            });
+                            if (matches.Count >= 12) break;
+                        }
+                    }
+                    if (matches.Count >= 12) break;
+                }
+            }
+
+            // 3. Search in standard unicode emojis
+            var emojiCatalog = EmojiService.Instance.BuildPickerCatalog(Guilds, _selectedGuild?.Id, query);
+            if (emojiCatalog.Count > 0 && emojiCatalog[0].Emojis != null)
+            {
+                foreach (var em in emojiCatalog[0].Emojis.Where(e => !e.IsCustom).Take(8))
+                {
+                    matches.Add(new AutocompleteItemViewModel
+                    {
+                        ItemType = AutocompleteItemType.Emoji,
+                        Title = $":{em.Name}:",
+                        Subtitle = em.Category,
+                        IsCustomEmoji = false,
+                        EmojiUnicode = em.UnicodeChar,
+                        TextToInsert = em.UnicodeChar ?? em.Name
+                    });
+                    if (matches.Count >= 16) break;
+                }
+            }
+
+            if (matches.Count > 0)
+            {
+                AutocompleteSuggestions.Clear();
+                foreach (var item in matches) AutocompleteSuggestions.Add(item);
+                AutocompleteCategoryTitle = "ÉMOJIS";
+                SetAutocompleteIndex(0);
+                IsAutocompleteOpen = true;
+                return;
+            }
+        }
+
+        CloseAutocomplete();
+    }
+
+    public void SelectNextAutocomplete()
+    {
+        if (AutocompleteSuggestions.Count == 0) return;
+        int next = (AutocompleteSelectedIndex + 1) % AutocompleteSuggestions.Count;
+        SetAutocompleteIndex(next);
+    }
+
+    public void SelectPreviousAutocomplete()
+    {
+        if (AutocompleteSuggestions.Count == 0) return;
+        int prev = AutocompleteSelectedIndex - 1;
+        if (prev < 0) prev = AutocompleteSuggestions.Count - 1;
+        SetAutocompleteIndex(prev);
+    }
+
+    private void SetAutocompleteIndex(int index)
+    {
+        if (index < 0 || index >= AutocompleteSuggestions.Count) return;
+        for (int i = 0; i < AutocompleteSuggestions.Count; i++)
+        {
+            AutocompleteSuggestions[i].IsSelected = (i == index);
+        }
+        AutocompleteSelectedIndex = index;
+    }
+
+    public AutocompleteItemViewModel? GetSelectedAutocompleteItem()
+    {
+        if (AutocompleteSelectedIndex >= 0 && AutocompleteSelectedIndex < AutocompleteSuggestions.Count)
+        {
+            return AutocompleteSuggestions[AutocompleteSelectedIndex];
+        }
+        return AutocompleteSuggestions.FirstOrDefault();
+    }
+
+    public void CloseAutocomplete()
+    {
+        IsAutocompleteOpen = false;
+        AutocompleteSelectedIndex = -1;
+        AutocompleteSuggestions.Clear();
+    }
+
+    public async Task LoadTrendingGifsAsync()
+    {
+        IsLoadingGifs = true;
+        try
+        {
+            var gifs = await _client.Rest.GetTrendingGifsAsync();
+            GifResults.Clear();
+            foreach (var g in gifs) GifResults.Add(g);
+        }
+        catch { }
+        finally
+        {
+            IsLoadingGifs = false;
+        }
+    }
+
+    public async Task SearchGifsAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            await LoadTrendingGifsAsync();
+            return;
+        }
+
+        IsLoadingGifs = true;
+        try
+        {
+            var gifs = await _client.Rest.SearchGifsAsync(query);
+            GifResults.Clear();
+            foreach (var g in gifs) GifResults.Add(g);
+        }
+        catch { }
+        finally
+        {
+            IsLoadingGifs = false;
+        }
+    }
 }
+
+
