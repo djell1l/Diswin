@@ -887,6 +887,54 @@ public sealed class DiscordRestClient : IDisposable
         return string.IsNullOrEmpty(code) ? string.Empty : $"https://discord.gg/{code}";
     }
 
+    public async Task<DiscordChannel> CreateGuildChannelAsync(
+        string guildId,
+        string name,
+        DiscordChannelType type = DiscordChannelType.GuildText,
+        string? topic = null,
+        string? parentId = null,
+        CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["name"] = name.Trim(),
+            ["type"] = (int)type,
+        };
+        if (!string.IsNullOrWhiteSpace(topic)) payload["topic"] = topic.Trim();
+        if (!string.IsNullOrWhiteSpace(parentId)) payload["parent_id"] = parentId;
+
+        var response = await _http.PostAsJsonAsync($"{ApiBase}/guilds/{guildId}/channels", payload, ct);
+        response.EnsureSuccessStatusCode();
+        var channel = await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("Impossible de lire la réponse du salon créé.");
+        channel.GuildId ??= guildId;
+        return channel;
+    }
+
+    public async Task<bool> DeleteChannelAsync(string channelId, CancellationToken ct = default)
+    {
+        var response = await _http.DeleteAsync($"{ApiBase}/channels/{channelId}", ct);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<DiscordChannel> ModifyChannelAsync(
+        string channelId,
+        string? name = null,
+        string? topic = null,
+        int? position = null,
+        CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(name)) payload["name"] = name.Trim();
+        if (topic != null) payload["topic"] = topic.Trim();
+        if (position.HasValue) payload["position"] = position.Value;
+
+        var response = await _http.PatchAsJsonAsync($"{ApiBase}/channels/{channelId}", payload, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("Impossible de lire la réponse du salon modifié.");
+    }
+
     public async Task LeaveGuildAsync(string guildId, CancellationToken ct = default)
     {
         var response = await _http.DeleteAsync($"{ApiBase}/users/@me/guilds/{guildId}", ct);

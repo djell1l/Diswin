@@ -120,6 +120,12 @@ public sealed partial class MainViewModel : ObservableObject
     private bool isLoadingGifs;
 
 
+    public bool HasSelectedGuild => _selectedGuild != null;
+    public bool HasSelectedGuildBanner => _selectedGuild?.HasBanner == true;
+    public string? SelectedGuildBannerUrl => _selectedGuild?.BannerUrl;
+    public string SelectedGuildBoostBadge => _selectedGuild?.BoostBadgeText ?? string.Empty;
+    public bool HasSelectedGuildBoosts => _selectedGuild?.HasBoosts == true;
+
     [ObservableProperty]
     private string selectedGuildName = "Sélectionnez un serveur";
 
@@ -875,6 +881,12 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedGuildName = "Amis & Messages Privés";
         OnPropertyChanged(nameof(ShowingGuildChannels));
         OnPropertyChanged(nameof(ShowingFriendsView));
+        OnPropertyChanged(nameof(SelectedGuild));
+        OnPropertyChanged(nameof(HasSelectedGuild));
+        OnPropertyChanged(nameof(HasSelectedGuildBanner));
+        OnPropertyChanged(nameof(SelectedGuildBannerUrl));
+        OnPropertyChanged(nameof(SelectedGuildBoostBadge));
+        OnPropertyChanged(nameof(HasSelectedGuildBoosts));
         RefreshFilteredFriends();
     }
 
@@ -891,6 +903,12 @@ public sealed partial class MainViewModel : ObservableObject
         guild.IsSelected = true;
         _client.ActiveGuildId = guild.Id;
         SelectedGuildName = guild.Name;
+        OnPropertyChanged(nameof(SelectedGuild));
+        OnPropertyChanged(nameof(HasSelectedGuild));
+        OnPropertyChanged(nameof(HasSelectedGuildBanner));
+        OnPropertyChanged(nameof(SelectedGuildBannerUrl));
+        OnPropertyChanged(nameof(SelectedGuildBoostBadge));
+        OnPropertyChanged(nameof(HasSelectedGuildBoosts));
         Channels.Clear();
 
         // Demander à la Gateway de s'abonner au serveur (Opcode 14) pour recevoir les mises à jour vocales et les membres en temps réel
@@ -1506,6 +1524,65 @@ public sealed partial class MainViewModel : ObservableObject
         if (_selectedGuild?.Id == guild.Id)
         {
             ShowFriendsView();
+        }
+    }
+
+    public async Task LeaveSelectedGuildAsync()
+    {
+        if (_selectedGuild == null) return;
+        await LeaveGuildAsync(_selectedGuild);
+    }
+
+    public async Task CreateChannelAsync(string name, DiscordChannelType type = DiscordChannelType.GuildText, string? topic = null, string? parentId = null)
+    {
+        if (_selectedGuild == null) return;
+        var newChannel = await _client.Rest.CreateGuildChannelAsync(_selectedGuild.Id, name, type, topic, parentId);
+        newChannel.GuildId = _selectedGuild.Id;
+        Channels.Add(newChannel);
+        FilteredChannels.Add(newChannel);
+        await SelectChannelAsync(newChannel);
+    }
+
+    public async Task ModifyChannelAsync(string channelId, string newName, string? newTopic)
+    {
+        var updated = await _client.Rest.ModifyChannelAsync(channelId, newName, newTopic);
+        var existing = Channels.FirstOrDefault(c => c.Id == channelId);
+        if (existing != null)
+        {
+            existing.Name = updated.Name;
+            existing.Topic = updated.Topic;
+            OnPropertyChanged(nameof(FilteredChannels));
+        }
+        if (_selectedChannel?.Id == channelId)
+        {
+            SelectedChannelName = updated.DisplayName;
+            SelectedChannelTopic = updated.Topic ?? string.Empty;
+        }
+    }
+
+    public async Task DeleteChannelAsync(string channelId)
+    {
+        var ok = await _client.Rest.DeleteChannelAsync(channelId);
+        if (ok)
+        {
+            var existing = Channels.FirstOrDefault(c => c.Id == channelId);
+            if (existing != null)
+            {
+                Channels.Remove(existing);
+                FilteredChannels.Remove(existing);
+            }
+            if (_selectedChannel?.Id == channelId)
+            {
+                var next = FilteredChannels.FirstOrDefault(c => c.IsTextLike || c.IsVoiceChannel);
+                if (next != null)
+                {
+                    await SelectChannelAsync(next);
+                }
+                else
+                {
+                    ClearActiveChannel();
+                }
+            }
         }
     }
 

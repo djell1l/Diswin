@@ -2281,7 +2281,11 @@ public sealed partial class MainWindowContent : UserControl
     // --- Menus contextuels Clic Droit : Salons ---
     private static DiscordChannel? GetChannelFromSender(object sender)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is DiscordChannel ch) return ch;
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.DataContext is DiscordChannel dc) return dc;
+            if (fe.Tag is DiscordChannel tc) return tc;
+        }
         return null;
     }
 
@@ -2320,6 +2324,393 @@ public sealed partial class MainWindowContent : UserControl
     {
         var ch = GetChannelFromSender(sender);
         if (ch != null) CopyToClipboard(ch.Id);
+    }
+
+    private void OnFriendsHeaderClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.ShowFriendsView();
+    }
+
+    private void OnCopyServerIdClicked(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedGuild != null)
+        {
+            CopyToClipboard(ViewModel.SelectedGuild.Id);
+        }
+    }
+
+    private async void OnServerBoostClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = ViewModel?.SelectedGuild;
+        if (guild == null) return;
+
+        var stack = new StackPanel { Spacing = 12, MaxWidth = 400 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"Avantages de Boost pour {guild.Name}",
+            FontSize = 16,
+            FontWeight = Microsoft.UI.Text.FontWeights.Bold
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"Niveau actuel : {guild.BoostLevelText} ({guild.PremiumSubscriptionCount ?? 0} Boosts actifs)\n\n" +
+                   "• Plus de 50 émojis et autocollants personnalisés\n" +
+                   "• Qualité audio haute fidélité (128 à 384 Kbps)\n" +
+                   "• Limite d'upload augmentée pour les membres\n" +
+                   "• Bannière animée et lien personnalisé (Vanity URL)",
+            FontSize = 13,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.9
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = "Booster le serveur",
+            Content = stack,
+            CloseButtonText = "Fermer",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void OnServerSettingsClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = ViewModel?.SelectedGuild;
+        if (guild == null) return;
+
+        var stack = new StackPanel { Spacing = 10, MaxWidth = 440 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"Vue d'ensemble de {guild.Name}",
+            FontSize = 16,
+            FontWeight = Microsoft.UI.Text.FontWeights.Bold
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"• Identifiant : {guild.Id}\n" +
+                   $"• Salons : {guild.Channels.Count}\n" +
+                   $"• Rôles : {guild.Roles.Count}\n" +
+                   $"• Émojis : {guild.Emojis.Count}\n" +
+                   $"• Niveau de boost : {guild.BoostLevelText}",
+            FontSize = 13,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.85
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = "Paramètres du serveur",
+            Content = stack,
+            CloseButtonText = "Fermer",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void OnCreateChannelHeaderClicked(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedGuild == null) return;
+
+        var typeRadioText = new RadioButton
+        {
+            Content = new StackPanel
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new TextBlock { Text = "#  Salon Textuel", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13 },
+                    new TextBlock { Text = "Postez des images, des autocollants, des opinions et des calembours", FontSize = 11, Opacity = 0.6 }
+                }
+            },
+            IsChecked = true,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+
+        var typeRadioVoice = new RadioButton
+        {
+            Content = new StackPanel
+            {
+                Spacing = 2,
+                Children =
+                {
+                    new TextBlock { Text = "🔊  Salon Vocal", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13 },
+                    new TextBlock { Text = "Passez du temps ensemble avec la voix, la vidéo et le partage d'écran", FontSize = 11, Opacity = 0.6 }
+                }
+            },
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+
+        var nameBox = new TextBox
+        {
+            Header = "NOM DU SALON",
+            PlaceholderText = "nouveau-salon",
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var topicBox = new TextBox
+        {
+            Header = "SUJET DU SALON (FACULTATIF)",
+            PlaceholderText = "De quoi va-t-on discuter ici ?",
+            CornerRadius = new CornerRadius(6),
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+
+        var stack = new StackPanel { Spacing = 6, Width = 380 };
+        stack.Children.Add(new TextBlock { Text = "TYPE DE SALON", FontSize = 11, FontWeight = Microsoft.UI.Text.FontWeights.Bold, Opacity = 0.7, Margin = new Thickness(0, 0, 0, 4) });
+        stack.Children.Add(typeRadioText);
+        stack.Children.Add(typeRadioVoice);
+        stack.Children.Add(nameBox);
+        stack.Children.Add(topicBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Créer un salon",
+            Content = stack,
+            PrimaryButtonText = "Créer un salon",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            var rawName = nameBox.Text.Trim();
+            if (string.IsNullOrWhiteSpace(rawName)) return;
+
+            var isVoice = typeRadioVoice.IsChecked == true;
+            var cleanName = isVoice ? rawName : rawName.ToLowerInvariant().Replace(' ', '-');
+            var channelType = isVoice ? DiscordChannelType.GuildVoice : DiscordChannelType.GuildText;
+            var topic = string.IsNullOrWhiteSpace(topicBox.Text) ? null : topicBox.Text.Trim();
+
+            try
+            {
+                await ViewModel.CreateChannelAsync(cleanName, channelType, topic);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de créer le salon",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
+    private async void OnCreateCategoryHeaderClicked(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedGuild == null) return;
+
+        var nameBox = new TextBox
+        {
+            Header = "NOM DE LA CATÉGORIE",
+            PlaceholderText = "NOUVELLE CATÉGORIE",
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var stack = new StackPanel { Spacing = 10, Width = 380 };
+        stack.Children.Add(nameBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Créer une catégorie",
+            Content = stack,
+            PrimaryButtonText = "Créer une catégorie",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(nameBox.Text))
+        {
+            try
+            {
+                await ViewModel.CreateChannelAsync(nameBox.Text.Trim().ToUpperInvariant(), DiscordChannelType.GuildCategory);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de créer la catégorie",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
+    private async void OnPrivacySettingsClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = ViewModel?.SelectedGuild;
+        if (guild == null) return;
+
+        var stack = new StackPanel { Spacing = 12, MaxWidth = 400 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"Paramètres de confidentialité pour {guild.Name}",
+            FontSize = 15,
+            FontWeight = Microsoft.UI.Text.FontWeights.Bold
+        });
+        stack.Children.Add(new ToggleSwitch
+        {
+            Header = "Messages Privés Directs",
+            OffContent = "Désactivé",
+            OnContent = "Autoriser les messages privés venant des membres de ce serveur",
+            IsOn = true
+        });
+
+        var dialog = new ContentDialog
+        {
+            Title = "Paramètres de confidentialité",
+            Content = stack,
+            CloseButtonText = "Enregistrer",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void OnEditServerProfileClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = ViewModel?.SelectedGuild;
+        if (guild == null) return;
+
+        var nickBox = new TextBox
+        {
+            Header = "PSEUDO DU SERVEUR",
+            PlaceholderText = ViewModel.CurrentUserName,
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var stack = new StackPanel { Spacing = 10, Width = 380 };
+        stack.Children.Add(new TextBlock { Text = $"Personnalisez votre identité pour {guild.Name}.", FontSize = 12, Opacity = 0.7 });
+        stack.Children.Add(nickBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Modifier le profil de serveur",
+            Content = stack,
+            PrimaryButtonText = "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        await dialog.ShowAsync();
+    }
+
+    private async void OnLeaveServerClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = ViewModel?.SelectedGuild;
+        if (guild == null) return;
+
+        var dialog = new ContentDialog
+        {
+            Title = $"Quitter '{guild.Name}'",
+            Content = $"Êtes-vous sûr de vouloir quitter {guild.Name} ? Vous ne pourrez pas le rejoindre sans une nouvelle invitation.",
+            PrimaryButtonText = "Quitter le serveur",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await ViewModel.LeaveSelectedGuildAsync();
+        }
+    }
+
+    private async void OnEditChannelFromMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender) ?? ViewModel?.SelectedChannel;
+        if (ch == null || ViewModel == null) return;
+
+        var nameBox = new TextBox
+        {
+            Header = "NOM DU SALON",
+            Text = ch.Name ?? string.Empty,
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var topicBox = new TextBox
+        {
+            Header = "SUJET DU SALON",
+            Text = ch.Topic ?? string.Empty,
+            CornerRadius = new CornerRadius(6),
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+
+        var stack = new StackPanel { Spacing = 8, Width = 380 };
+        stack.Children.Add(nameBox);
+        stack.Children.Add(topicBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Modifier le salon",
+            Content = stack,
+            PrimaryButtonText = "Enregistrer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(nameBox.Text))
+        {
+            try
+            {
+                await ViewModel.ModifyChannelAsync(ch.Id, nameBox.Text.Trim(), topicBox.Text);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de modifier le salon",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
+    private async void OnDeleteChannelFromMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender) ?? ViewModel?.SelectedChannel;
+        if (ch == null || ViewModel == null) return;
+
+        var dialog = new ContentDialog
+        {
+            Title = "Supprimer le salon",
+            Content = $"Êtes-vous sûr de vouloir supprimer #{ch.DisplayName} ? Cette action est irréversible.",
+            PrimaryButtonText = "Supprimer le salon",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            try
+            {
+                await ViewModel.DeleteChannelAsync(ch.Id);
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Impossible de supprimer le salon",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
     }
 
     private void OnOpenDmChannelClicked(object sender, RoutedEventArgs e)

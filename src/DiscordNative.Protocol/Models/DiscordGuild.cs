@@ -56,6 +56,29 @@ public sealed class DiscordGuild : INotifyPropertyChanged
     [JsonPropertyName("features")]
     public List<string> Features { get; set; } = new();
 
+    [JsonPropertyName("premium_tier")]
+    public int PremiumTier { get; set; }
+
+    [JsonPropertyName("premium_subscription_count")]
+    public int? PremiumSubscriptionCount { get; set; }
+
+    [JsonIgnore]
+    public bool HasBoosts => (PremiumSubscriptionCount ?? 0) > 0 || PremiumTier > 0;
+
+    [JsonIgnore]
+    public string BoostLevelText => PremiumTier switch
+    {
+        1 => "Niveau 1",
+        2 => "Niveau 2",
+        3 => "Niveau 3",
+        _ => "Niveau 0"
+    };
+
+    [JsonIgnore]
+    public string BoostBadgeText => PremiumSubscriptionCount.HasValue && PremiumSubscriptionCount.Value > 0
+        ? $"{PremiumSubscriptionCount.Value} Boost{(PremiumSubscriptionCount.Value > 1 ? "s" : "")}"
+        : BoostLevelText;
+
     public string? BannerUrl => !string.IsNullOrEmpty(Banner)
         ? $"https://cdn.discordapp.com/banners/{Id}/{Banner}.png?size=512"
         : (!string.IsNullOrEmpty(DiscoverySplash)

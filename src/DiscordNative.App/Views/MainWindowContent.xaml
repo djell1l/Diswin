@@ -317,9 +317,92 @@
                     </Grid.RowDefinitions>
 
                     <!-- Haut gauche : Titre de serveur & Recherche de salons (Quick Switcher) -->
-                    <StackPanel Grid.Row="0" Margin="12,10,12,10" Spacing="8">
-                        <TextBlock Text="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}"
-                                   FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Row="0" Margin="8,6,8,8" Spacing="6">
+                        <!-- En-tête de Serveur Interactif avec Menu Déroulant officiel Discord -->
+                        <Button x:Name="ServerHeaderButton"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Padding="12,10" CornerRadius="8" Background="Transparent" BorderThickness="0"
+                                Visibility="{x:Bind ViewModel.ShowingGuildChannels, Mode=OneWay}"
+                                ToolTipService.ToolTip="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <!-- Badge Boost du serveur si présent -->
+                                    <Border Background="#33F47FFF" CornerRadius="4" Padding="4,1" VerticalAlignment="Center"
+                                            Visibility="{x:Bind ViewModel.HasSelectedGuildBoosts, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE735;" FontSize="10" Foreground="#F47FFF" />
+                                            <TextBlock Text="{x:Bind ViewModel.SelectedGuildBoostBadge, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#F47FFF" />
+                                        </StackPanel>
+                                    </Border>
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedGuildName, Mode=OneWay}"
+                                               FontWeight="Bold" FontSize="15" Foreground="#F2F3F5"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <!-- Chevron vers le bas comme sur Discord officiel -->
+                                <FontIcon Grid.Column="1" Glyph="&#xE70D;" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <!-- Menu d'actions du serveur officiel Discord -->
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuFlyoutItem Text="Booster le serveur" Foreground="#F47FFF" Click="OnServerBoostClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE735;" Foreground="#F47FFF" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Inviter des personnes" Foreground="#5865F2" Click="OnCreateChannelInviteFromMenuClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72D;" Foreground="#5865F2" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Paramètres du serveur" Click="OnServerSettingsClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Créer un salon" Click="OnCreateChannelHeaderClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE710;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Créer une catégorie" Click="OnCreateCategoryHeaderClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B7;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutSubItem Text="Paramètres de notification">
+                                        <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xEA8F;" /></MenuFlyoutSubItem.Icon>
+                                        <MenuFlyoutItem Text="Tous les messages" Tag="all" Click="OnNotificationSettingClicked" />
+                                        <MenuFlyoutItem Text="Seulement les mentions" Tag="mentions" Click="OnNotificationSettingClicked" />
+                                        <MenuFlyoutItem Text="Rien" Tag="nothing" Click="OnNotificationSettingClicked" />
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutItem Text="Paramètres de confidentialité" Click="OnPrivacySettingsClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEA18;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Modifier le profil de serveur" Click="OnEditServerProfileClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Copier l'identifiant du serveur" Click="OnCopyServerIdClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Quitter le serveur" Foreground="#FF453A" Click="OnLeaveServerClicked">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7E8;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+
+                        <!-- En-tête Amis & Messages Privés quand aucun serveur n'est sélectionné -->
+                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                Padding="12,10" CornerRadius="8" Background="Transparent" BorderThickness="0"
+                                Visibility="{x:Bind ViewModel.ShowingFriendsView, Mode=OneWay}"
+                                Click="OnFriendsHeaderClicked">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE77B;" FontSize="15" Foreground="#5865F2" VerticalAlignment="Center" />
+                                <TextBlock Text="Amis &amp; Messages Privés" FontWeight="Bold" FontSize="14" Foreground="#F2F3F5" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <TextBox x:Name="ChannelSearchBox"
                                  PlaceholderText="Rechercher un salon..."
                                  CornerRadius="8"
@@ -376,6 +459,13 @@
                                                     </MenuFlyoutItem>
                                                     <MenuFlyoutItem Text="Copier l'identifiant" Click="OnCopyChannelIdClicked">
                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Modifier le salon" Click="OnEditChannelFromMenuClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Supprimer le salon" Foreground="#FF453A" Click="OnDeleteChannelFromMenuClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
                                                     </MenuFlyoutItem>
                                                 </MenuFlyout>
                                             </StackPanel.ContextFlyout>
