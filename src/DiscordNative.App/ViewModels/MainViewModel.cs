@@ -19,6 +19,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public void ClearActiveChannel()
     {
+        CloseSplitViewThread();
+        ChannelActiveThreads.Clear();
         _selectedChannel = null;
         SelectedChannelName = "Sélectionnez un salon";
         SelectedChannelTopic = string.Empty;
@@ -47,6 +49,30 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool HasChannelSearchResults => ChannelSearchResults.Count > 0;
     public string ChannelSearchResultsCountText => $"{ChannelSearchResults.Count} résultat{(ChannelSearchResults.Count > 1 ? "s" : "")}";
+
+    [ObservableProperty]
+    private bool isSplitThreadOpen;
+
+    partial void OnIsSplitThreadOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(SplitThreadPanelVisibility));
+    }
+
+    [ObservableProperty]
+    private DiscordChannel? activeSplitThread;
+
+    partial void OnActiveSplitThreadChanged(DiscordChannel? value)
+    {
+        OnPropertyChanged(nameof(SplitThreadPanelVisibility));
+    }
+
+    public ObservableCollection<DiscordMessage> ActiveThreadMessages { get; } = new();
+    public ObservableCollection<DiscordChannel> ChannelActiveThreads { get; } = new();
+    public bool HasChannelActiveThreads => ChannelActiveThreads.Count > 0;
+    public string ChannelActiveThreadsCountText => $"{ChannelActiveThreads.Count} fil{(ChannelActiveThreads.Count > 1 ? "s" : "")}";
+    public Microsoft.UI.Xaml.Visibility SplitThreadPanelVisibility => IsSplitThreadOpen && ActiveSplitThread != null
+        ? Microsoft.UI.Xaml.Visibility.Visible
+        : Microsoft.UI.Xaml.Visibility.Collapsed;
 
     public ObservableCollection<DiscordMessage> RecentMentions { get; } = new();
     public ObservableCollection<DiscordChannel> UnreadChannels { get; } = new();
@@ -1199,6 +1225,12 @@ public sealed partial class MainViewModel : ObservableObject
         Messages.Clear();
         ChannelMembers.Clear();
 
+        if (ActiveSplitThread != null && ActiveSplitThread.ParentId != channel.Id)
+        {
+            CloseSplitViewThread();
+        }
+        _ = LoadActiveChannelThreadsAsync();
+
         var guildIdForSub = channel.GuildId ?? _selectedGuild?.Id;
         if (!string.IsNullOrEmpty(guildIdForSub))
         {
@@ -1324,6 +1356,125 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _isLoadingOlderMessages = false;
         }
+    }
+
+    public async Task OpenThreadInSplitViewAsync(DiscordChannel thread)
+    {
+        ActiveSplitThread = thread;
+        IsSplitThreadOpen = true;
+        OnPropertyChanged(nameof(SplitThreadPanelVisibility));
+        ActiveThreadMessages.Clear();
+
+        try
+        {
+            var history = await _client.Rest.GetMessagesAsync(thread.Id, limit: 50);
+            DiscordMessage? prev = null;
+            foreach (var message in history.OrderBy(m => m.Timestamp))
+            {
+                _client.ApplyCachedPresenceToUser(message.Author);
+                ProcessMessageForGrouping(message, prev);
+                ActiveThreadMessages.Add(message);
+                prev = message;
+            }
+        }
+        catch { }
+    }
+
+    public void CloseSplitViewThread()
+    {
+        IsSplitThreadOpen = false;
+        ActiveSplitThread = null;
+        ActiveThreadMessages.Clear();
+        OnPropertyChanged(nameof(SplitThreadPanelVisibility));
+    }
+
+    public async Task LoadActiveChannelThreadsAsync()
+    {
+        if (_selectedChannel == null) return;
+        try
+        {
+            var threads = await _client.Rest.GetActiveThreadsAsync(_selectedChannel.Id);
+            Protocol.App.RunOnUiThread(() =>
+            {
+                ChannelActiveThreads.Clear();
+                foreach (var t in threads)
+                {
+                    ChannelActiveThreads.Add(t);
+                }
+                OnPropertyChanged(nameof(HasChannelActiveThreads));
+                OnPropertyChanged(nameof(ChannelActiveThreadsCountText));
+            });
+        }
+        catch { }
+    }
+
+    public async Task<bool> SendThreadMessageAsync(string content)
+    {
+        if (ActiveSplitThread == null || string.IsNullOrWhiteSpace(content)) return false;
+        try
+        {
+            var sent = await _client.Rest.SendMessageAsync(ActiveSplitThread.Id, content);
+            if (sent != null)
+            {
+                Protocol.App.RunOnUiThread(() =>
+                {
+                    _client.ApplyCachedPresenceToUser(sent.Author);
+                    ProcessMessageForGrouping(sent, ActiveThreadMessages.LastOrDefault());
+                    ActiveThreadMessages.Add(sent);
+                });
+                return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    public async Task<DiscordChannel?> CreateThreadFromMessageAsync(DiscordMessage message, string threadName)
+    {
+        try
+        {
+            var thread = await _client.Rest.CreateThreadFromMessageAsync(message.ChannelId, message.Id, threadName);
+            if (thread != null)
+            {
+                message.Thread = thread;
+                message.OnPropertyChanged(nameof(message.HasThread));
+                Protocol.App.RunOnUiThread(() =>
+                {
+                    if (ChannelActiveThreads.All(t => t.Id != thread.Id))
+                    {
+                        ChannelActiveThreads.Insert(0, thread);
+                    }
+                    OnPropertyChanged(nameof(HasChannelActiveThreads));
+                    OnPropertyChanged(nameof(ChannelActiveThreadsCountText));
+                });
+                await OpenThreadInSplitViewAsync(thread);
+                return thread;
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public async Task<DiscordChannel?> CreateChannelThreadAsync(string threadName)
+    {
+        if (_selectedChannel == null) return null;
+        try
+        {
+            var thread = await _client.Rest.CreateThreadAsync(_selectedChannel.Id, threadName);
+            if (thread != null)
+            {
+                Protocol.App.RunOnUiThread(() =>
+                {
+                    ChannelActiveThreads.Insert(0, thread);
+                    OnPropertyChanged(nameof(HasChannelActiveThreads));
+                    OnPropertyChanged(nameof(ChannelActiveThreadsCountText));
+                });
+                await OpenThreadInSplitViewAsync(thread);
+                return thread;
+            }
+        }
+        catch { }
+        return null;
     }
 
     public async Task SendMessageAsync(string content)
@@ -1917,66 +2068,130 @@ public sealed partial class MainViewModel : ObservableObject
 
     private void OnMessageReceived(DiscordMessage message)
     {
-        if (message.ChannelId != _selectedChannel?.Id) return;
-        Protocol.App.RunOnUiThread(() =>
+        if (ActiveSplitThread != null && message.ChannelId == ActiveSplitThread.Id)
         {
-            _client.ApplyCachedPresenceToUser(message.Author);
-            ProcessMessageForGrouping(message, Messages.LastOrDefault());
-            Messages.Add(message);
-            if (ChannelMembers.All(u => u.Id != message.Author.Id))
+            Protocol.App.RunOnUiThread(() =>
             {
-                ChannelMembers.Add(message.Author);
-            }
-        });
+                _client.ApplyCachedPresenceToUser(message.Author);
+                ProcessMessageForGrouping(message, ActiveThreadMessages.LastOrDefault());
+                ActiveThreadMessages.Add(message);
+            });
+        }
+
+        if (message.ChannelId == _selectedChannel?.Id)
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                _client.ApplyCachedPresenceToUser(message.Author);
+                ProcessMessageForGrouping(message, Messages.LastOrDefault());
+                Messages.Add(message);
+                if (ChannelMembers.All(u => u.Id != message.Author.Id))
+                {
+                    ChannelMembers.Add(message.Author);
+                }
+            });
+        }
     }
 
     private void OnMessageUpdated(DiscordMessage message)
     {
-        if (message.ChannelId != _selectedChannel?.Id) return;
-        Protocol.App.RunOnUiThread(() =>
+        if (ActiveSplitThread != null && message.ChannelId == ActiveSplitThread.Id)
         {
-            var existing = Messages.FirstOrDefault(m => m.Id == message.Id);
-            if (existing != null)
+            Protocol.App.RunOnUiThread(() =>
             {
-                var idx = Messages.IndexOf(existing);
-                message.ShowHeader = existing.ShowHeader;
-                message.IsOwnMessage = _client.CurrentUser != null && message.Author.Id == _client.CurrentUser.Id;
-                Messages[idx] = message;
-            }
-        });
+                var existing = ActiveThreadMessages.FirstOrDefault(m => m.Id == message.Id);
+                if (existing != null)
+                {
+                    var idx = ActiveThreadMessages.IndexOf(existing);
+                    message.ShowHeader = existing.ShowHeader;
+                    message.IsOwnMessage = _client.CurrentUser != null && message.Author.Id == _client.CurrentUser.Id;
+                    ActiveThreadMessages[idx] = message;
+                }
+            });
+        }
+
+        if (message.ChannelId == _selectedChannel?.Id)
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                var existing = Messages.FirstOrDefault(m => m.Id == message.Id);
+                if (existing != null)
+                {
+                    var idx = Messages.IndexOf(existing);
+                    message.ShowHeader = existing.ShowHeader;
+                    message.IsOwnMessage = _client.CurrentUser != null && message.Author.Id == _client.CurrentUser.Id;
+                    Messages[idx] = message;
+                }
+            });
+        }
     }
 
     private void OnMessageDeleted(string channelId, string messageId)
     {
-        if (channelId != _selectedChannel?.Id) return;
-        Protocol.App.RunOnUiThread(() =>
+        if (ActiveSplitThread != null && channelId == ActiveSplitThread.Id)
         {
-            var existing = Messages.FirstOrDefault(m => m.Id == messageId);
-            if (existing != null) Messages.Remove(existing);
-        });
+            Protocol.App.RunOnUiThread(() =>
+            {
+                var existing = ActiveThreadMessages.FirstOrDefault(m => m.Id == messageId);
+                if (existing != null) ActiveThreadMessages.Remove(existing);
+            });
+        }
+
+        if (channelId == _selectedChannel?.Id)
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                var existing = Messages.FirstOrDefault(m => m.Id == messageId);
+                if (existing != null) Messages.Remove(existing);
+            });
+        }
     }
 
     private void OnReactionAdded(string channelId, string messageId, DiscordEmoji emoji)
     {
-        if (channelId != _selectedChannel?.Id) return;
-        Protocol.App.RunOnUiThread(() =>
+        if (ActiveSplitThread != null && channelId == ActiveSplitThread.Id)
         {
-            var existing = Messages.FirstOrDefault(m => m.Id == messageId);
-            if (existing != null)
+            Protocol.App.RunOnUiThread(() =>
             {
-                var reaction = existing.Reactions.FirstOrDefault(r => r.Emoji.Name == emoji.Name);
-                if (reaction != null)
+                var existing = ActiveThreadMessages.FirstOrDefault(m => m.Id == messageId);
+                if (existing != null)
                 {
-                    reaction.Count++;
+                    var reaction = existing.Reactions.FirstOrDefault(r => r.Emoji.Name == emoji.Name);
+                    if (reaction != null)
+                    {
+                        reaction.Count++;
+                    }
+                    else
+                    {
+                        existing.Reactions.Add(new DiscordReaction { Count = 1, Emoji = emoji });
+                    }
+                    var idx = ActiveThreadMessages.IndexOf(existing);
+                    ActiveThreadMessages[idx] = existing;
                 }
-                else
+            });
+        }
+
+        if (channelId == _selectedChannel?.Id)
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                var existing = Messages.FirstOrDefault(m => m.Id == messageId);
+                if (existing != null)
                 {
-                    existing.Reactions.Add(new DiscordReaction { Count = 1, Emoji = emoji });
+                    var reaction = existing.Reactions.FirstOrDefault(r => r.Emoji.Name == emoji.Name);
+                    if (reaction != null)
+                    {
+                        reaction.Count++;
+                    }
+                    else
+                    {
+                        existing.Reactions.Add(new DiscordReaction { Count = 1, Emoji = emoji });
+                    }
+                    var idx = Messages.IndexOf(existing);
+                    Messages[idx] = existing;
                 }
-                var idx = Messages.IndexOf(existing);
-                Messages[idx] = existing;
-            }
-        });
+            });
+        }
     }
 
     private void ProcessMessageForGrouping(DiscordMessage current, DiscordMessage? previous)

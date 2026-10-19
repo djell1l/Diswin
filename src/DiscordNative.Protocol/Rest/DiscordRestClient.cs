@@ -896,6 +896,57 @@ public sealed class DiscordRestClient : IDisposable
         catch { }
     }
 
+    public async Task<List<DiscordChannel>> GetActiveThreadsAsync(string channelId, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<DiscordActiveThreadsResponse>($"{ApiBase}/channels/{channelId}/threads/active", ct);
+            if (res?.Threads != null) return res.Threads;
+        }
+        catch { }
+        return new();
+    }
+
+    public async Task<DiscordChannel?> CreateThreadFromMessageAsync(string channelId, string messageId, string name, int autoArchiveDuration = 1440, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                name = name,
+                auto_archive_duration = autoArchiveDuration
+            };
+            var response = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/messages/{messageId}/threads", payload, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct);
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    public async Task<DiscordChannel?> CreateThreadAsync(string channelId, string name, int autoArchiveDuration = 1440, int type = 11, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                name = name,
+                auto_archive_duration = autoArchiveDuration,
+                type = type
+            };
+            var response = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/threads", payload, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct);
+            }
+        }
+        catch { }
+        return null;
+    }
+
+
 
     public async Task<DiscordChannel?> CreateDmAsync(string recipientUserId, CancellationToken ct = default)
     {

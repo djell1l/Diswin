@@ -74,6 +74,16 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     [JsonPropertyName("permission_overwrites")]
     public List<DiscordPermissionOverwrite>? PermissionOverwrites { get; set; }
 
+    [JsonPropertyName("thread_metadata")]
+    public DiscordThreadMetadata? ThreadMetadata { get; set; }
+
+    [JsonPropertyName("message_count")]
+    public int? MessageCount { get; set; }
+
+    [JsonPropertyName("member_count")]
+    public int? MemberCount { get; set; }
+
+
     private bool _canView = true;
     [JsonIgnore]
     public bool CanView
@@ -125,9 +135,12 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     public bool IsVoiceChannel => Type is DiscordChannelType.GuildVoice or DiscordChannelType.GuildStageVoice;
     public bool IsCategory => Type == DiscordChannelType.GuildCategory;
     public bool IsNotCategory => Type != DiscordChannelType.GuildCategory;
+    public bool IsThread => Type is DiscordChannelType.PublicThread or DiscordChannelType.PrivateThread or DiscordChannelType.AnnouncementThread;
+    public string ThreadMessageCountText => MessageCount.HasValue ? $"{MessageCount.Value} message{(MessageCount.Value > 1 ? "s" : "")}" : "Fil actif";
     public bool IsInParentCategory => !IsCategory && !string.IsNullOrEmpty(ParentId);
     public string ChannelRowMargin => IsInParentCategory ? "12,0,0,0" : "0,0,0,0";
     public string CategoryNameUpper => (Name ?? DisplayName).ToUpperInvariant();
+
 
     private bool _isCollapsed;
     [JsonIgnore]

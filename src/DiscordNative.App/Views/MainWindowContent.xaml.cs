@@ -1041,6 +1041,85 @@ public sealed partial class MainWindowContent : UserControl
         ViewModel.ToggleMemberList();
     }
 
+    private void OnThreadsButtonClicked(object sender, RoutedEventArgs e)
+    {
+        _ = ViewModel.LoadActiveChannelThreadsAsync();
+    }
+
+    private async void OnSelectThreadFromFlyoutClicked(object sender, RoutedEventArgs e)
+    {
+        ChannelThreadsFlyout?.Hide();
+        if (sender is FrameworkElement fe && fe.Tag is DiscordChannel thread)
+        {
+            await ViewModel.OpenThreadInSplitViewAsync(thread);
+        }
+    }
+
+    private async void OnCreateNewThreadDialogClicked(object sender, RoutedEventArgs e)
+    {
+        ChannelThreadsFlyout?.Hide();
+        var input = new TextBox
+        {
+            PlaceholderText = "Nom du fil de discussion",
+            CornerRadius = new CornerRadius(8)
+        };
+        var dialog = new ContentDialog
+        {
+            Title = "Nouveau fil de discussion",
+            Content = input,
+            PrimaryButtonText = "Créer le fil",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            await ViewModel.CreateChannelThreadAsync(input.Text.Trim());
+        }
+    }
+
+    private async void OnOpenThreadCardClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordChannel thread)
+        {
+            await ViewModel.OpenThreadInSplitViewAsync(thread);
+        }
+    }
+
+    private void OnCloseSplitThreadClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.CloseSplitViewThread();
+    }
+
+    private async void OnSendSplitThreadMessageClicked(object sender, RoutedEventArgs e)
+    {
+        var text = SplitThreadMessageInput.Text;
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            SplitThreadMessageInput.Text = string.Empty;
+            await ViewModel.SendThreadMessageAsync(text.Trim());
+        }
+    }
+
+    private async void OnSplitThreadMessageInputKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            var shift = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift);
+            if (!shift.HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
+            {
+                e.Handled = true;
+                var text = SplitThreadMessageInput.Text;
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    SplitThreadMessageInput.Text = string.Empty;
+                    await ViewModel.SendThreadMessageAsync(text.Trim());
+                }
+            }
+        }
+    }
+
     private static DiscordUser? ExtractDiscordUser(object? sender)
     {
         if (sender is FrameworkElement fe)
@@ -1796,6 +1875,44 @@ public sealed partial class MainWindowContent : UserControl
             MessageInput.Text = msg.Content;
             MessageInput.SelectionStart = MessageInput.Text.Length;
             MessageInput.Focus(FocusState.Programmatic);
+        }
+    }
+
+    private async void OnCreateThreadFromMessageClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        var msg = GetMessageFromSender(sender);
+        if (msg == null) return;
+
+        if (msg.Thread != null)
+        {
+            await ViewModel.OpenThreadInSplitViewAsync(msg.Thread);
+            return;
+        }
+
+        var defaultName = !string.IsNullOrWhiteSpace(msg.Content)
+            ? (msg.Content.Length > 30 ? msg.Content.Substring(0, 30) : msg.Content)
+            : $"Fil de {msg.Author?.DisplayName ?? "discussion"}";
+
+        var input = new TextBox
+        {
+            Text = defaultName,
+            PlaceholderText = "Nom du fil de discussion",
+            CornerRadius = new CornerRadius(8)
+        };
+        var dialog = new ContentDialog
+        {
+            Title = "Créer un fil de discussion",
+            Content = input,
+            PrimaryButtonText = "Créer le fil",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(input.Text))
+        {
+            await ViewModel.CreateThreadFromMessageAsync(msg, input.Text.Trim());
         }
     }
 

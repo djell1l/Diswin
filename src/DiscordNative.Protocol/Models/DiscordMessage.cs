@@ -299,7 +299,13 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     public bool HasStickers => StickerItems.Count > 0;
     public bool HasReactions => Reactions.Count > 0;
     public bool HasPoll => Poll is not null;
+
+    [JsonPropertyName("thread")]
+    public DiscordChannel? Thread { get; set; }
+
+    public bool HasThread => Thread != null;
 }
+
 
 public sealed class DiscordAttachment
 {
