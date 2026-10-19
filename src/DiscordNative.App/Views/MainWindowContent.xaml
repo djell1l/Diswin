@@ -132,6 +132,7 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Spacing="0">
@@ -370,7 +371,22 @@
                         <FontIcon Glyph="&#xE710;" />
                     </Button>
 
-                    <Button Grid.Row="3" Margin="12" Width="48" Height="48" CornerRadius="16"
+                    <!-- Bouton Découverte de serveurs publics (Boussole Discord) -->
+                    <Grid Grid.Row="3" Margin="0,4,0,0">
+                        <!-- Pilule indicatrice blanche sur le bord gauche -->
+                        <Border HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Width="8" Height="40" Margin="-4,0,0,0" CornerRadius="0,4,4,0" Background="White"
+                                Visibility="{x:Bind ViewModel.DiscoveryPillVisibility, Mode=OneWay}" />
+
+                        <Button Margin="12,0,12,0" Width="48" Height="48" CornerRadius="16"
+                                Background="{x:Bind ViewModel.DiscoveryCompassBackground, Mode=OneWay}"
+                                Click="OnOpenDiscoveryClicked" ToolTipService.ToolTip="Découvrir des serveurs publics">
+                            <FontIcon Glyph="&#xE774;" FontSize="18"
+                                      Foreground="{x:Bind ViewModel.DiscoveryCompassForeground, Mode=OneWay}" />
+                        </Button>
+                    </Grid>
+
+                    <Button Grid.Row="4" Margin="12" Width="48" Height="48" CornerRadius="16"
                             Click="OnSettingsClicked" ToolTipService.ToolTip="Paramètres">
                         <FontIcon Glyph="&#xE713;" />
                     </Button>
@@ -5801,6 +5817,225 @@
                     </Grid>
                 </Border>
             </Canvas>
+
+            <!-- VUE DÉCOUVERTE DE SERVEURS PUBLICS (SERVER DISCOVERY HUB) -->
+            <Grid Grid.Column="1" Grid.ColumnSpan="2"
+                  Visibility="{x:Bind ViewModel.DiscoveryViewVisibility, Mode=OneWay}"
+                  Background="#313338" Canvas.ZIndex="100">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- En-tête / Bannière Héro de Découverte -->
+                <Border Grid.Row="0" Background="#111214" Padding="32,24" BorderBrush="#1F2023" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Ligne de Titre + Bouton Fermer -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Border Width="36" Height="36" CornerRadius="18" Background="#23A55A">
+                                        <FontIcon Glyph="&#xE774;" FontSize="18" Foreground="White" />
+                                    </Border>
+                                    <TextBlock Text="Découvrir des serveurs publics" FontSize="22" FontWeight="Bold" Foreground="#F2F3F5" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="Trouvez des communautés qui partagent vos passions : jeux vidéo, musique, tech, création et plus encore."
+                                           FontSize="13" Foreground="#949BA4" Margin="46,0,0,0" />
+                            </StackPanel>
+
+                            <Button Grid.Column="1" Width="36" Height="36" Padding="0" CornerRadius="18"
+                                    Background="#2B2D31" BorderThickness="0"
+                                    Click="OnCloseDiscoveryClicked" ToolTipService.ToolTip="Fermer la découverte (Échap)">
+                                <FontIcon Glyph="&#xE8BB;" FontSize="14" Foreground="#DBDEE1" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Barre de Recherche stylée Discord -->
+                        <Grid Grid.Row="1" Margin="0,18,0,14" MaxWidth="640" HorizontalAlignment="Left">
+                            <TextBox x:Name="DiscoverySearchInput"
+                                     PlaceholderText="Explorer des serveurs (ex: Minecraft, IA, Python...)"
+                                     Text="{x:Bind ViewModel.DiscoverySearchQuery, Mode=TwoWay}"
+                                     TextChanged="OnDiscoverySearchTextChanged"
+                                     KeyDown="OnDiscoverySearchKeyDown"
+                                     Height="42" Width="520" CornerRadius="8"
+                                     Padding="36,8,12,8"
+                                     Background="#1E1F22" Foreground="#F2F3F5" BorderBrush="#35373C" BorderThickness="1"
+                                     FontSize="14" />
+                            <FontIcon Glyph="&#xE721;" FontSize="15" Foreground="#949BA4"
+                                      HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False" />
+                        </Grid>
+
+                        <!-- Pilules de Catégories ("Tous", "Gaming", "Musique", "Tech", "Éducation") -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                            <Button Content="Tous" Tag="Tous" Click="OnDiscoveryCategoryClicked"
+                                    Padding="16,6" CornerRadius="16" FontSize="13" FontWeight="SemiBold"
+                                    Background="{x:Bind ViewModel.CategoryTousBrush, Mode=OneWay}"
+                                    Foreground="{x:Bind ViewModel.CategoryTousTextBrush, Mode=OneWay}"
+                                    BorderThickness="0" />
+                            <Button Content="Gaming" Tag="Gaming" Click="OnDiscoveryCategoryClicked"
+                                    Padding="16,6" CornerRadius="16" FontSize="13" FontWeight="SemiBold"
+                                    Background="{x:Bind ViewModel.CategoryGamingBrush, Mode=OneWay}"
+                                    Foreground="{x:Bind ViewModel.CategoryGamingTextBrush, Mode=OneWay}"
+                                    BorderThickness="0" />
+                            <Button Content="Musique" Tag="Musique" Click="OnDiscoveryCategoryClicked"
+                                    Padding="16,6" CornerRadius="16" FontSize="13" FontWeight="SemiBold"
+                                    Background="{x:Bind ViewModel.CategoryMusiqueBrush, Mode=OneWay}"
+                                    Foreground="{x:Bind ViewModel.CategoryMusiqueTextBrush, Mode=OneWay}"
+                                    BorderThickness="0" />
+                            <Button Content="Tech" Tag="Tech" Click="OnDiscoveryCategoryClicked"
+                                    Padding="16,6" CornerRadius="16" FontSize="13" FontWeight="SemiBold"
+                                    Background="{x:Bind ViewModel.CategoryTechBrush, Mode=OneWay}"
+                                    Foreground="{x:Bind ViewModel.CategoryTechTextBrush, Mode=OneWay}"
+                                    BorderThickness="0" />
+                            <Button Content="Éducation" Tag="Éducation" Click="OnDiscoveryCategoryClicked"
+                                    Padding="16,6" CornerRadius="16" FontSize="13" FontWeight="SemiBold"
+                                    Background="{x:Bind ViewModel.CategoryEducationBrush, Mode=OneWay}"
+                                    Foreground="{x:Bind ViewModel.CategoryEducationTextBrush, Mode=OneWay}"
+                                    BorderThickness="0" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Zone de Défilement avec Cartes de Serveurs -->
+                <ScrollViewer Grid.Row="1" Padding="32,20">
+                    <StackPanel Spacing="16">
+                        <!-- En-tête des résultats & Indicateur de chargement -->
+                        <Grid Margin="0,0,0,4">
+                            <TextBlock Text="{x:Bind ViewModel.DiscoveryResultsCountText, Mode=OneWay}"
+                                       FontSize="14" FontWeight="SemiBold" Foreground="#DBDEE1" VerticalAlignment="Center" />
+                            <ProgressRing IsActive="{x:Bind ViewModel.IsLoadingDiscovery, Mode=OneWay}"
+                                          Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <!-- Message si aucun serveur trouvé -->
+                        <StackPanel Visibility="{x:Bind ViewModel.HasFilteredDiscoverableGuilds, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" Spacing="12">
+                            <FontIcon Glyph="&#xE721;" FontSize="40" Foreground="#4E5058" HorizontalAlignment="Center" />
+                            <TextBlock Text="Aucun serveur public trouvé" FontSize="16" FontWeight="Bold" Foreground="#DBDEE1" HorizontalAlignment="Center" />
+                            <TextBlock Text="Essayez un autre mot-clé ou sélectionnez une autre catégorie." FontSize="13" Foreground="#949BA4" HorizontalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Grille de Cartes de Serveurs Publics -->
+                        <GridView ItemsSource="{x:Bind ViewModel.FilteredDiscoverableGuilds, Mode=OneWay}"
+                                  SelectionMode="None"
+                                  Visibility="{x:Bind ViewModel.HasFilteredDiscoverableGuilds, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0,0,16,16" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                </Style>
+                            </GridView.ItemContainerStyle>
+                            <GridView.ItemTemplate>
+                                <DataTemplate x:DataType="models:DiscordDiscoverableGuild">
+                                    <Border Width="280" Height="340" Background="#2B2D31" BorderBrush="#1E1F22" BorderThickness="1" CornerRadius="12">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="120" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Bannière en haut -->
+                                            <Border Grid.Row="0" CornerRadius="12,12,0,0">
+                                                <Grid>
+                                                    <!-- Bannière si disponible -->
+                                                    <Border CornerRadius="12,12,0,0"
+                                                            Visibility="{x:Bind HasBanner, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Border.Background>
+                                                            <ImageBrush ImageSource="{x:Bind BannerUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                        </Border.Background>
+                                                    </Border>
+                                                    <!-- Fond dégradé subtil si aucune bannière -->
+                                                    <Border CornerRadius="12,12,0,0"
+                                                            Visibility="{x:Bind HasBanner, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                                                        <Border.Background>
+                                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                                <GradientStop Color="#5865F2" Offset="0" />
+                                                                <GradientStop Color="#23A55A" Offset="1" />
+                                                            </LinearGradientBrush>
+                                                        </Border.Background>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Icône de serveur flottante chevauchant la bannière -->
+                                            <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                                    Margin="16,0,0,-24" Width="48" Height="48" CornerRadius="16"
+                                                    BorderBrush="#2B2D31" BorderThickness="3" Background="#1E1F22" Canvas.ZIndex="10">
+                                                <Grid>
+                                                    <!-- Image de l'icône si présente -->
+                                                    <Border CornerRadius="13" Visibility="{x:Bind HasIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Border.Background>
+                                                            <ImageBrush ImageSource="{x:Bind IconUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                        </Border.Background>
+                                                    </Border>
+                                                    <!-- Initiales si pas d'icône -->
+                                                    <TextBlock Text="{x:Bind Initials}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               FontWeight="Bold" FontSize="14" Foreground="White"
+                                                               Visibility="{x:Bind HasIcon, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Corps de la carte -->
+                                            <Grid Grid.Row="1" Margin="16,28,16,14">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Nom + Badge Vérifié / Partenaire -->
+                                                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+                                                    <Border Background="#23A55A" CornerRadius="4" Padding="4,1" VerticalAlignment="Center"
+                                                            Visibility="{x:Bind HasBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock Text="{x:Bind BadgeText, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="White" />
+                                                    </Border>
+                                                    <TextBlock Text="{x:Bind Name}" FontSize="15" FontWeight="Bold" Foreground="#F2F3F5"
+                                                               TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <!-- Description -->
+                                                <TextBlock Grid.Row="1" Text="{x:Bind Description}" FontSize="12" Foreground="#949BA4"
+                                                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" VerticalAlignment="Top" />
+
+                                                <!-- Membres & En ligne -->
+                                                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,8,0,10">
+                                                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                                        <Ellipse Width="8" Height="8" Fill="#23A55A" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind PresenceCountText, Mode=OneWay}" FontSize="11" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                                                        <Ellipse Width="8" Height="8" Fill="#80848E" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind MemberCountText, Mode=OneWay}" FontSize="11" Foreground="#949BA4" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Bouton Rejoindre le serveur (style Discord officiel) -->
+                                                <Button Grid.Row="3" HorizontalAlignment="Stretch" Height="36" CornerRadius="6"
+                                                        Background="#23A55A" Foreground="White" FontWeight="Bold" FontSize="13"
+                                                        Content="Rejoindre le serveur" Tag="{x:Bind}" Click="OnJoinDiscoverableGuildClicked" />
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
         </Grid>
 
         <!-- Modal Éditeur de Profil (Fenêtre modale centrée non plein écran 100% fidèle à Discord) -->

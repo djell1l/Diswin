@@ -1511,6 +1511,63 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
+    // --- Découverte de serveurs publics (Discovery Hub) ---
+    private async void OnOpenDiscoveryClicked(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.OpenDiscoveryViewAsync();
+    }
+
+    private void OnCloseDiscoveryClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.CloseDiscoveryView();
+    }
+
+    private void OnDiscoverySearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        ViewModel.DiscoverySearchQuery = (sender as TextBox)?.Text ?? string.Empty;
+    }
+
+    private async void OnDiscoverySearchKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            var cat = ViewModel.SelectedDiscoveryCategory switch
+            {
+                "Gaming" => 1,
+                "Musique" => 2,
+                "Tech" => 3,
+                "Éducation" => 4,
+                _ => 0
+            };
+            await ViewModel.LoadDiscoverableGuildsAsync(ViewModel.DiscoverySearchQuery, cat);
+        }
+    }
+
+    private async void OnDiscoveryCategoryClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string category)
+        {
+            ViewModel.SelectedDiscoveryCategory = category;
+            var cat = category switch
+            {
+                "Gaming" => 1,
+                "Musique" => 2,
+                "Tech" => 3,
+                "Éducation" => 4,
+                _ => 0
+            };
+            await ViewModel.LoadDiscoverableGuildsAsync(ViewModel.DiscoverySearchQuery, cat);
+        }
+    }
+
+    private async void OnJoinDiscoverableGuildClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.Tag is DiscordDiscoverableGuild guild)
+        {
+            await ViewModel.JoinDiscoverableGuildAsync(guild);
+        }
+    }
+
     // --- Animation au survol des avatars et icônes ---
     private void OnAvatarPointerEntered(object sender, PointerRoutedEventArgs e)
     {

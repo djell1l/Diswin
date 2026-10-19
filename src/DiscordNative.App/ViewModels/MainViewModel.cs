@@ -119,6 +119,83 @@ public sealed partial class MainViewModel : ObservableObject
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
 
+    [ObservableProperty]
+    private bool isDiscoveryOpen;
+
+    partial void OnIsDiscoveryOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DiscoveryViewVisibility));
+        OnPropertyChanged(nameof(DiscoveryPillVisibility));
+        OnPropertyChanged(nameof(DiscoveryCompassBackground));
+        OnPropertyChanged(nameof(DiscoveryCompassForeground));
+    }
+
+    public Microsoft.UI.Xaml.Visibility DiscoveryViewVisibility => IsDiscoveryOpen
+        ? Microsoft.UI.Xaml.Visibility.Visible
+        : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    public Microsoft.UI.Xaml.Visibility DiscoveryPillVisibility => IsDiscoveryOpen
+        ? Microsoft.UI.Xaml.Visibility.Visible
+        : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DiscoveryActiveCompassBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90)); // #23A55A
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DiscoveryInactiveCompassBrush = new(Windows.UI.Color.FromArgb(255, 43, 45, 49)); // #2B2D31
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush WhiteBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush ActivePillBrush = new(Windows.UI.Color.FromArgb(255, 88, 101, 242)); // #5865F2 Blurple
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush InactivePillBrush = new(Windows.UI.Color.FromArgb(255, 43, 45, 49)); // #2B2D31
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush ActivePillTextBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush InactivePillTextBrush = new(Windows.UI.Color.FromArgb(255, 219, 222, 225)); // #DBDEE1
+
+    public Microsoft.UI.Xaml.Media.Brush DiscoveryCompassBackground => IsDiscoveryOpen ? DiscoveryActiveCompassBrush : DiscoveryInactiveCompassBrush;
+    public Microsoft.UI.Xaml.Media.Brush DiscoveryCompassForeground => IsDiscoveryOpen ? WhiteBrush : DiscoveryActiveCompassBrush;
+
+    public ObservableCollection<DiscordDiscoverableGuild> DiscoverableGuilds { get; } = new();
+    public ObservableCollection<DiscordDiscoverableGuild> FilteredDiscoverableGuilds { get; } = new();
+
+    [ObservableProperty]
+    private string discoverySearchQuery = string.Empty;
+
+    partial void OnDiscoverySearchQueryChanged(string value)
+    {
+        ApplyDiscoveryFilter();
+    }
+
+    [ObservableProperty]
+    private string selectedDiscoveryCategory = "Tous";
+
+    partial void OnSelectedDiscoveryCategoryChanged(string value)
+    {
+        ApplyDiscoveryFilter();
+        OnPropertyChanged(nameof(CategoryTousBrush));
+        OnPropertyChanged(nameof(CategoryGamingBrush));
+        OnPropertyChanged(nameof(CategoryMusiqueBrush));
+        OnPropertyChanged(nameof(CategoryTechBrush));
+        OnPropertyChanged(nameof(CategoryEducationBrush));
+        OnPropertyChanged(nameof(CategoryTousTextBrush));
+        OnPropertyChanged(nameof(CategoryGamingTextBrush));
+        OnPropertyChanged(nameof(CategoryMusiqueTextBrush));
+        OnPropertyChanged(nameof(CategoryTechTextBrush));
+        OnPropertyChanged(nameof(CategoryEducationTextBrush));
+    }
+
+    public Microsoft.UI.Xaml.Media.Brush CategoryTousBrush => SelectedDiscoveryCategory == "Tous" ? ActivePillBrush : InactivePillBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryGamingBrush => SelectedDiscoveryCategory == "Gaming" ? ActivePillBrush : InactivePillBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryMusiqueBrush => SelectedDiscoveryCategory == "Musique" ? ActivePillBrush : InactivePillBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryTechBrush => SelectedDiscoveryCategory == "Tech" ? ActivePillBrush : InactivePillBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryEducationBrush => SelectedDiscoveryCategory == "Éducation" ? ActivePillBrush : InactivePillBrush;
+
+    public Microsoft.UI.Xaml.Media.Brush CategoryTousTextBrush => SelectedDiscoveryCategory == "Tous" ? ActivePillTextBrush : InactivePillTextBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryGamingTextBrush => SelectedDiscoveryCategory == "Gaming" ? ActivePillTextBrush : InactivePillTextBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryMusiqueTextBrush => SelectedDiscoveryCategory == "Musique" ? ActivePillTextBrush : InactivePillTextBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryTechTextBrush => SelectedDiscoveryCategory == "Tech" ? ActivePillTextBrush : InactivePillTextBrush;
+    public Microsoft.UI.Xaml.Media.Brush CategoryEducationTextBrush => SelectedDiscoveryCategory == "Éducation" ? ActivePillTextBrush : InactivePillTextBrush;
+
+    [ObservableProperty]
+    private bool isLoadingDiscovery;
+
+    public string DiscoveryResultsCountText => $"{FilteredDiscoverableGuilds.Count} communauté{(FilteredDiscoverableGuilds.Count > 1 ? "s" : "")} trouvée{(FilteredDiscoverableGuilds.Count > 1 ? "s" : "")}";
+    public bool HasFilteredDiscoverableGuilds => FilteredDiscoverableGuilds.Count > 0;
+
     public ObservableCollection<DiscordMessage> RecentMentions { get; } = new();
     public ObservableCollection<DiscordChannel> UnreadChannels { get; } = new();
     public bool HasUnreadChannels => UnreadChannels.Count > 0;
@@ -1047,6 +1124,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public void ShowFriendsView()
     {
+        IsDiscoveryOpen = false;
         if (_selectedGuild != null)
         {
             _selectedGuild.IsSelected = false;
@@ -1068,6 +1146,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public async Task SelectGuildAsync(DiscordGuild guild)
     {
+        IsDiscoveryOpen = false;
         if (_selectedGuild != null && _selectedGuild != guild)
         {
             _selectedGuild.IsSelected = false;
@@ -1807,6 +1886,111 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
         return null;
+    }
+
+    public async Task OpenDiscoveryViewAsync()
+    {
+        if (_selectedGuild != null)
+        {
+            _selectedGuild.IsSelected = false;
+            _selectedGuild = null;
+            OnPropertyChanged(nameof(SelectedGuild));
+            OnPropertyChanged(nameof(HasSelectedGuild));
+        }
+        _showingFriends = false;
+        OnPropertyChanged(nameof(ShowingGuildChannels));
+        OnPropertyChanged(nameof(ShowingFriendsView));
+
+        IsDiscoveryOpen = true;
+        await LoadDiscoverableGuildsAsync();
+    }
+
+    public void CloseDiscoveryView()
+    {
+        IsDiscoveryOpen = false;
+        ShowFriendsView();
+    }
+
+    public async Task LoadDiscoverableGuildsAsync(string? query = null, int category = 0)
+    {
+        IsLoadingDiscovery = true;
+        try
+        {
+            var results = await _client.Rest.GetDiscoverableGuildsAsync(query, category);
+            Protocol.App.RunOnUiThread(() =>
+            {
+                DiscoverableGuilds.Clear();
+                foreach (var g in results)
+                {
+                    DiscoverableGuilds.Add(g);
+                }
+                ApplyDiscoveryFilter();
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LoadDiscoverableGuildsAsync] Error: {ex.Message}");
+        }
+        finally
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                IsLoadingDiscovery = false;
+            });
+        }
+    }
+
+    public void ApplyDiscoveryFilter()
+    {
+        FilteredDiscoverableGuilds.Clear();
+        var category = SelectedDiscoveryCategory;
+        var query = DiscoverySearchQuery?.Trim();
+
+        foreach (var g in DiscoverableGuilds)
+        {
+            if (!string.IsNullOrEmpty(category) && category != "Tous" && !string.Equals(g.Category, category, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(query))
+            {
+                var matchesName = g.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
+                var matchesDesc = g.Description != null && g.Description.Contains(query, StringComparison.OrdinalIgnoreCase);
+                var matchesKeywords = g.Keywords != null && g.Keywords.Any(k => k.Contains(query, StringComparison.OrdinalIgnoreCase));
+                if (!matchesName && !matchesDesc && !matchesKeywords)
+                {
+                    continue;
+                }
+            }
+
+            FilteredDiscoverableGuilds.Add(g);
+        }
+
+        OnPropertyChanged(nameof(HasFilteredDiscoverableGuilds));
+        OnPropertyChanged(nameof(DiscoveryResultsCountText));
+    }
+
+    public async Task JoinDiscoverableGuildAsync(DiscordDiscoverableGuild guild)
+    {
+        var localGuild = Guilds.FirstOrDefault(g => g.Id == guild.Id);
+        if (localGuild != null)
+        {
+            IsDiscoveryOpen = false;
+            await SelectGuildAsync(localGuild);
+            return;
+        }
+
+        var inviteCode = !string.IsNullOrWhiteSpace(guild.VanityUrlCode) ? guild.VanityUrlCode : guild.Id;
+        try
+        {
+            await JoinServerByInviteAsync(inviteCode);
+            IsDiscoveryOpen = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[JoinDiscoverableGuildAsync] Error: {ex.Message}");
+        }
     }
 
     public async Task SendMessageAsync(string content)
