@@ -549,6 +549,39 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
     }
 
+    public void SetUserVoiceVolume(string userId, float volume)
+    {
+        _client.SetUserVoiceVolume(userId, volume);
+        var target = ChannelMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? OnlineMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? OfflineMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? VoiceParticipants.FirstOrDefault(u => u.Id == userId);
+        if (target != null)
+        {
+            target.VoiceVolume = Math.Round(volume * 100);
+            target.IsLocalMuted = volume <= 0.001f;
+        }
+    }
+
+    public void ToggleUserVoiceMute(string userId)
+    {
+        var target = ChannelMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? OnlineMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? OfflineMembers.FirstOrDefault(u => u.Id == userId)
+                     ?? VoiceParticipants.FirstOrDefault(u => u.Id == userId);
+        if (target != null)
+        {
+            if (target.IsLocalMuted)
+            {
+                SetUserVoiceVolume(userId, 1.0f);
+            }
+            else
+            {
+                SetUserVoiceVolume(userId, 0.0f);
+            }
+        }
+    }
+
     private void NotifyCurrentUserRichPresenceChanged()
     {
         OnPropertyChanged(nameof(CurrentStatusDisplayName));

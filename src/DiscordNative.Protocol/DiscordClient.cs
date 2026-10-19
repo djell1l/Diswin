@@ -64,6 +64,16 @@ public sealed class DiscordClient : IAsyncDisposable
         }
     }
 
+    public void SetUserVoiceVolume(string userId, float volume)
+    {
+        _voiceClient?.SetUserVolume(userId, volume);
+    }
+
+    public float GetUserVoiceVolume(string userId)
+    {
+        return _voiceClient?.GetUserVolume(userId) ?? 1.0f;
+    }
+
     // Suivi en temps réel des membres présents dans chaque salon vocal (channelId -> liste des utilisateurs)
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DiscordUser>> _voiceChannelMembers = new();
 

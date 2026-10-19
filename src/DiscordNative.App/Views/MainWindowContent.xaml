@@ -1592,6 +1592,53 @@
                             <GridView.ItemTemplate>
                                 <DataTemplate x:DataType="models:DiscordUser">
                                     <Grid Width="260" Height="190" Margin="10">
+                                        <Grid.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Profil" Tag="{x:Bind}" Click="OnUserMenuProfileClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Mentionner" Tag="{x:Bind}" Click="OnUserMenuMentionClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE910;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Message privé" Tag="{x:Bind}" Click="OnUserMenuDirectMessageClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Appeler" Tag="{x:Bind}" Click="OnUserMenuCallClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutSubItem Text="Volume utilisateur">
+                                                    <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE767;" /></MenuFlyoutSubItem.Icon>
+                                                    <MenuFlyoutItem Text="200% (Maximum)" Tag="2.0" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="150%" Tag="1.5" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="100% (Normal)" Tag="1.0" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="75%" Tag="0.75" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="50%" Tag="0.5" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="25%" Tag="0.25" Click="OnUserMenuSetVolumeClicked" />
+                                                    <MenuFlyoutItem Text="Couper le son (0%)" Tag="0.0" Click="OnUserMenuSetVolumeClicked" />
+                                                </MenuFlyoutSubItem>
+                                                <MenuFlyoutItem Text="Mettre en sourdine locale" Tag="{x:Bind}" Click="OnUserMenuToggleMuteClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutItem Text="Ajouter en ami" Tag="{x:Bind}" Click="OnUserMenuAddFriendClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FA;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind}" Click="OnUserMenuBlockClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutItem Text="Copier le nom d'utilisateur" Tag="{x:Bind}" Click="OnUserMenuCopyUsernameClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Copier le pseudo" Tag="{x:Bind}" Click="OnUserMenuCopyDisplayNameClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Copier l'identifiant" Tag="{x:Bind}" Click="OnUserMenuCopyIdClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Grid.ContextFlyout>
                                         <!-- Carte de fond -->
                                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
@@ -2089,6 +2136,53 @@
                                         <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="20" VerticalAlignment="Top"
                                                 PointerEntered="OnAvatarPointerEntered" PointerExited="OnAvatarPointerExited"
                                                 DoubleTapped="OnAvatarDoubleTapped" ToolTipService.ToolTip="Cliquez pour le mini-profil, double-cliquez pour la vue complète">
+                                            <Button.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuFlyoutItem Text="Profil" Tag="{x:Bind Author}" Click="OnUserMenuProfileClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Mentionner" Tag="{x:Bind Author}" Click="OnUserMenuMentionClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE910;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Message privé" Tag="{x:Bind Author}" Click="OnUserMenuDirectMessageClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Appeler" Tag="{x:Bind Author}" Click="OnUserMenuCallClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutSubItem Text="Volume utilisateur">
+                                                        <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE767;" /></MenuFlyoutSubItem.Icon>
+                                                        <MenuFlyoutItem Text="200% (Maximum)" Tag="2.0" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="150%" Tag="1.5" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="100% (Normal)" Tag="1.0" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="75%" Tag="0.75" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="50%" Tag="0.5" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="25%" Tag="0.25" Click="OnUserMenuSetVolumeClicked" />
+                                                        <MenuFlyoutItem Text="Couper le son (0%)" Tag="0.0" Click="OnUserMenuSetVolumeClicked" />
+                                                    </MenuFlyoutSubItem>
+                                                    <MenuFlyoutItem Text="Mettre en sourdine locale" Tag="{x:Bind Author}" Click="OnUserMenuToggleMuteClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Ajouter en ami" Tag="{x:Bind Author}" Click="OnUserMenuAddFriendClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FA;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind Author}" Click="OnUserMenuBlockClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Copier le nom d'utilisateur" Tag="{x:Bind Author}" Click="OnUserMenuCopyUsernameClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Copier le pseudo" Tag="{x:Bind Author}" Click="OnUserMenuCopyDisplayNameClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Copier l'identifiant" Tag="{x:Bind Author}" Click="OnUserMenuCopyIdClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                </MenuFlyout>
+                                            </Button.ContextFlyout>
                                             <Button.Flyout>
                                                 <Flyout Opening="OnUserProfileFlyoutOpening">
                                                     <Flyout.FlyoutPresenterStyle>
@@ -2476,7 +2570,55 @@
 
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+                                                <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center">
+                                                    <TextBlock.ContextFlyout>
+                                                        <MenuFlyout>
+                                                            <MenuFlyoutItem Text="Profil" Tag="{x:Bind Author}" Click="OnUserMenuProfileClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Mentionner" Tag="{x:Bind Author}" Click="OnUserMenuMentionClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE910;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Message privé" Tag="{x:Bind Author}" Click="OnUserMenuDirectMessageClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Appeler" Tag="{x:Bind Author}" Click="OnUserMenuCallClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutSubItem Text="Volume utilisateur">
+                                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE767;" /></MenuFlyoutSubItem.Icon>
+                                                                <MenuFlyoutItem Text="200% (Maximum)" Tag="2.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="150%" Tag="1.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="100% (Normal)" Tag="1.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="75%" Tag="0.75" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="50%" Tag="0.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="25%" Tag="0.25" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="Couper le son (0%)" Tag="0.0" Click="OnUserMenuSetVolumeClicked" />
+                                                            </MenuFlyoutSubItem>
+                                                            <MenuFlyoutItem Text="Mettre en sourdine locale" Tag="{x:Bind Author}" Click="OnUserMenuToggleMuteClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Ajouter en ami" Tag="{x:Bind Author}" Click="OnUserMenuAddFriendClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FA;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind Author}" Click="OnUserMenuBlockClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Copier le nom d'utilisateur" Tag="{x:Bind Author}" Click="OnUserMenuCopyUsernameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier le pseudo" Tag="{x:Bind Author}" Click="OnUserMenuCopyDisplayNameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier l'identifiant" Tag="{x:Bind Author}" Click="OnUserMenuCopyIdClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                        </MenuFlyout>
+                                                    </TextBlock.ContextFlyout>
+                                                </TextBlock>
                                                 <!-- Pill Tag de Clan à côté du pseudo dans les messages -->
                                                 <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="5"
                                                         Visibility="{x:Bind Author.HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -3191,6 +3333,53 @@
                                                         HorizontalContentAlignment="Left" Padding="6,5" CornerRadius="8"
                                                         Tag="{x:Bind}" Click="OnMemberItemClicked" DoubleTapped="OnMemberItemDoubleTapped"
                                                         ToolTipService.ToolTip="{x:Bind DisplayName}">
+                                                    <Button.ContextFlyout>
+                                                        <MenuFlyout>
+                                                            <MenuFlyoutItem Text="Profil" Tag="{x:Bind}" Click="OnUserMenuProfileClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Mentionner" Tag="{x:Bind}" Click="OnUserMenuMentionClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE910;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Message privé" Tag="{x:Bind}" Click="OnUserMenuDirectMessageClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Appeler" Tag="{x:Bind}" Click="OnUserMenuCallClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutSubItem Text="Volume utilisateur">
+                                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE767;" /></MenuFlyoutSubItem.Icon>
+                                                                <MenuFlyoutItem Text="200% (Maximum)" Tag="2.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="150%" Tag="1.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="100% (Normal)" Tag="1.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="75%" Tag="0.75" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="50%" Tag="0.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="25%" Tag="0.25" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="Couper le son (0%)" Tag="0.0" Click="OnUserMenuSetVolumeClicked" />
+                                                            </MenuFlyoutSubItem>
+                                                            <MenuFlyoutItem Text="Mettre en sourdine locale" Tag="{x:Bind}" Click="OnUserMenuToggleMuteClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Ajouter en ami" Tag="{x:Bind}" Click="OnUserMenuAddFriendClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FA;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind}" Click="OnUserMenuBlockClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Copier le nom d'utilisateur" Tag="{x:Bind}" Click="OnUserMenuCopyUsernameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier le pseudo" Tag="{x:Bind}" Click="OnUserMenuCopyDisplayNameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier l'identifiant" Tag="{x:Bind}" Click="OnUserMenuCopyIdClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                        </MenuFlyout>
+                                                    </Button.ContextFlyout>
                                                     <Button.Flyout>
                                                         <Flyout Opening="OnUserProfileFlyoutOpening" Placement="LeftEdgeAlignedTop">
                                                             <Flyout.FlyoutPresenterStyle>
@@ -3630,6 +3819,53 @@
                                                         HorizontalContentAlignment="Left" Padding="6,5" CornerRadius="8" Opacity="0.65"
                                                         Tag="{x:Bind}" Click="OnMemberItemClicked" DoubleTapped="OnMemberItemDoubleTapped"
                                                         ToolTipService.ToolTip="{x:Bind DisplayName}">
+                                                    <Button.ContextFlyout>
+                                                        <MenuFlyout>
+                                                            <MenuFlyoutItem Text="Profil" Tag="{x:Bind}" Click="OnUserMenuProfileClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Mentionner" Tag="{x:Bind}" Click="OnUserMenuMentionClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE910;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Message privé" Tag="{x:Bind}" Click="OnUserMenuDirectMessageClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Appeler" Tag="{x:Bind}" Click="OnUserMenuCallClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutSubItem Text="Volume utilisateur">
+                                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE767;" /></MenuFlyoutSubItem.Icon>
+                                                                <MenuFlyoutItem Text="200% (Maximum)" Tag="2.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="150%" Tag="1.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="100% (Normal)" Tag="1.0" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="75%" Tag="0.75" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="50%" Tag="0.5" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="25%" Tag="0.25" Click="OnUserMenuSetVolumeClicked" />
+                                                                <MenuFlyoutItem Text="Couper le son (0%)" Tag="0.0" Click="OnUserMenuSetVolumeClicked" />
+                                                            </MenuFlyoutSubItem>
+                                                            <MenuFlyoutItem Text="Mettre en sourdine locale" Tag="{x:Bind}" Click="OnUserMenuToggleMuteClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Ajouter en ami" Tag="{x:Bind}" Click="OnUserMenuAddFriendClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FA;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind}" Click="OnUserMenuBlockClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutSeparator />
+                                                            <MenuFlyoutItem Text="Copier le nom d'utilisateur" Tag="{x:Bind}" Click="OnUserMenuCopyUsernameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier le pseudo" Tag="{x:Bind}" Click="OnUserMenuCopyDisplayNameClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                            <MenuFlyoutItem Text="Copier l'identifiant" Tag="{x:Bind}" Click="OnUserMenuCopyIdClicked">
+                                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                            </MenuFlyoutItem>
+                                                        </MenuFlyout>
+                                                    </Button.ContextFlyout>
                                                     <Button.Flyout>
                                                         <Flyout Opening="OnUserProfileFlyoutOpening" Placement="LeftEdgeAlignedTop">
                                                             <Flyout.FlyoutPresenterStyle>

@@ -4415,6 +4415,131 @@ public sealed partial class MainWindowContent : UserControl
             ViewModel.RemoveBookmark(msg);
         }
     }
+
+    // --- Menu contextuel utilisateur Discord (User Context Menu) ---
+    private static DiscordUser? GetUserFromSender(object? sender)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.DataContext is DiscordUser u) return u;
+            if (fe.DataContext is DiscordMessage m) return m.Author;
+            if (fe.DataContext is ViewModels.MemberActivityCardViewModel act) return act.User;
+            if (fe.Tag is DiscordUser ut) return ut;
+            if (fe.Tag is DiscordMessage mt) return mt.Author;
+            if (fe.Tag is ViewModels.MemberActivityCardViewModel actT) return actT.User;
+        }
+        return null;
+    }
+
+    private void OnUserMenuProfileClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            ShowFullUserProfileModal(user);
+        }
+    }
+
+    private void OnUserMenuMentionClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            var mention = $"<@{user.Id}> ";
+            if (string.IsNullOrEmpty(MessageInput.Text))
+            {
+                MessageInput.Text = mention;
+            }
+            else
+            {
+                MessageInput.Text += mention;
+            }
+            MessageInput.Focus(FocusState.Programmatic);
+            MessageInput.SelectionStart = MessageInput.Text.Length;
+        }
+    }
+
+    private async void OnUserMenuDirectMessageClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            await ViewModel.OpenOrSendDirectMessageAsync(user);
+        }
+    }
+
+    private async void OnUserMenuCallClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            await ViewModel.OpenOrSendDirectMessageAsync(user);
+            await ViewModel.StartOrJoinVoiceCallInCurrentChannelAsync();
+        }
+    }
+
+    private void OnUserMenuSetVolumeClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null && sender is FrameworkElement fe && float.TryParse(fe.Tag?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float vol))
+        {
+            ViewModel.SetUserVoiceVolume(user.Id, vol);
+        }
+    }
+
+    private void OnUserMenuToggleMuteClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            ViewModel.ToggleUserVoiceMute(user.Id);
+        }
+    }
+
+    private async void OnUserMenuAddFriendClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            await ViewModel.SendFriendRequestAsync(user.Username);
+        }
+    }
+
+    private async void OnUserMenuBlockClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            await ViewModel.BlockUserAsync(user);
+        }
+    }
+
+    private void OnUserMenuCopyUsernameClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            CopyToClipboard(user.Username);
+        }
+    }
+
+    private void OnUserMenuCopyDisplayNameClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            CopyToClipboard(user.DisplayName);
+        }
+    }
+
+    private void OnUserMenuCopyIdClicked(object sender, RoutedEventArgs e)
+    {
+        var user = GetUserFromSender(sender);
+        if (user != null)
+        {
+            CopyToClipboard(user.Id);
+        }
+    }
 }
 
 

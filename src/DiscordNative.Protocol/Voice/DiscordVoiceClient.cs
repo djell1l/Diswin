@@ -54,6 +54,17 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
     private readonly ConcurrentDictionary<uint, OpusDecoder> _decoders = new();
     private readonly ConcurrentDictionary<uint, string> _ssrcToUserId = new();
     private readonly ConcurrentDictionary<string, DateTime> _remoteLastPacketUtc = new();
+    private readonly ConcurrentDictionary<string, float> _userVolumes = new();
+
+    public void SetUserVolume(string userId, float volume)
+    {
+        _userVolumes[userId] = Math.Clamp(volume, 0f, 2.0f);
+    }
+
+    public float GetUserVolume(string userId)
+    {
+        return _userVolumes.TryGetValue(userId, out var v) ? v : 1.0f;
+    }
 
     public event Action<string, bool>? UserSpeakingChanged;
 
@@ -665,6 +676,26 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
 #pragma warning restore CS0618
         if (samples > 0)
         {
+            float volume = 1.0f;
+            if (_ssrcToUserId.TryGetValue(ssrc, out var uid) && _userVolumes.TryGetValue(uid, out var userVol))
+            {
+                volume = userVol;
+            }
+
+            if (volume <= 0.001f)
+            {
+                return;
+            }
+
+            if (Math.Abs(volume - 1.0f) > 0.001f)
+            {
+                int totalSamples = samples * 2;
+                for (int i = 0; i < totalSamples; i++)
+                {
+                    pcmOut[i] = (short)Math.Clamp((int)(pcmOut[i] * volume), short.MinValue, short.MaxValue);
+                }
+            }
+
             byte[] pcmBytes = new byte[samples * 2 * 2];
             Buffer.BlockCopy(pcmOut, 0, pcmBytes, 0, pcmBytes.Length);
             _playbackBuffer.AddSamples(pcmBytes, 0, pcmBytes.Length);

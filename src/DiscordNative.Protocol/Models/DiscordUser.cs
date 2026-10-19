@@ -265,6 +265,48 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public string ProfileCardBackgroundColorHex => IsThemeLight ? "#18000000" : "#2B2D31";
     public string ProfileCardBorderColorHex => IsThemeLight ? "#22000000" : "#35373C";
 
+    private double _voiceVolume = 100.0;
+    [JsonIgnore]
+    public double VoiceVolume
+    {
+        get => _voiceVolume;
+        set
+        {
+            if (Math.Abs(_voiceVolume - value) > 0.01)
+            {
+                _voiceVolume = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(VoiceVolumeText));
+                OnPropertyChanged(nameof(IsLocalMuted));
+                OnPropertyChanged(nameof(LocalMuteText));
+                OnPropertyChanged(nameof(LocalMuteGlyph));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string VoiceVolumeText => $"{VoiceVolume:F0}%";
+
+    private bool _isLocalMuted;
+    [JsonIgnore]
+    public bool IsLocalMuted
+    {
+        get => _isLocalMuted;
+        set
+        {
+            if (_isLocalMuted != value)
+            {
+                _isLocalMuted = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(LocalMuteText));
+                OnPropertyChanged(nameof(LocalMuteGlyph));
+            }
+        }
+    }
+
+    [JsonIgnore] public string LocalMuteText => IsLocalMuted ? "Rétablir le son de l'utilisateur" : "Mettre en sourdine locale";
+    [JsonIgnore] public string LocalMuteGlyph => IsLocalMuted ? "\uE767" : "\uE74F";
+
     private int _mutualFriendsCount;
     public int MutualFriendsCount
     {
