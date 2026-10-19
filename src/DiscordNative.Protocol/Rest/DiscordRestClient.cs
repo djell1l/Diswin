@@ -690,6 +690,62 @@ public sealed class DiscordRestClient : IDisposable
                ?? throw new InvalidOperationException("Réponse d'envoi de message illisible.");
     }
 
+    public async Task<DiscordMessage> SendStickerAsync(string channelId, string stickerId, string? replyToMessageId = null, CancellationToken ct = default)
+    {
+        var payload = new SendMessageRequest
+        {
+            Content = string.Empty,
+            Nonce = Guid.NewGuid().ToString("N"),
+            StickerIds = new List<string> { stickerId },
+            MessageReference = string.IsNullOrWhiteSpace(replyToMessageId)
+                ? null
+                : new MessageReferencePayload { ChannelId = channelId, MessageId = replyToMessageId }
+        };
+        var response = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/messages", payload, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<DiscordMessage>(cancellationToken: ct)
+               ?? throw new InvalidOperationException("Réponse d'envoi d'autocollant illisible.");
+    }
+
+    public async Task<List<DiscordStickerPack>> GetStickerPacksAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<DiscordStickerPacksResponse>($"{ApiBase}/sticker-packs?locale=fr", cancellationToken: ct);
+            return res?.StickerPacks ?? new List<DiscordStickerPack>();
+        }
+        catch
+        {
+            return new List<DiscordStickerPack>();
+        }
+    }
+
+    public async Task<List<DiscordSticker>> GetGuildStickersAsync(string guildId, CancellationToken ct = default)
+    {
+        try
+        {
+            var stickers = await _http.GetFromJsonAsync<List<DiscordSticker>>($"{ApiBase}/guilds/{guildId}/stickers", cancellationToken: ct);
+            return stickers ?? new List<DiscordSticker>();
+        }
+        catch
+        {
+            return new List<DiscordSticker>();
+        }
+    }
+
+    public async Task AckMessageAsync(string channelId, string messageId, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new { token = (string?)null };
+            await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/messages/{messageId}/ack", payload, ct);
+        }
+        catch
+        {
+            // Ignore ack failures
+        }
+    }
+
     public async Task AddReactionAsync(string channelId, string messageId, string emoji, CancellationToken ct = default)
     {
         var encoded = Uri.EscapeDataString(emoji);
@@ -946,6 +1002,9 @@ public sealed class DiscordRestClient : IDisposable
         [JsonPropertyName("content")] public string Content { get; set; } = string.Empty;
         [JsonPropertyName("nonce")] public string Nonce { get; set; } = string.Empty;
         [JsonPropertyName("tts")] public bool Tts { get; set; } = false;
+        [JsonPropertyName("sticker_ids")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? StickerIds { get; set; }
         [JsonPropertyName("message_reference")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public MessageReferencePayload? MessageReference { get; set; }

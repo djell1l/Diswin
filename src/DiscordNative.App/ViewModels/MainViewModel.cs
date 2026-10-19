@@ -15,6 +15,18 @@ public sealed partial class MainViewModel : ObservableObject
     private DiscordGuild? _selectedGuild;
     public DiscordGuild? SelectedGuild => _selectedGuild;
     private DiscordChannel? _selectedChannel;
+    public DiscordChannel? SelectedChannel => _selectedChannel;
+
+    public void ClearActiveChannel()
+    {
+        _selectedChannel = null;
+        SelectedChannelName = "Sélectionnez un salon";
+        SelectedChannelTopic = string.Empty;
+        Messages.Clear();
+        ChannelMembers.Clear();
+        OnPropertyChanged(nameof(SelectedChannel));
+    }
+
     private bool _showingFriends;
     private string _friendsFilter = "All";
 
@@ -1081,6 +1093,28 @@ public sealed partial class MainViewModel : ObservableObject
             System.IO.File.AppendAllText(
                 System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log"),
                 $"[{DateTime.Now}] SendMessageAsync failed: {ex}\n\n");
+        }
+    }
+
+    public async Task SendStickerAsync(string stickerId)
+    {
+        if (_selectedChannel is null || string.IsNullOrWhiteSpace(stickerId)) return;
+        try
+        {
+            var replyId = ReplyingToMessage?.Id;
+            CancelComposerAction();
+            var sent = await _client.Rest.SendStickerAsync(_selectedChannel.Id, stickerId, replyToMessageId: replyId);
+            if (sent != null && Messages.All(m => m.Id != sent.Id))
+            {
+                sent.IsOwnMessage = true;
+                Messages.Add(sent);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log"),
+                $"[{DateTime.Now}] SendStickerAsync failed: {ex}\n\n");
         }
     }
 

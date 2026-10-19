@@ -1,0 +1,122 @@
+<UserControl
+    x:Class="DiscordNative.App.Controls.DiscordStickerPickerControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:services="using:DiscordNative.App.Services"
+    Width="440" Height="480">
+
+    <UserControl.Resources>
+        <services:StringToImageSourceConverter x:Key="StringToImageSourceConverter" />
+        <services:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <services:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid Background="#1E1F22" CornerRadius="12" BorderBrush="#2B2D31" BorderThickness="1">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 1. En-tête : Barre de recherche autocollants -->
+        <Border Grid.Row="0" Padding="12,10,12,6" Background="#232428" CornerRadius="12,12,0,0">
+            <Grid>
+                <TextBox x:Name="SearchTextBox" PlaceholderText="Rechercher un autocollant..."
+                         Background="#111214" Foreground="#F2F3F5" BorderThickness="0"
+                         CornerRadius="6" Padding="32,7,10,7" FontSize="13"
+                         TextChanged="OnSearchTextChanged" />
+                <FontIcon Glyph="&#xE721;" FontSize="13" Foreground="#949BA4"
+                          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" />
+            </Grid>
+        </Border>
+
+        <!-- 2. Corps : Liste des packs et serveurs avec leurs autocollants -->
+        <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="10,6,10,10">
+                <!-- État de chargement si vide -->
+                <TextBlock x:Name="LoadingTextBlock" Text="Chargement des autocollants..."
+                           Foreground="#949BA4" FontSize="12" HorizontalAlignment="Center"
+                           Margin="0,40,0,0" Visibility="Collapsed" />
+
+                <ItemsControl x:Name="CategoryItemsControl" ItemsSource="{x:Bind Groups, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="services:StickerCategoryGroup">
+                            <StackPanel Margin="0,0,0,14">
+                                <!-- En-tête du pack / serveur -->
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,4,4,6" VerticalAlignment="Center">
+                                    <Border Width="16" Height="16" CornerRadius="4" Background="#313338"
+                                            Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Image Source="{x:Bind IconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneTime}" FontSize="12" Foreground="#949BA4"
+                                              Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                    <TextBlock Text="{x:Bind Title, Mode=OneTime}" FontSize="11" FontWeight="Bold" Foreground="#949BA4"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="340" />
+                                </StackPanel>
+
+                                <!-- Grille des autocollants -->
+                                <GridView ItemsSource="{x:Bind Stickers}"
+                                          SelectionMode="None" IsItemClickEnabled="True"
+                                          ItemClick="OnStickerItemClicked"
+                                          Padding="0" Margin="0">
+                                    <GridView.ItemContainerStyle>
+                                        <Style TargetType="GridViewItem">
+                                            <Setter Property="MinWidth" Value="80" />
+                                            <Setter Property="MinHeight" Value="80" />
+                                            <Setter Property="Width" Value="80" />
+                                            <Setter Property="Height" Value="80" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Margin" Value="2" />
+                                            <Setter Property="CornerRadius" Value="8" />
+                                        </Style>
+                                    </GridView.ItemContainerStyle>
+                                    <GridView.ItemTemplate>
+                                        <DataTemplate x:DataType="services:StickerItemViewModel">
+                                            <Grid Width="80" Height="80" ToolTipService.ToolTip="{x:Bind TooltipText}"
+                                                  Background="Transparent" CornerRadius="8"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Image Source="{x:Bind Url, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}"
+                                                       Width="68" Height="68" Stretch="Uniform"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </GridView.ItemTemplate>
+                                </GridView>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3. Pied : Barre de navigation des catégories -->
+        <Border Grid.Row="2" Background="#232428" BorderBrush="#2B2D31" BorderThickness="0,1,0,0"
+                Padding="6,4" CornerRadius="0,0,12,12">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{x:Bind Groups, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="services:StickerCategoryGroup">
+                            <Button Width="32" Height="32" Padding="0" CornerRadius="6" Background="Transparent" BorderThickness="0"
+                                    ToolTipService.ToolTip="{x:Bind Title, Mode=OneTime}"
+                                    Tag="{x:Bind Title, Mode=OneTime}" Click="OnCategoryNavClicked">
+                                <Grid Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="4" Background="#313338"
+                                            Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Image Source="{x:Bind IconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneTime}" FontSize="14" Foreground="#949BA4"
+                                              Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

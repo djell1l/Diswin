@@ -205,6 +205,25 @@
                                             <MenuFlyoutItem Text="Marquer comme lu" Click="OnMarkGuildReadClicked">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Inviter des personnes" Click="OnInvitePeopleFromGuildMenuClicked">
+                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72D;" /></MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutSubItem Text="Mettre en sourdine le serveur">
+                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutSubItem.Icon>
+                                                <MenuFlyoutItem Text="Pendant 15 minutes" Tag="15m" Click="OnMuteDurationClicked" />
+                                                <MenuFlyoutItem Text="Pendant 1 heure" Tag="1h" Click="OnMuteDurationClicked" />
+                                                <MenuFlyoutItem Text="Pendant 3 heures" Tag="3h" Click="OnMuteDurationClicked" />
+                                                <MenuFlyoutItem Text="Pendant 8 heures" Tag="8h" Click="OnMuteDurationClicked" />
+                                                <MenuFlyoutItem Text="Pendant 24 heures" Tag="24h" Click="OnMuteDurationClicked" />
+                                                <MenuFlyoutItem Text="Jusqu'à réactivation" Tag="forever" Click="OnMuteDurationClicked" />
+                                            </MenuFlyoutSubItem>
+                                            <MenuFlyoutSubItem Text="Paramètres de notification">
+                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xEA8F;" /></MenuFlyoutSubItem.Icon>
+                                                <MenuFlyoutItem Text="Tous les messages" Tag="all" Click="OnNotificationSettingClicked" />
+                                                <MenuFlyoutItem Text="Seulement les mentions @everyone et @here" Tag="mentions" Click="OnNotificationSettingClicked" />
+                                                <MenuFlyoutItem Text="Rien" Tag="nothing" Click="OnNotificationSettingClicked" />
+                                            </MenuFlyoutSubItem>
+                                            <MenuFlyoutSeparator />
                                             <MenuFlyoutItem Text="Copier le nom" Click="OnCopyGuildNameClicked">
                                                 <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
@@ -326,10 +345,32 @@
                                         <StackPanel Orientation="Horizontal" Spacing="8" Padding="8,4">
                                             <StackPanel.ContextFlyout>
                                                 <MenuFlyout>
+                                                    <MenuFlyoutItem Text="Marquer comme lu" Click="OnMarkChannelReadClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSubItem Text="Mettre en sourdine le salon">
+                                                        <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutSubItem.Icon>
+                                                        <MenuFlyoutItem Text="Pendant 15 minutes" Tag="15m" Click="OnMuteDurationClicked" />
+                                                        <MenuFlyoutItem Text="Pendant 1 heure" Tag="1h" Click="OnMuteDurationClicked" />
+                                                        <MenuFlyoutItem Text="Pendant 3 heures" Tag="3h" Click="OnMuteDurationClicked" />
+                                                        <MenuFlyoutItem Text="Pendant 8 heures" Tag="8h" Click="OnMuteDurationClicked" />
+                                                        <MenuFlyoutItem Text="Pendant 24 heures" Tag="24h" Click="OnMuteDurationClicked" />
+                                                        <MenuFlyoutItem Text="Jusqu'à réactivation" Tag="forever" Click="OnMuteDurationClicked" />
+                                                    </MenuFlyoutSubItem>
+                                                    <MenuFlyoutSubItem Text="Paramètres de notification">
+                                                        <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xEA8F;" /></MenuFlyoutSubItem.Icon>
+                                                        <MenuFlyoutItem Text="Utiliser les paramètres de la catégorie" Tag="default" Click="OnNotificationSettingClicked" />
+                                                        <MenuFlyoutItem Text="Tous les messages" Tag="all" Click="OnNotificationSettingClicked" />
+                                                        <MenuFlyoutItem Text="Seulement les mentions" Tag="mentions" Click="OnNotificationSettingClicked" />
+                                                        <MenuFlyoutItem Text="Rien" Tag="nothing" Click="OnNotificationSettingClicked" />
+                                                    </MenuFlyoutSubItem>
+                                                    <MenuFlyoutSeparator />
                                                     <MenuFlyoutItem Text="Créer une invitation" Click="OnCreateChannelInviteFromMenuClicked">
                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72D;" /></MenuFlyoutItem.Icon>
                                                     </MenuFlyoutItem>
-                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Copier le lien du salon" Click="OnCopyChannelLinkClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE71B;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
                                                     <MenuFlyoutItem Text="Copier le nom" Click="OnCopyChannelNameClicked">
                                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                                                     </MenuFlyoutItem>
@@ -442,11 +483,28 @@
                                                         <MenuFlyoutItem Text="Ouvrir le salon" Click="OnOpenDmChannelClicked">
                                                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
                                                         </MenuFlyoutItem>
+                                                        <MenuFlyoutItem Text="Marquer comme lu" Click="OnMarkChannelReadClicked">
+                                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
+                                                        </MenuFlyoutItem>
+                                                        <MenuFlyoutSubItem Text="Mettre en sourdine">
+                                                            <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutSubItem.Icon>
+                                                            <MenuFlyoutItem Text="Pendant 15 minutes" Tag="15m" Click="OnMuteDurationClicked" />
+                                                            <MenuFlyoutItem Text="Pendant 1 heure" Tag="1h" Click="OnMuteDurationClicked" />
+                                                            <MenuFlyoutItem Text="Pendant 3 heures" Tag="3h" Click="OnMuteDurationClicked" />
+                                                            <MenuFlyoutItem Text="Pendant 8 heures" Tag="8h" Click="OnMuteDurationClicked" />
+                                                            <MenuFlyoutItem Text="Pendant 24 heures" Tag="24h" Click="OnMuteDurationClicked" />
+                                                            <MenuFlyoutItem Text="Jusqu'à réactivation" Tag="forever" Click="OnMuteDurationClicked" />
+                                                        </MenuFlyoutSubItem>
+                                                        <MenuFlyoutSeparator />
                                                         <MenuFlyoutItem Text="Copier le nom" Click="OnCopyChannelNameClicked">
                                                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                                                         </MenuFlyoutItem>
                                                         <MenuFlyoutItem Text="Copier l'identifiant" Click="OnCopyChannelIdClicked">
                                                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                        </MenuFlyoutItem>
+                                                        <MenuFlyoutSeparator />
+                                                        <MenuFlyoutItem Text="Fermer le message privé" Click="OnCloseDmChannelClicked" Foreground="#FF453A">
+                                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
                                                         </MenuFlyoutItem>
                                                     </MenuFlyout>
                                                 </StackPanel.ContextFlyout>
@@ -3763,6 +3821,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <Button Grid.Column="0" Width="40" Height="40" CornerRadius="20" Padding="0"
@@ -3859,8 +3918,31 @@
                                 </Button.Flyout>
                             </Button>
 
-                            <!-- Sélecteur d'Emojis complet Discord (Serveurs + Catégories + Recherche) -->
+                            <!-- Sélecteur d'Autocollants complet Discord (Packs Discord + Serveurs + Recherche) -->
                             <Button Grid.Column="5" Width="40" Height="40" CornerRadius="20" Padding="0"
+                                     Background="{ThemeResource ControlFillColorDefaultBrush}" BorderThickness="0"
+                                     ToolTipService.ToolTip="Ouvrir le sélecteur d'autocollants">
+                                <FontIcon Glyph="&#xEB9F;" FontSize="16" />
+                                <Button.Flyout>
+                                    <Flyout x:Name="ComposerStickerFlyout" Placement="Top" Opening="OnComposerStickerPickerOpening">
+                                        <Flyout.FlyoutPresenterStyle>
+                                            <Style TargetType="FlyoutPresenter">
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="CornerRadius" Value="12" />
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="MaxWidth" Value="460" />
+                                                <Setter Property="MaxHeight" Value="500" />
+                                            </Style>
+                                        </Flyout.FlyoutPresenterStyle>
+                                        <controls:DiscordStickerPickerControl x:Name="ComposerStickerPicker"
+                                                                              StickerSelected="OnComposerStickerSelected" />
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
+                            <!-- Sélecteur d'Emojis complet Discord (Serveurs + Catégories + Recherche) -->
+                            <Button Grid.Column="6" Width="40" Height="40" CornerRadius="20" Padding="0"
                                      Background="{ThemeResource ControlFillColorDefaultBrush}" BorderThickness="0"
                                      ToolTipService.ToolTip="Insérer un émoji">
                                 <FontIcon Glyph="&#xED54;" FontSize="16" />
@@ -3882,9 +3964,9 @@
                                 </Button.Flyout>
                             </Button>
 
-                            <Button Grid.Column="6" Content="Envoyer" Click="OnSendClicked"
-                                    CornerRadius="10"
-                                    Style="{StaticResource AccentButtonStyle}" />
+                            <Button Grid.Column="7" Content="Envoyer" Click="OnSendClicked"
+                                     CornerRadius="10"
+                                     Style="{StaticResource AccentButtonStyle}" />
                         </Grid>
 
                     </StackPanel>

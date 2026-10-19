@@ -29,6 +29,9 @@ public sealed class DiscordGuild : INotifyPropertyChanged
     [JsonPropertyName("emojis")]
     public List<DiscordEmoji> Emojis { get; set; } = new();
 
+    [JsonPropertyName("stickers")]
+    public List<DiscordSticker> Stickers { get; set; } = new();
+
     [JsonPropertyName("banner")]
     public string? Banner { get; set; }
 

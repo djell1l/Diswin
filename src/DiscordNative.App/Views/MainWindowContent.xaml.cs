@@ -549,6 +549,20 @@ public sealed partial class MainWindowContent : UserControl
         ComposerEmojiPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id);
     }
 
+    private void OnComposerStickerPickerOpening(object sender, object e)
+    {
+        ComposerStickerPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id, ViewModel?.Client?.Rest);
+    }
+
+    private async void OnComposerStickerSelected(StickerItemViewModel sticker)
+    {
+        ComposerStickerFlyout.Hide();
+        if (ViewModel != null && !string.IsNullOrEmpty(sticker.Id))
+        {
+            await ViewModel.SendStickerAsync(sticker.Id);
+        }
+    }
+
     private void OnComposerEmojiSelected(EmojiItemViewModel emoji)
     {
         ComposerEmojiFlyout.Hide();
@@ -2236,11 +2250,66 @@ public sealed partial class MainWindowContent : UserControl
         if (g != null) CopyToClipboard(g.Id);
     }
 
+    private async void OnInvitePeopleFromGuildMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var g = GetGuildFromSender(sender) ?? ViewModel.SelectedGuild;
+        if (g != null && ViewModel != null)
+        {
+            var firstChannel = g.Channels?.FirstOrDefault(c => !c.IsVoiceChannel);
+            if (firstChannel != null)
+            {
+                await ViewModel.SelectChannelAsync(firstChannel);
+                await ShowCreatedInviteDialogAsync();
+            }
+        }
+    }
+
+    private void OnMuteDurationClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem item)
+        {
+            System.Diagnostics.Debug.WriteLine($"Sourdine activée : {item.Text}");
+        }
+    }
+
+    private void OnNotificationSettingClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem item)
+        {
+            System.Diagnostics.Debug.WriteLine($"Notifications configurées : {item.Text}");
+        }
+    }
+
     // --- Menus contextuels Clic Droit : Salons ---
     private static DiscordChannel? GetChannelFromSender(object sender)
     {
         if (sender is FrameworkElement fe && fe.DataContext is DiscordChannel ch) return ch;
         return null;
+    }
+
+    private void OnMarkChannelReadClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender);
+        if (ch != null)
+        {
+            ch.MentionCount = 0;
+            ch.HasUnread = false;
+            if (ViewModel?.Client?.Rest != null && !string.IsNullOrEmpty(ch.LastMessageId))
+            {
+                _ = ViewModel.Client.Rest.AckMessageAsync(ch.Id, ch.LastMessageId);
+            }
+        }
+    }
+
+    private void OnCopyChannelLinkClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender);
+        if (ch != null)
+        {
+            var guildId = ViewModel?.SelectedGuild?.Id ?? "@me";
+            var link = $"https://discord.com/channels/{guildId}/{ch.Id}";
+            CopyToClipboard(link);
+        }
     }
 
     private void OnCopyChannelNameClicked(object sender, RoutedEventArgs e)
@@ -2259,6 +2328,19 @@ public sealed partial class MainWindowContent : UserControl
     {
         var ch = GetChannelFromSender(sender);
         if (ch != null) _ = ViewModel.SelectChannelAsync(ch);
+    }
+
+    private void OnCloseDmChannelClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender);
+        if (ch != null && ViewModel != null)
+        {
+            ViewModel.PrivateChannels.Remove(ch);
+            if (ViewModel.SelectedChannel?.Id == ch.Id)
+            {
+                ViewModel.ClearActiveChannel();
+            }
+        }
     }
 
     // --- Filtres & Menus contextuels Clic Droit : Amis ---
