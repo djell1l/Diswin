@@ -522,7 +522,7 @@ public sealed class DiscordRestClient : IDisposable
         }
     }
 
-    public async Task UpdateCustomStatusAsync(string? customStatusText, string? status = null, CancellationToken ct = default)
+    public async Task UpdateCustomStatusAsync(string? customStatusText, string? status = null, string? emojiName = null, string? emojiId = null, DateTimeOffset? expiresAt = null, CancellationToken ct = default)
     {
         try
         {
@@ -533,9 +533,19 @@ public sealed class DiscordRestClient : IDisposable
             }
             if (customStatusText is not null)
             {
-                settingsBody["custom_status"] = string.IsNullOrWhiteSpace(customStatusText)
-                    ? null
-                    : new { text = customStatusText };
+                if (string.IsNullOrWhiteSpace(customStatusText) && string.IsNullOrWhiteSpace(emojiName))
+                {
+                    settingsBody["custom_status"] = null;
+                }
+                else
+                {
+                    var csObj = new Dictionary<string, object?>();
+                    if (!string.IsNullOrWhiteSpace(customStatusText)) csObj["text"] = customStatusText;
+                    if (!string.IsNullOrWhiteSpace(emojiName)) csObj["emoji_name"] = emojiName;
+                    if (!string.IsNullOrWhiteSpace(emojiId)) csObj["emoji_id"] = emojiId;
+                    if (expiresAt.HasValue) csObj["expires_at"] = expiresAt.Value.ToUniversalTime().ToString("o");
+                    settingsBody["custom_status"] = csObj;
+                }
             }
             if (settingsBody.Count > 0)
             {
@@ -544,6 +554,7 @@ public sealed class DiscordRestClient : IDisposable
         }
         catch { }
     }
+
 
     public async Task<List<DiscordGuild>> GetGuildsAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<DiscordGuild>>($"{ApiBase}/users/@me/guilds", ct) ?? new();

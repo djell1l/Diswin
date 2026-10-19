@@ -513,10 +513,13 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public List<DiscordActivity> Activities { get; set; } = new();
 
     public DiscordActivity? PrimaryActivity => Activities.FirstOrDefault(a => a.Type != 4 && a.Type != 6);
-    public DiscordActivity? CustomStatusActivity => Activities.FirstOrDefault(a => a.Type == 4 && !string.IsNullOrWhiteSpace(a.State));
-    public bool HasCustomStatus => CustomStatusActivity is not null && !string.IsNullOrWhiteSpace(CustomStatusActivity.State);
+    public DiscordActivity? CustomStatusActivity => Activities.FirstOrDefault(a => a.Type == 4 && (!string.IsNullOrWhiteSpace(a.State) || a.Emoji != null));
+    public bool HasCustomStatus => CustomStatusActivity is not null && (!string.IsNullOrWhiteSpace(CustomStatusActivity.State) || CustomStatusActivity.Emoji != null);
     public string CustomStatusText => CustomStatusActivity?.State ?? string.Empty;
+    public string CustomStatusEmoji => CustomStatusActivity?.Emoji?.Name ?? string.Empty;
+    public bool HasCustomStatusEmoji => !string.IsNullOrEmpty(CustomStatusEmoji);
     public bool HasRichPresence => PrimaryActivity is not null;
+
     public bool HasActivityOrCustomStatus => PrimaryActivity is not null || CustomStatusActivity is not null || IsInVoice;
     public void NotifyActivityTimesChanged()
     {
@@ -758,8 +761,15 @@ public sealed class DiscordActivity : INotifyPropertyChanged
     [JsonPropertyName("assets")]
     public DiscordActivityAssets? Assets { get; set; }
 
+
+
+    [JsonPropertyName("emoji")]
+    public DiscordActivityEmoji? Emoji { get; set; }
+
     [JsonPropertyName("buttons")]
     public List<string>? Buttons { get; set; }
+
+
 
     public string HeaderLabel => Type switch
     {
@@ -864,7 +874,21 @@ public sealed class DiscordActivity : INotifyPropertyChanged
     }
 }
 
+public sealed class DiscordActivityEmoji
+
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("animated")]
+    public bool? Animated { get; set; }
+}
+
 public sealed class DiscordActivityTimestamps
+
 {
     [JsonPropertyName("start")]
     public long? Start { get; set; }

@@ -139,8 +139,16 @@ public sealed partial class MainWindowContent : UserControl
                     e.Handled = true;
                     return;
                 }
+                if (CustomStatusModalOverlay?.Visibility == Visibility.Visible)
+                {
+                    CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
+                    e.Handled = true;
+                    return;
+                }
             }
         };
+
+
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -4144,4 +4152,85 @@ public sealed partial class MainWindowContent : UserControl
             ClanTagPopoutOverlay.Visibility = Visibility.Collapsed;
         }
     }
+
+    // --- Modal Définir un Statut Personnalisé ---
+    private string? _selectedCustomStatusEmoji;
+
+    private void OnOpenCustomStatusModalClicked(object sender, RoutedEventArgs e)
+    {
+        _selectedCustomStatusEmoji = ViewModel.CurrentUserCustomStatusEmoji;
+        CustomStatusTextInput.Text = ViewModel.CurrentUserCustomStatusText;
+        if (!string.IsNullOrEmpty(_selectedCustomStatusEmoji))
+        {
+            CustomStatusEmojiGlyph.Text = _selectedCustomStatusEmoji;
+        }
+        else
+        {
+            CustomStatusEmojiGlyph.Text = "\uE76E";
+        }
+
+        int presenceIndex = ViewModel.CurrentStatus switch
+        {
+            "idle" => 1,
+            "dnd" => 2,
+            "invisible" => 3,
+            _ => 0
+        };
+        CustomStatusPresenceComboBox.SelectedIndex = presenceIndex;
+        CustomStatusExpiryComboBox.SelectedIndex = 0;
+
+        CustomStatusModalOverlay.Visibility = Visibility.Visible;
+        CustomStatusTextInput.Focus(FocusState.Programmatic);
+    }
+
+    private void OnCloseCustomStatusModalClicked(object sender, RoutedEventArgs e)
+    {
+        CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnCustomStatusBackdropPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, CustomStatusModalOverlay))
+        {
+            CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
+        }
+    }
+
+
+    private void OnClearCustomStatusTextClicked(object sender, RoutedEventArgs e)
+    {
+        CustomStatusTextInput.Text = string.Empty;
+        _selectedCustomStatusEmoji = null;
+        CustomStatusEmojiGlyph.Text = "\uE76E";
+    }
+
+    private void OnCustomStatusEmojiButtonClicked(object sender, RoutedEventArgs e)
+    {
+        string[] quickEmojis = { "🚀", "🎮", "🎧", "☕", "🔥", "✨", "📚", "💤", "💻", "🍿" };
+        int nextIndex = 0;
+        if (!string.IsNullOrEmpty(_selectedCustomStatusEmoji))
+        {
+            int idx = Array.IndexOf(quickEmojis, _selectedCustomStatusEmoji);
+            nextIndex = (idx + 1) % quickEmojis.Length;
+        }
+        _selectedCustomStatusEmoji = quickEmojis[nextIndex];
+        CustomStatusEmojiGlyph.Text = _selectedCustomStatusEmoji;
+    }
+
+    private async void OnSaveCustomStatusClicked(object sender, RoutedEventArgs e)
+    {
+        string text = CustomStatusTextInput.Text.Trim();
+        string expiry = (CustomStatusExpiryComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "today";
+        string status = (CustomStatusPresenceComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "online";
+
+        await ViewModel.SetCustomStatusAsync(text, _selectedCustomStatusEmoji, expiry, status);
+        CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private async void OnClearCustomStatusClicked(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.ClearCustomStatusAsync();
+        CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
+    }
 }
+

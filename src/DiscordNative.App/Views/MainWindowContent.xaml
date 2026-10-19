@@ -380,10 +380,18 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:DiscordUser">
                                                     <StackPanel Orientation="Horizontal" Spacing="6" Padding="4,2">
-                                                        <PersonPicture Width="18" Height="18"
-                                                                       ProfilePicture="{x:Bind AvatarUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}"
-                                                                       DisplayName="{x:Bind DisplayName, Mode=OneWay}" />
+                                                        <Grid Width="22" Height="22" VerticalAlignment="Center">
+                                                            <PersonPicture Width="18" Height="18"
+                                                                           ProfilePicture="{x:Bind AvatarUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                           DisplayName="{x:Bind DisplayName, Mode=OneWay}"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            <Ellipse Width="22" Height="22" Stroke="#23A55A" StrokeThickness="2" Fill="Transparent"
+                                                                     Opacity="{x:Bind SpeakingRingOpacity, Mode=OneWay}"
+                                                                     IsHitTestVisible="False"
+                                                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Grid>
                                                         <TextBlock Text="{x:Bind DisplayName, Mode=OneWay}" FontSize="12" Opacity="0.85" VerticalAlignment="Center" />
+
                                                         <FontIcon Glyph="&#xE720;" FontSize="10" Foreground="#F23F43" VerticalAlignment="Center"
                                                                   Visibility="{x:Bind IsVoiceMuted, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                                                   ToolTipService.ToolTip="Muet" />
@@ -830,6 +838,32 @@
                                                                  <TextBlock Text="Modifier le profil" FontSize="13" FontWeight="Medium" />
                                                             </StackPanel>
                                                         </Button>
+
+                                                        <!-- Définir un statut personnalisé (style Discord officiel) -->
+                                                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                                Background="Transparent" BorderThickness="0" Padding="10,8" CornerRadius="6"
+                                                                Click="OnOpenCustomStatusModalClicked">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <FontIcon Grid.Column="0" Glyph="&#xE76E;" FontSize="14" Opacity="0.85" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{x:Bind ViewModel.CustomStatusButtonText, Mode=OneWay}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                                                    <TextBlock Text="{x:Bind ViewModel.CurrentUserCustomStatusSubtitle, Mode=OneWay}" FontSize="11" Opacity="0.6"
+                                                                               Visibility="{x:Bind ViewModel.HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                                <Button Grid.Column="2" Width="24" Height="24" Padding="0" CornerRadius="12" Background="Transparent" BorderThickness="0"
+                                                                        Click="OnClearCustomStatusClicked" ToolTipService.ToolTip="Effacer le statut personnalisé"
+                                                                        Visibility="{x:Bind ViewModel.HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                    <FontIcon Glyph="&#xE711;" FontSize="10" Opacity="0.7" />
+                                                                </Button>
+                                                            </Grid>
+                                                        </Button>
+
 
                                                         <!-- Sélecteur de statut avec sous-menu déroulant latéral comme sur Discord -->
                                                         <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -4503,5 +4537,139 @@
                 </Button>
             </Grid>
         </Grid>
+
+        <!-- Modal Définir un Statut Personnalisé (100% fidèle au vrai Discord) -->
+
+        <Grid x:Name="CustomStatusModalOverlay" Visibility="Collapsed" Background="#B3000000" Canvas.ZIndex="980"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              PointerPressed="OnCustomStatusBackdropPointerPressed">
+            <Border Width="460" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#313338" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- En-tête de la modale -->
+                    <Grid Grid.Row="0" Padding="20,18,16,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Définir un statut personnalisé" FontSize="18" FontWeight="Bold" Foreground="White" />
+                            <TextBlock Text="Partagez ce qui vous passe par la tête avec vos amis" FontSize="12" Opacity="0.65" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Width="32" Height="32" Padding="0" CornerRadius="16"
+                                Background="Transparent" BorderThickness="0"
+                                Click="OnCloseCustomStatusModalClicked" ToolTipService.ToolTip="Fermer (Échap)">
+                            <FontIcon Glyph="&#xE711;" FontSize="12" Opacity="0.75" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Corps de la modale -->
+                    <StackPanel Grid.Row="1" Padding="20,8,20,20" Spacing="16">
+                        <!-- Saisie du texte du statut avec bouton émoji -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="QUEL EST VOTRE STATUT ?" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                            <Border Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="8" Padding="6,4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="CustomStatusEmojiButton" Grid.Column="0" Width="36" Height="36" Padding="0"
+                                            CornerRadius="18" Background="#2B2D31" BorderThickness="0"
+                                            Click="OnCustomStatusEmojiButtonClicked"
+                                            ToolTipService.ToolTip="Choisir un émoji">
+                                        <TextBlock x:Name="CustomStatusEmojiGlyph" Text="&#xE76E;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    <TextBox x:Name="CustomStatusTextInput" Grid.Column="1"
+                                             PlaceholderText="Qu'avez-vous en tête ?"
+                                             Margin="8,0" VerticalAlignment="Center"
+                                             Background="Transparent" BorderThickness="0"
+                                             FontSize="14" MaxLength="128" />
+                                    <Button x:Name="CustomStatusClearTextBtn" Grid.Column="2" Width="24" Height="24" Padding="0"
+                                            CornerRadius="12" Background="Transparent" BorderThickness="0"
+                                            Click="OnClearCustomStatusTextClicked"
+                                            ToolTipService.ToolTip="Effacer le texte">
+                                        <FontIcon Glyph="&#xE711;" FontSize="10" Opacity="0.6" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Sélecteur d'expiration -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="EFFACER APRÈS" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                            <ComboBox x:Name="CustomStatusExpiryComboBox" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Content="Aujourd'hui" Tag="today" />
+                                <ComboBoxItem Content="4 heures" Tag="4h" />
+                                <ComboBoxItem Content="1 heure" Tag="1h" />
+                                <ComboBoxItem Content="30 minutes" Tag="30m" />
+                                <ComboBoxItem Content="Ne pas effacer" Tag="never" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Sélecteur de statut de présence -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="STATUT DE PRÉSENCE" FontSize="11" FontWeight="Bold" Foreground="#B5BAC1" />
+                            <ComboBox x:Name="CustomStatusPresenceComboBox" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                <ComboBoxItem Tag="online">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="10" Height="10" Fill="#23A55A" VerticalAlignment="Center" />
+                                        <TextBlock Text="En ligne" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="idle">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="10" Height="10" Fill="#F0B232" VerticalAlignment="Center" />
+                                        <TextBlock Text="Inactif" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="dnd">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="10" Height="10" Fill="#F23F43" VerticalAlignment="Center" />
+                                        <TextBlock Text="Ne pas déranger" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="invisible">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="10" Height="10" Stroke="#80848E" StrokeThickness="2" Fill="Transparent" VerticalAlignment="Center" />
+                                        <TextBlock Text="Invisible" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Pied de page avec actions -->
+                    <Border Grid.Row="2" Background="#2B2D31" Padding="16,12" CornerRadius="0,0,12,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Effacer le statut" FontSize="12"
+                                    Background="Transparent" BorderThickness="0" Foreground="#F23F43"
+                                    Click="OnClearCustomStatusClicked"
+                                    Visibility="{x:Bind ViewModel.HasCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <Button Content="Annuler" FontSize="13" Padding="16,8" CornerRadius="6"
+                                        Background="Transparent" BorderThickness="0"
+                                        Click="OnCloseCustomStatusModalClicked" />
+                                <Button Content="Enregistrer" FontSize="13" FontWeight="Bold" Padding="20,8" CornerRadius="6"
+                                        Background="#5865F2" Foreground="White" BorderThickness="0"
+                                        Click="OnSaveCustomStatusClicked" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
+

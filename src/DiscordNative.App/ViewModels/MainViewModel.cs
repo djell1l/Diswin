@@ -188,7 +188,16 @@ public sealed partial class MainViewModel : ObservableObject
         ? _client.CurrentUser.ActivitySummaryText
         : CurrentStatusDisplayName;
 
+    public string CurrentUserCustomStatusText => _client.CurrentUser?.CustomStatusText ?? string.Empty;
+    public string CurrentUserCustomStatusEmoji => _client.CurrentUser?.CustomStatusEmoji ?? string.Empty;
+    public bool HasCustomStatus => !string.IsNullOrWhiteSpace(CurrentUserCustomStatusText) || !string.IsNullOrWhiteSpace(CurrentUserCustomStatusEmoji);
+    public string CustomStatusButtonText => HasCustomStatus
+        ? (!string.IsNullOrWhiteSpace(CurrentUserCustomStatusEmoji) ? $"{CurrentUserCustomStatusEmoji} {CurrentUserCustomStatusText}".Trim() : CurrentUserCustomStatusText)
+        : "Définir un statut personnalisé";
+    public string CurrentUserCustomStatusSubtitle => HasCustomStatus ? "Modifier le statut" : string.Empty;
+
     public bool CurrentUserIsInVoice => _client.CurrentUser?.IsInVoice ?? false;
+
 
     public DiscordActivity? CurrentUserRichPresence => _client.CurrentUser?.PrimaryActivity;
     public Microsoft.UI.Xaml.Visibility CurrentUserRichPresenceVisibility => CurrentUserRichPresence is not null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
@@ -1637,11 +1646,74 @@ public sealed partial class MainViewModel : ObservableObject
         _ = _client.BroadcastCurrentPresenceAsync(status);
     }
 
+    public async Task SetCustomStatusAsync(string? text, string? emojiName = null, string? expiryOption = "today", string? status = null)
+    {
+        DateTimeOffset? expiresAt = null;
+        if (!string.IsNullOrWhiteSpace(text) || !string.IsNullOrWhiteSpace(emojiName))
+        {
+            expiresAt = expiryOption switch
+            {
+                "30m" => DateTimeOffset.UtcNow.AddMinutes(30),
+                "1h" => DateTimeOffset.UtcNow.AddHours(1),
+                "4h" => DateTimeOffset.UtcNow.AddHours(4),
+                "today" => DateTimeOffset.UtcNow.Date.AddDays(1),
+                _ => null
+            };
+        }
+
+        string effectiveStatus = !string.IsNullOrWhiteSpace(status) ? status : CurrentStatus;
+
+        await _client.Rest.UpdateCustomStatusAsync(
+            customStatusText: text,
+            status: effectiveStatus,
+            emojiName: emojiName,
+            expiresAt: expiresAt);
+
+        if (_client.CurrentUser != null)
+        {
+            _client.CurrentUser.Activities.RemoveAll(a => a.Type == 4);
+            if (!string.IsNullOrWhiteSpace(text) || !string.IsNullOrWhiteSpace(emojiName))
+            {
+                var newActivity = new DiscordActivity
+                {
+                    Name = "Custom Status",
+                    Type = 4,
+                    State = text,
+                    Emoji = !string.IsNullOrWhiteSpace(emojiName) ? new DiscordActivityEmoji { Name = emojiName } : null
+                };
+                _client.CurrentUser.Activities.Add(newActivity);
+            }
+            _client.CurrentUser.NotifyActivityTimesChanged();
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            CurrentStatus = status;
+        }
+
+        await _client.BroadcastCurrentPresenceAsync(effectiveStatus);
+
+        OnPropertyChanged(nameof(StatusDotBrush));
+        OnPropertyChanged(nameof(CurrentStatusDisplayName));
+        OnPropertyChanged(nameof(CurrentUserSubStatusText));
+        OnPropertyChanged(nameof(CurrentUserCustomStatusText));
+        OnPropertyChanged(nameof(CurrentUserCustomStatusEmoji));
+        OnPropertyChanged(nameof(HasCustomStatus));
+        OnPropertyChanged(nameof(CustomStatusButtonText));
+        OnPropertyChanged(nameof(CurrentUserCustomStatusSubtitle));
+    }
+
+    public async Task ClearCustomStatusAsync()
+    {
+        await SetCustomStatusAsync(null, null, "never");
+    }
+
     public async Task SetCustomRichPresenceAsync(DiscordActivity? customActivity)
     {
         await _client.SetCustomRichPresenceAsync(customActivity, CurrentStatus);
         NotifyCurrentUserRichPresenceChanged();
     }
+
 
     public void ApplySearchFilter(string query)
     {
