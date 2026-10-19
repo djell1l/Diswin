@@ -32,6 +32,10 @@ public sealed partial class MainViewModel : ObservableObject
         Messages.Clear();
         ChannelMembers.Clear();
         OnPropertyChanged(nameof(SelectedChannel));
+        OnPropertyChanged(nameof(ShowingFriendsMainStage));
+        OnPropertyChanged(nameof(FriendsMainStageVisibility));
+        OnPropertyChanged(nameof(TextViewVisibility));
+        OnPropertyChanged(nameof(MemberListVisibility));
     }
 
     private bool _showingFriends;
@@ -459,9 +463,11 @@ public sealed partial class MainViewModel : ObservableObject
         ? "Caméra activée — Cliquez pour désactiver"
         : "Activer la caméra vidéo";
 
+    public bool ShowingFriendsMainStage => _showingFriends && _selectedChannel == null && !IsDiscoveryOpen;
+    public Microsoft.UI.Xaml.Visibility FriendsMainStageVisibility => ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility VoiceViewVisibility => IsVoiceChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-    public Microsoft.UI.Xaml.Visibility TextViewVisibility => IsVoiceChannelSelected || IsForumChannelSelected ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
-    public Microsoft.UI.Xaml.Visibility MemberListVisibility => IsMemberListOpen && !IsVoiceChannelSelected && !IsForumChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility TextViewVisibility => IsVoiceChannelSelected || IsForumChannelSelected || ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+    public Microsoft.UI.Xaml.Visibility MemberListVisibility => IsMemberListOpen && !IsVoiceChannelSelected && !IsForumChannelSelected && !ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility TopicVisibility => string.IsNullOrWhiteSpace(SelectedChannelTopic) ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
 
     public DiscordUser? CurrentUser => _client.CurrentUser;
@@ -1014,25 +1020,187 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [ObservableProperty]
+    private string friendsTab = "Online";
+
+    partial void OnFriendsTabChanged(string value)
+    {
+        _friendsFilter = value;
+        RefreshFilteredFriends();
+        OnPropertyChanged(nameof(IsFriendsTabOnline));
+        OnPropertyChanged(nameof(IsFriendsTabAll));
+        OnPropertyChanged(nameof(IsFriendsTabPending));
+        OnPropertyChanged(nameof(IsFriendsTabBlocked));
+        OnPropertyChanged(nameof(IsFriendsTabAddFriend));
+
+        OnPropertyChanged(nameof(FriendsTabOnlineBackground));
+        OnPropertyChanged(nameof(FriendsTabAllBackground));
+        OnPropertyChanged(nameof(FriendsTabPendingBackground));
+        OnPropertyChanged(nameof(FriendsTabBlockedBackground));
+        OnPropertyChanged(nameof(FriendsTabAddFriendBackground));
+
+        OnPropertyChanged(nameof(FriendsTabOnlineForeground));
+        OnPropertyChanged(nameof(FriendsTabAllForeground));
+        OnPropertyChanged(nameof(FriendsTabPendingForeground));
+        OnPropertyChanged(nameof(FriendsTabBlockedForeground));
+        OnPropertyChanged(nameof(FriendsTabAddFriendForeground));
+
+        OnPropertyChanged(nameof(FriendsListVisibility));
+        OnPropertyChanged(nameof(AddFriendStageVisibility));
+        OnPropertyChanged(nameof(FriendsSectionTitleText));
+    }
+
+    public bool IsFriendsTabOnline => FriendsTab == "Online";
+    public bool IsFriendsTabAll => FriendsTab == "All";
+    public bool IsFriendsTabPending => FriendsTab == "Pending";
+    public bool IsFriendsTabBlocked => FriendsTab == "Blocked";
+    public bool IsFriendsTabAddFriend => FriendsTab == "AddFriend";
+
+    public Microsoft.UI.Xaml.Visibility FriendsListVisibility => FriendsTab != "AddFriend" ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility AddFriendStageVisibility => FriendsTab == "AddFriend" ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabActiveBgBrush = new(Windows.UI.Color.FromArgb(255, 53, 55, 60)); // #35373C
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabTransparentBgBrush = new(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabActiveFgBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabInactiveFgBrush = new(Windows.UI.Color.FromArgb(255, 148, 155, 164)); // #949BA4
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush AddFriendActiveBgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90)); // #23A55A
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush AddFriendInactiveFgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90));
+
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabOnlineBackground => IsFriendsTabOnline ? TabActiveBgBrush : TabTransparentBgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabAllBackground => IsFriendsTabAll ? TabActiveBgBrush : TabTransparentBgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabPendingBackground => IsFriendsTabPending ? TabActiveBgBrush : TabTransparentBgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabBlockedBackground => IsFriendsTabBlocked ? TabActiveBgBrush : TabTransparentBgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabAddFriendBackground => IsFriendsTabAddFriend ? AddFriendActiveBgBrush : TabTransparentBgBrush;
+
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabOnlineForeground => IsFriendsTabOnline ? TabActiveFgBrush : TabInactiveFgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabAllForeground => IsFriendsTabAll ? TabActiveFgBrush : TabInactiveFgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabPendingForeground => IsFriendsTabPending ? TabActiveFgBrush : TabInactiveFgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabBlockedForeground => IsFriendsTabBlocked ? TabActiveFgBrush : TabInactiveFgBrush;
+    public Microsoft.UI.Xaml.Media.Brush FriendsTabAddFriendForeground => IsFriendsTabAddFriend ? TabActiveFgBrush : AddFriendInactiveFgBrush;
+
+    [ObservableProperty]
+    private string friendsSearchQuery = string.Empty;
+
+    partial void OnFriendsSearchQueryChanged(string value)
+    {
+        RefreshFilteredFriends();
+    }
+
+    [ObservableProperty]
+    private string addFriendInput = string.Empty;
+
+    [ObservableProperty]
+    private string addFriendFeedbackMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool hasAddFriendFeedback;
+
+    [ObservableProperty]
+    private bool isAddFriendSuccess;
+
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackSuccessBgBrush = new(Windows.UI.Color.FromArgb(255, 20, 50, 30));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackErrorBgBrush = new(Windows.UI.Color.FromArgb(255, 50, 20, 20));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackSuccessFgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90));
+    private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackErrorFgBrush = new(Windows.UI.Color.FromArgb(255, 242, 63, 67));
+
+    public Microsoft.UI.Xaml.Media.Brush AddFriendFeedbackBackground => IsAddFriendSuccess ? FeedbackSuccessBgBrush : FeedbackErrorBgBrush;
+    public Microsoft.UI.Xaml.Media.Brush AddFriendFeedbackForeground => IsAddFriendSuccess ? FeedbackSuccessFgBrush : FeedbackErrorFgBrush;
+
+    public ObservableCollection<DiscordRelationship> ActiveNowFriends { get; } = new();
+    public bool HasActiveNowFriends => ActiveNowFriends.Count > 0;
+
+    public int OnlineFriendsCount => _client.Friends.Count(r => r.IsOnline);
+    public int AllFriendsCount => _client.Friends.Count(r => r.IsFriend);
+    public int PendingFriendsCount => _client.Friends.Count(r => r.IsPending);
+    public int BlockedFriendsCount => _client.Friends.Count(r => r.IsBlocked);
+    public bool HasPendingFriends => PendingFriendsCount > 0;
+    public string PendingBadgeText => PendingFriendsCount.ToString();
+
+    public string FriendsSectionTitleText => FriendsTab switch
+    {
+        "Online" => $"EN LIGNE — {FilteredFriends.Count}",
+        "All" => $"TOUS LES AMIS — {FilteredFriends.Count}",
+        "Pending" => $"EN ATTENTE — {FilteredFriends.Count}",
+        "Blocked" => $"BLOQUÉS — {FilteredFriends.Count}",
+        "AddFriend" => "AJOUTER UN AMI",
+        _ => $"AMIS — {FilteredFriends.Count}"
+    };
+
     public void SetFriendsFilter(string filter)
     {
         _friendsFilter = filter;
+        if (FriendsTab != filter) FriendsTab = filter;
         RefreshFilteredFriends();
     }
 
     public void RefreshFilteredFriends()
     {
         FilteredFriends.Clear();
+        ActiveNowFriends.Clear();
+
         IEnumerable<DiscordRelationship> query = _client.Friends;
-        query = _friendsFilter switch
+
+        // Populate ActiveNowFriends
+        foreach (var r in query.Where(r => r.IsOnline && (r.User.HasActivityOrCustomStatus || r.User.HasGameActivity)))
         {
+            ActiveNowFriends.Add(r);
+        }
+        OnPropertyChanged(nameof(HasActiveNowFriends));
+
+        var filter = FriendsTab;
+        query = filter switch
+        {
+            "Online" => query.Where(r => r.IsOnline),
             "Pending" => query.Where(r => r.IsPending),
             "Blocked" => query.Where(r => r.IsBlocked),
-            _ => query.Where(r => r.IsFriend || r.IsPending),
+            _ => query.Where(r => r.IsFriend),
         };
+
+        if (!string.IsNullOrWhiteSpace(FriendsSearchQuery))
+        {
+            var q = FriendsSearchQuery.Trim();
+            query = query.Where(r =>
+                r.User.DisplayName.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                r.User.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                r.User.UserTag.Contains(q, StringComparison.OrdinalIgnoreCase));
+        }
+
         foreach (var rel in query)
         {
             FilteredFriends.Add(rel);
+        }
+
+        OnPropertyChanged(nameof(OnlineFriendsCount));
+        OnPropertyChanged(nameof(AllFriendsCount));
+        OnPropertyChanged(nameof(PendingFriendsCount));
+        OnPropertyChanged(nameof(BlockedFriendsCount));
+        OnPropertyChanged(nameof(HasPendingFriends));
+        OnPropertyChanged(nameof(PendingBadgeText));
+        OnPropertyChanged(nameof(FriendsSectionTitleText));
+    }
+
+    public async Task SubmitAddFriendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AddFriendInput)) return;
+
+        try
+        {
+            await SendFriendRequestAsync(AddFriendInput.Trim());
+            AddFriendFeedbackMessage = $"Succès ! Ta demande d'ami a été envoyée à {AddFriendInput.Trim()}.";
+            IsAddFriendSuccess = true;
+            HasAddFriendFeedback = true;
+            OnPropertyChanged(nameof(AddFriendFeedbackBackground));
+            OnPropertyChanged(nameof(AddFriendFeedbackForeground));
+            AddFriendInput = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            AddFriendFeedbackMessage = $"Hm, ça n'a pas fonctionné. Vérifie que l'orthographe est correcte. ({ex.Message})";
+            IsAddFriendSuccess = false;
+            HasAddFriendFeedback = true;
+            OnPropertyChanged(nameof(AddFriendFeedbackBackground));
+            OnPropertyChanged(nameof(AddFriendFeedbackForeground));
         }
     }
 
@@ -1132,9 +1300,16 @@ public sealed partial class MainViewModel : ObservableObject
         }
         _client.ActiveGuildId = null;
         _showingFriends = true;
-        SelectedGuildName = "Amis & Messages Privés";
+        _selectedChannel = null;
+        SelectedChannelName = "Amis & Messages Privés";
+        SelectedChannelTopic = string.Empty;
+        OnPropertyChanged(nameof(SelectedChannel));
         OnPropertyChanged(nameof(ShowingGuildChannels));
         OnPropertyChanged(nameof(ShowingFriendsView));
+        OnPropertyChanged(nameof(ShowingFriendsMainStage));
+        OnPropertyChanged(nameof(FriendsMainStageVisibility));
+        OnPropertyChanged(nameof(TextViewVisibility));
+        OnPropertyChanged(nameof(MemberListVisibility));
         OnPropertyChanged(nameof(SelectedGuild));
         OnPropertyChanged(nameof(HasSelectedGuild));
         OnPropertyChanged(nameof(HasSelectedGuildBanner));
@@ -1154,6 +1329,10 @@ public sealed partial class MainViewModel : ObservableObject
         _showingFriends = false;
         OnPropertyChanged(nameof(ShowingGuildChannels));
         OnPropertyChanged(nameof(ShowingFriendsView));
+        OnPropertyChanged(nameof(ShowingFriendsMainStage));
+        OnPropertyChanged(nameof(FriendsMainStageVisibility));
+        OnPropertyChanged(nameof(TextViewVisibility));
+        OnPropertyChanged(nameof(MemberListVisibility));
         _selectedGuild = guild;
         guild.IsSelected = true;
         _client.ActiveGuildId = guild.Id;
@@ -1509,6 +1688,11 @@ public sealed partial class MainViewModel : ObservableObject
             _selectedGuild.MentionCount = Math.Max(0, _selectedGuild.MentionCount - 1);
         }
         NotifyDmMentionsChanged();
+        OnPropertyChanged(nameof(SelectedChannel));
+        OnPropertyChanged(nameof(ShowingFriendsMainStage));
+        OnPropertyChanged(nameof(FriendsMainStageVisibility));
+        OnPropertyChanged(nameof(TextViewVisibility));
+        OnPropertyChanged(nameof(MemberListVisibility));
 
         SelectedChannelName = channel.DisplayName;
         SelectedChannelTopic = channel.Topic ?? string.Empty;

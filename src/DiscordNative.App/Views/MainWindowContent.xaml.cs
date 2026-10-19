@@ -3247,8 +3247,114 @@ public sealed partial class MainWindowContent : UserControl
 
     private static DiscordRelationship? GetFriendFromSender(object sender)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is DiscordRelationship rel) return rel;
+        if (sender is FrameworkElement fe)
+        {
+            if (fe.Tag is DiscordRelationship relTag) return relTag;
+            if (fe.DataContext is DiscordRelationship rel) return rel;
+        }
         return null;
+    }
+
+    private void OnFriendsTabClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string tab)
+        {
+            ViewModel.FriendsTab = tab;
+        }
+    }
+
+    private void OnFriendsSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        ViewModel.FriendsSearchQuery = (sender as TextBox)?.Text ?? string.Empty;
+    }
+
+    private void OnFriendMessageClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null)
+        {
+            _ = ViewModel.OpenOrSendDirectMessageAsync(rel.User);
+        }
+    }
+
+    private async void OnFriendCallClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null)
+        {
+            await ViewModel.OpenOrSendDirectMessageAsync(rel.User);
+            await ViewModel.StartOrJoinVoiceCallInCurrentChannelAsync();
+        }
+    }
+
+    private async void OnFriendVideoCallClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null)
+        {
+            await ViewModel.OpenOrSendDirectMessageAsync(rel.User);
+            await ViewModel.StartOrJoinVoiceCallInCurrentChannelAsync();
+            await ViewModel.ToggleCameraAsync();
+        }
+    }
+
+    private void OnAcceptFriendRequestClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null) _ = ViewModel.AcceptFriendRequestAsync(rel);
+    }
+
+    private void OnDeclineFriendRequestClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null) _ = ViewModel.RemoveOrBlockRelationshipAsync(rel, block: false);
+    }
+
+    private void OnUnblockFriendClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null) _ = ViewModel.RemoveOrBlockRelationshipAsync(rel, block: false);
+    }
+
+    private void OnBlockFriendFromMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null) _ = ViewModel.RemoveOrBlockRelationshipAsync(rel, block: true);
+    }
+
+    private void OnRemoveFriendFromMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null) _ = ViewModel.RemoveOrBlockRelationshipAsync(rel, block: false);
+    }
+
+    private async void OnSubmitAddFriendClicked(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.SubmitAddFriendAsync();
+    }
+
+    private async void OnAddFriendInputKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            await ViewModel.SubmitAddFriendAsync();
+        }
+    }
+
+    private void OnFriendCardPointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is Border b)
+        {
+            b.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 53, 55, 60));
+        }
+    }
+
+    private void OnFriendCardPointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is Border b)
+        {
+            b.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+        }
     }
 
     private void OnFriendProfileClicked(object sender, RoutedEventArgs e)

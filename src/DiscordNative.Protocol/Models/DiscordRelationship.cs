@@ -38,7 +38,9 @@ public sealed class DiscordRelationship : INotifyPropertyChanged
     public bool IsFriend => Type == DiscordRelationshipType.Friend;
     public bool IsPending => Type is DiscordRelationshipType.PendingIncoming or DiscordRelationshipType.PendingOutgoing;
     public bool IsPendingIncoming => Type == DiscordRelationshipType.PendingIncoming;
+    public bool IsPendingOutgoing => Type == DiscordRelationshipType.PendingOutgoing;
     public bool IsBlocked => Type == DiscordRelationshipType.Blocked;
+    public bool IsOnline => IsFriend && (User.Status is "online" or "idle" or "dnd");
 
     public string SubtitleText => Type switch
     {
@@ -55,5 +57,7 @@ public sealed class DiscordRelationship : INotifyPropertyChanged
                 _ => User.UserTag
             }
     };
+
+    public string SubtitleDisplay => !string.IsNullOrWhiteSpace(SubtitleText) ? SubtitleText : User.UserTag;
 }
 
