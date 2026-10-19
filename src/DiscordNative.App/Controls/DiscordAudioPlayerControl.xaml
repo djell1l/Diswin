@@ -1,0 +1,51 @@
+<UserControl
+    x:Class="DiscordNative.App.Controls.DiscordAudioPlayerControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:DiscordNative.Protocol.Models"
+    MaxWidth="380" HorizontalAlignment="Left">
+
+    <Border Background="#2B2D31" BorderBrush="#383A40" BorderThickness="1"
+            CornerRadius="12" Padding="12,8" Margin="0,4">
+        <Grid ColumnSpacing="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Bouton Lecture / Pause Discord 1:1 (Cercle Blurple 36x36) -->
+            <Button Grid.Column="0" Width="36" Height="36" CornerRadius="18" Padding="0"
+                    Background="#5865F2" BorderThickness="0"
+                    Click="OnPlayPauseClicked" ToolTipService.ToolTip="Écouter">
+                <FontIcon x:Name="PlayPauseIcon" Glyph="&#xE768;" FontSize="14" Foreground="White" />
+            </Button>
+
+            <!-- Titre + Barre de progression / Forme d'onde + Horodatage -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock x:Name="TitleTextBlock" Text="Message vocal" FontWeight="SemiBold" FontSize="12"
+                           Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" />
+
+                <!-- Curseur de progression / seek bar -->
+                <Slider x:Name="ProgressSlider" Minimum="0" Maximum="1" StepFrequency="0.001"
+                        Height="20" Margin="0,-4,0,-4"
+                        ValueChanged="OnProgressSliderValueChanged" />
+
+                <TextBlock x:Name="TimeTextBlock" Text="0:00 / 0:00" FontSize="10" Foreground="#949BA4" />
+            </StackPanel>
+
+            <!-- Contrôles Vitesse (1x/1.5x/2x) & Téléchargement -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <Button x:Name="SpeedButton" Content="1x" FontSize="10" FontWeight="Bold"
+                        Padding="5,2" CornerRadius="4" Background="#1E1F22" BorderThickness="0"
+                        Foreground="#DBDEE1" Click="OnSpeedClicked" ToolTipService.ToolTip="Changer la vitesse de lecture" />
+
+                <Button Width="26" Height="26" Padding="0" CornerRadius="13"
+                        Background="Transparent" BorderThickness="0"
+                        Click="OnOpenLinkClicked" ToolTipService.ToolTip="Ouvrir le fichier audio dans le navigateur">
+                    <FontIcon Glyph="&#xE896;" FontSize="11" Foreground="#949BA4" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

@@ -2881,9 +2881,20 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <!-- Pièces jointes Fichiers non-image (ex: message.txt, zip, pdf) -->
+                                    <!-- Pièces jointes Audio & Messages Vocaux (Discord 1:1) -->
+                                    <ItemsControl ItemsSource="{x:Bind AudioAttachments}" Margin="50,4,0,0"
+                                                  Visibility="{x:Bind HasAudio, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DiscordAttachment">
+                                                <controls:DiscordAudioPlayerControl Attachment="{x:Bind}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Pièces jointes Fichiers non-image non-audio (ex: message.txt, zip, pdf) -->
                                     <ItemsControl ItemsSource="{x:Bind FileAttachments}" Margin="50,4,0,0"
                                                   Visibility="{x:Bind HasFiles, Converter={StaticResource BoolToVisibilityConverter}}">
+
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:DiscordAttachment">
                                                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"

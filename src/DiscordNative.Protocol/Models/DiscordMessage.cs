@@ -290,9 +290,11 @@ public sealed class DiscordMessage : INotifyPropertyChanged
             : ReferencedMessage.Content.ReplaceLineEndings(" ");
 
     public List<DiscordAttachment> ImageAttachments => Attachments.Where(a => a.IsImage).ToList();
-    public List<DiscordAttachment> FileAttachments => Attachments.Where(a => !a.IsImage).ToList();
+    public List<DiscordAttachment> AudioAttachments => Attachments.Where(a => a.IsAudio).ToList();
+    public List<DiscordAttachment> FileAttachments => Attachments.Where(a => !a.IsImage && !a.IsAudio).ToList();
     public bool HasImages => Attachments.Any(a => a.IsImage);
-    public bool HasFiles => Attachments.Any(a => !a.IsImage);
+    public bool HasAudio => Attachments.Any(a => a.IsAudio);
+    public bool HasFiles => Attachments.Any(a => !a.IsImage && !a.IsAudio);
     public bool HasEmbeds => Embeds.Count > 0;
     public bool HasStickers => StickerItems.Count > 0;
     public bool HasReactions => Reactions.Count > 0;
@@ -328,12 +330,42 @@ public sealed class DiscordAttachment
     [JsonPropertyName("size")]
     public long Size { get; set; }
 
+    [JsonPropertyName("waveform")]
+    public string? Waveform { get; set; }
+
+    [JsonPropertyName("duration_secs")]
+    public double? DurationSecs { get; set; }
+
     public bool IsImage => ContentType?.StartsWith("image/") == true
         || Filename.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
         || Filename.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsAudio => ContentType?.StartsWith("audio/") == true
+        || Filename.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase)
+        || Filename.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)
+        || Filename.EndsWith(".wav", StringComparison.OrdinalIgnoreCase)
+        || Filename.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase)
+        || Filename.EndsWith(".flac", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsVoiceMessage => IsAudio && (!string.IsNullOrEmpty(Waveform) || Filename.StartsWith("voice-message", StringComparison.OrdinalIgnoreCase));
+
+    public string TitleText => IsVoiceMessage ? "Message vocal" : Filename;
+
+    public string DurationFormattedText
+    {
+        get
+        {
+            if (DurationSecs.HasValue && DurationSecs.Value > 0)
+            {
+                var ts = TimeSpan.FromSeconds(DurationSecs.Value);
+                return ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss");
+            }
+            return SizeText;
+        }
+    }
 
     /// <summary>Taille d'affichage bornée (max 400x300) en conservant le ratio.</summary>
     public double DisplayWidth => Scale().w;
@@ -353,6 +385,7 @@ public sealed class DiscordAttachment
         _ => $"{Size / 1024.0 / 1024.0:0.##} Mo",
     };
 }
+
 
 public sealed class DiscordEmbed
 {
