@@ -38,6 +38,7 @@ public sealed partial class MainViewModel : ObservableObject
     private string _friendsFilter = "All";
 
     public ObservableCollection<DiscordGuild> Guilds => _client.Guilds;
+    public ObservableCollection<DiscordGuild> DisplayGuilds { get; } = new();
     public ObservableCollection<DiscordChannel> Channels { get; } = new();
     public ObservableCollection<DiscordRelationship> Friends => _client.Friends;
     public ObservableCollection<DiscordRelationship> FilteredFriends { get; } = new();
@@ -449,6 +450,9 @@ public sealed partial class MainViewModel : ObservableObject
         _client.GuildMembersUpdated += OnGuildMembersUpdated;
         _client.VoiceChannelEffectReceived += OnVoiceChannelEffectReceived;
         _client.Friends.CollectionChanged += (_, _) => RefreshFilteredFriends();
+        _client.GuildFoldersUpdated += RefreshDisplayGuilds;
+        _client.Guilds.CollectionChanged += (_, _) => RefreshDisplayGuilds();
+        RefreshDisplayGuilds();
 
         _rpcTickerTimer.Interval = TimeSpan.FromSeconds(1);
         _rpcTickerTimer.Tick += (_, _) =>
@@ -1202,6 +1206,171 @@ public sealed partial class MainViewModel : ObservableObject
 
         SyncOnlineOfflineMembers();
         RefreshRecentMemberActivities();
+    }
+
+    public void RefreshDisplayGuilds()
+    {
+        Protocol.App.RunOnUiThread(() =>
+        {
+            var allGuilds = _client.Guilds.ToList();
+            var folders = _client.GuildFolders;
+            var assignedGuildIds = new HashSet<string>();
+
+            var existingStates = new Dictionary<string, bool>();
+            foreach (var item in DisplayGuilds.Where(g => g.IsFolder))
+            {
+                existingStates[item.Id] = item.IsFolderCollapsed;
+            }
+
+            DisplayGuilds.Clear();
+
+            if (folders != null && folders.Count > 0)
+            {
+                foreach (var folderData in folders)
+                {
+                    var folderGuilds = allGuilds.Where(g => folderData.GuildIds.Contains(g.Id)).ToList();
+                    if (folderGuilds.Count == 0) continue;
+
+                    foreach (var g in folderGuilds) assignedGuildIds.Add(g.Id);
+
+                    if (folderData.IsFolder)
+                    {
+                        var folderId = $"folder_{folderData.IdString ?? Guid.NewGuid().ToString("N")}";
+                        bool isCollapsed = true;
+                        if (existingStates.TryGetValue(folderId, out var prevCollapsed))
+                        {
+                            isCollapsed = prevCollapsed;
+                        }
+
+                        var folderItem = new DiscordGuild
+                        {
+                            Id = folderId,
+                            Name = folderData.Name ?? "Dossier de serveurs",
+                            IsFolder = true,
+                            FolderColor = folderData.Color,
+                            IsFolderCollapsed = isCollapsed
+                        };
+                        folderItem.FolderChildren.Clear();
+                        foreach (var g in folderGuilds)
+                        {
+                            g.FolderId = folderItem.Id;
+                            folderItem.FolderChildren.Add(g);
+                        }
+                        folderItem.NotifyFolderChanged();
+                        DisplayGuilds.Add(folderItem);
+
+                        if (!isCollapsed)
+                        {
+                            foreach (var g in folderGuilds)
+                            {
+                                DisplayGuilds.Add(g);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (var g in folderGuilds)
+                        {
+                            g.FolderId = null;
+                            DisplayGuilds.Add(g);
+                        }
+                    }
+                }
+            }
+
+            foreach (var g in allGuilds)
+            {
+                if (!assignedGuildIds.Contains(g.Id))
+                {
+                    g.FolderId = null;
+                    DisplayGuilds.Add(g);
+                }
+            }
+        });
+    }
+
+    public void ToggleFolderCollapse(DiscordGuild folder)
+    {
+        if (!folder.IsFolder) return;
+        folder.IsFolderCollapsed = !folder.IsFolderCollapsed;
+        int folderIndex = DisplayGuilds.IndexOf(folder);
+        if (folderIndex < 0) return;
+
+        if (folder.IsFolderCollapsed)
+        {
+            foreach (var child in folder.FolderChildren)
+            {
+                DisplayGuilds.Remove(child);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < folder.FolderChildren.Count; i++)
+            {
+                DisplayGuilds.Insert(folderIndex + 1 + i, folder.FolderChildren[i]);
+            }
+        }
+    }
+
+    public void MarkFolderRead(DiscordGuild folder)
+    {
+        if (!folder.IsFolder) return;
+        foreach (var child in folder.FolderChildren)
+        {
+            child.MentionCount = 0;
+            child.HasUnread = false;
+        }
+        folder.NotifyFolderChanged();
+    }
+
+    public void CreateLocalServerFolder(string folderName, DiscordGuild firstGuild)
+    {
+        if (firstGuild == null) return;
+        var folderItem = new DiscordGuild
+        {
+            Id = $"folder_local_{Guid.NewGuid():N}",
+            Name = string.IsNullOrWhiteSpace(folderName) ? "Nouveau dossier" : folderName.Trim(),
+            IsFolder = true,
+            IsFolderCollapsed = false
+        };
+        firstGuild.FolderId = folderItem.Id;
+        folderItem.FolderChildren.Add(firstGuild);
+        folderItem.NotifyFolderChanged();
+
+        int idx = DisplayGuilds.IndexOf(firstGuild);
+        if (idx >= 0)
+        {
+            DisplayGuilds.Insert(idx, folderItem);
+        }
+        else
+        {
+            DisplayGuilds.Add(folderItem);
+            DisplayGuilds.Add(firstGuild);
+        }
+    }
+
+    public void DissolveFolder(DiscordGuild folder)
+    {
+        if (!folder.IsFolder) return;
+        int idx = DisplayGuilds.IndexOf(folder);
+        if (idx < 0) return;
+
+        DisplayGuilds.RemoveAt(idx);
+        if (folder.IsFolderCollapsed)
+        {
+            for (int i = 0; i < folder.FolderChildren.Count; i++)
+            {
+                folder.FolderChildren[i].FolderId = null;
+                DisplayGuilds.Insert(idx + i, folder.FolderChildren[i]);
+            }
+        }
+        else
+        {
+            foreach (var child in folder.FolderChildren)
+            {
+                child.FolderId = null;
+            }
+        }
     }
 
     public void ToggleCategoryCollapse(DiscordChannel category)

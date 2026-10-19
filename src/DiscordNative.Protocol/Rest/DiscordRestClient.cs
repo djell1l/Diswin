@@ -616,6 +616,57 @@ public sealed class DiscordRestClient : IDisposable
         }
     }
 
+    public async Task<List<DiscordGuildFolderData>> GetGuildFoldersAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await _http.GetAsync($"{ApiBase}/users/@me/settings", ct);
+            if (!resp.IsSuccessStatusCode) return new();
+
+            using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            return ExtractGuildFolders(doc.RootElement);
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    public static List<DiscordGuildFolderData> ExtractGuildFolders(JsonElement userSettings)
+    {
+        var list = new List<DiscordGuildFolderData>();
+        if (userSettings.TryGetProperty("guild_folders", out var foldersEl) && foldersEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var folderEl in foldersEl.EnumerateArray())
+            {
+                var folder = new DiscordGuildFolderData();
+                if (folderEl.TryGetProperty("id", out var idEl))
+                {
+                    if (idEl.ValueKind == JsonValueKind.Number) folder.Id = idEl.GetInt64();
+                    else if (idEl.ValueKind == JsonValueKind.String) folder.Id = idEl.GetString();
+                }
+                if (folderEl.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String)
+                {
+                    folder.Name = nameEl.GetString();
+                }
+                if (folderEl.TryGetProperty("color", out var colorEl) && colorEl.ValueKind == JsonValueKind.Number)
+                {
+                    folder.Color = colorEl.GetInt64();
+                }
+                if (folderEl.TryGetProperty("guild_ids", out var gIdsEl) && gIdsEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var id in gIdsEl.EnumerateArray())
+                    {
+                        var s = id.GetString();
+                        if (!string.IsNullOrEmpty(s)) folder.GuildIds.Add(s);
+                    }
+                }
+                list.Add(folder);
+            }
+        }
+        return list;
+    }
+
     /// <summary>
     /// Extrait la liste ordonnée des identifiants de serveurs depuis un payload JSON user_settings (REST ou Gateway).
     /// </summary>

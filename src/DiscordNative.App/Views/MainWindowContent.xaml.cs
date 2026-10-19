@@ -298,7 +298,76 @@ public sealed partial class MainWindowContent : UserControl
     {
         if (GuildList.SelectedItem is DiscordGuild guild)
         {
+            if (guild.IsFolder)
+            {
+                GuildList.SelectedItem = null;
+                ViewModel.ToggleFolderCollapse(guild);
+                return;
+            }
+
             await ViewModel.SelectGuildAsync(guild);
+        }
+    }
+
+    private void OnMarkFolderReadClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordGuild folder && folder.IsFolder)
+        {
+            ViewModel.MarkFolderRead(folder);
+        }
+    }
+
+    private void OnToggleFolderFromMenuClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordGuild folder && folder.IsFolder)
+        {
+            ViewModel.ToggleFolderCollapse(folder);
+        }
+    }
+
+    private void OnDissolveFolderClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordGuild folder && folder.IsFolder)
+        {
+            ViewModel.DissolveFolder(folder);
+        }
+    }
+
+    private void OnCopyFolderIdClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is DiscordGuild folder)
+        {
+            var dp = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            dp.SetText(folder.Id);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dp);
+        }
+    }
+
+    private async void OnCreateFolderFromGuildMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var guild = (sender as FrameworkElement)?.Tag as DiscordGuild
+                   ?? (sender as FrameworkElement)?.DataContext as DiscordGuild;
+        if (guild == null || guild.IsFolder) return;
+
+        var input = new TextBox
+        {
+            PlaceholderText = "Nom du dossier (ex: Jeux, Amis, Dev)",
+            Text = "Nouveau dossier",
+            CornerRadius = new CornerRadius(8)
+        };
+        var dialog = new ContentDialog
+        {
+            Title = "Créer un dossier de serveurs",
+            Content = input,
+            PrimaryButtonText = "Créer le dossier",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            ViewModel.CreateLocalServerFolder(input.Text, guild);
         }
     }
 

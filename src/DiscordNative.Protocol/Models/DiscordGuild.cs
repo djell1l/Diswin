@@ -264,6 +264,93 @@ public sealed class DiscordGuild : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool HasStreamActivityAndNoVoice => HasStreamActivity && !HasVoiceActivity;
+
+    [JsonIgnore]
+    public bool IsFolder { get; set; }
+
+    [JsonIgnore]
+    public bool IsNotFolder => !IsFolder;
+
+    [JsonIgnore]
+    public string? FolderId { get; set; }
+
+    [JsonIgnore]
+    public bool IsInFolder => !string.IsNullOrEmpty(FolderId);
+
+    [JsonIgnore]
+    public List<DiscordGuild> FolderChildren { get; } = new();
+
+    private bool _isFolderCollapsed = true;
+    [JsonIgnore]
+    public bool IsFolderCollapsed
+    {
+        get => _isFolderCollapsed;
+        set
+        {
+            if (_isFolderCollapsed != value)
+            {
+                _isFolderCollapsed = value;
+                OnPropertyChanged(nameof(IsFolderCollapsed));
+                OnPropertyChanged(nameof(FolderChevronGlyph));
+                OnPropertyChanged(nameof(FolderIconGlyph));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string FolderChevronGlyph => IsFolderCollapsed ? "\uE70D" : "\uE70E";
+
+    [JsonIgnore]
+    public string FolderIconGlyph => IsFolderCollapsed ? "\uED43" : "\uED25";
+
+    [JsonIgnore]
+    public long? FolderColor { get; set; }
+
+    [JsonIgnore]
+    public string FolderColorHex
+    {
+        get
+        {
+            if (FolderColor.HasValue && FolderColor.Value > 0)
+            {
+                var r = (byte)((FolderColor.Value >> 16) & 0xFF);
+                var g = (byte)((FolderColor.Value >> 8) & 0xFF);
+                var b = (byte)(FolderColor.Value & 0xFF);
+                return $"#66{r:X2}{g:X2}{b:X2}";
+            }
+            return "#405865F2";
+        }
+    }
+
+    [JsonIgnore]
+    public string FolderChildCountText => FolderChildren.Count.ToString();
+
+    [JsonIgnore]
+    public string FolderTooltip => !string.IsNullOrWhiteSpace(Name)
+        ? $"{Name} ({FolderChildren.Count} serveurs)"
+        : $"Dossier de serveurs ({FolderChildren.Count} serveurs)";
+
+    [JsonIgnore]
+    public int FolderTotalMentions => IsFolder ? FolderChildren.Sum(c => c.MentionCount) : MentionCount;
+
+    [JsonIgnore]
+    public bool FolderHasMentions => IsFolder ? FolderChildren.Any(c => c.HasMentions) : HasMentions;
+
+    [JsonIgnore]
+    public string FolderMentionCountText => FolderTotalMentions > 99 ? "99+" : FolderTotalMentions.ToString();
+
+    [JsonIgnore]
+    public bool FolderHasUnread => IsFolder && FolderChildren.Any(c => c.HasUnreadOrSelected);
+
+    public void NotifyFolderChanged()
+    {
+        OnPropertyChanged(nameof(FolderTotalMentions));
+        OnPropertyChanged(nameof(FolderHasMentions));
+        OnPropertyChanged(nameof(FolderMentionCountText));
+        OnPropertyChanged(nameof(FolderHasUnread));
+        OnPropertyChanged(nameof(FolderChildCountText));
+        OnPropertyChanged(nameof(FolderTooltip));
+    }
 }
 
 public sealed class DiscordRole

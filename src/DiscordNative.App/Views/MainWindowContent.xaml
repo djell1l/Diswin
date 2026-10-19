@@ -169,7 +169,7 @@
                     </StackPanel>
 
                     <ListView Grid.Row="1" x:Name="GuildList"
-                              ItemsSource="{x:Bind ViewModel.Guilds, Mode=OneWay}"
+                              ItemsSource="{x:Bind ViewModel.DisplayGuilds, Mode=OneWay}"
                               SelectionMode="Single"
                               SelectionChanged="OnGuildSelected"
                               Padding="0,4,0,0">
@@ -198,98 +198,166 @@
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="models:DiscordGuild">
-                                <Grid Height="48" ToolTipService.ToolTip="{x:Bind Name}"
-                                      PointerEntered="OnAvatarPointerEntered" PointerExited="OnAvatarPointerExited">
-                                    <Grid.ContextFlyout>
-                                        <MenuFlyout>
-                                            <MenuFlyoutItem Text="Marquer comme lu" Click="OnMarkGuildReadClicked">
-                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Inviter des personnes" Click="OnInvitePeopleFromGuildMenuClicked">
-                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72D;" /></MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            <MenuFlyoutSubItem Text="Mettre en sourdine le serveur">
-                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutSubItem.Icon>
-                                                <MenuFlyoutItem Text="Pendant 15 minutes" Tag="15m" Click="OnMuteDurationClicked" />
-                                                <MenuFlyoutItem Text="Pendant 1 heure" Tag="1h" Click="OnMuteDurationClicked" />
-                                                <MenuFlyoutItem Text="Pendant 3 heures" Tag="3h" Click="OnMuteDurationClicked" />
-                                                <MenuFlyoutItem Text="Pendant 8 heures" Tag="8h" Click="OnMuteDurationClicked" />
-                                                <MenuFlyoutItem Text="Pendant 24 heures" Tag="24h" Click="OnMuteDurationClicked" />
-                                                <MenuFlyoutItem Text="Jusqu'à réactivation" Tag="forever" Click="OnMuteDurationClicked" />
-                                            </MenuFlyoutSubItem>
-                                            <MenuFlyoutSubItem Text="Paramètres de notification">
-                                                <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xEA8F;" /></MenuFlyoutSubItem.Icon>
-                                                <MenuFlyoutItem Text="Tous les messages" Tag="all" Click="OnNotificationSettingClicked" />
-                                                <MenuFlyoutItem Text="Seulement les mentions @everyone et @here" Tag="mentions" Click="OnNotificationSettingClicked" />
-                                                <MenuFlyoutItem Text="Rien" Tag="nothing" Click="OnNotificationSettingClicked" />
-                                            </MenuFlyoutSubItem>
-                                            <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Copier le nom" Click="OnCopyGuildNameClicked">
-                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Copier l'identifiant" Click="OnCopyGuildIdClicked">
-                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                            <MenuFlyoutSeparator />
-                                            <MenuFlyoutItem Text="Quitter le serveur" Click="OnLeaveGuildClicked" Foreground="#FF453A">
-                                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE89B;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
-                                        </MenuFlyout>
-                                    </Grid.ContextFlyout>
+                                <Grid Height="48">
+                                    <!-- 1. CAS DOSSIER DE SERVEURS (IsFolder == true) -->
+                                    <Grid Visibility="{x:Bind IsFolder, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                          ToolTipService.ToolTip="{x:Bind FolderTooltip, Mode=OneWay}">
+                                        <Grid.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Marquer tout le dossier comme lu" Tag="{x:Bind}" Click="OnMarkFolderReadClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Développer / Réduire le dossier" Tag="{x:Bind}" Click="OnToggleFolderFromMenuClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xED43;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutItem Text="Dissoudre le dossier" Tag="{x:Bind}" Click="OnDissolveFolderClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Copier l'identifiant du dossier" Tag="{x:Bind}" Click="OnCopyFolderIdClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Grid.ContextFlyout>
 
-                                    <!-- Pilule blanche sur le bord gauche (Non lu = petit point 8px, Survol = 20px, Sélectionné = barre 40px) -->
-                                    <Border HorizontalAlignment="Left" VerticalAlignment="Center"
-                                            Width="8" Height="{x:Bind IndicatorHeight, Mode=OneWay}"
-                                            Margin="-4,0,0,0"
-                                            CornerRadius="0,4,4,0" Background="White"
-                                            Visibility="{x:Bind HasUnreadOrSelected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                        <!-- Pilule blanche sur le bord gauche si le dossier contient des non-lus -->
+                                        <Border HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                Width="8" Height="8" Margin="-4,0,0,0" CornerRadius="0,4,4,0" Background="White"
+                                                Visibility="{x:Bind FolderHasUnread, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                                    <!-- Conteneur d'icône du serveur centré 48x48 -->
-                                    <Grid Width="48" Height="48" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Rectangle Fill="{ThemeResource ControlFillColorSecondaryBrush}" RadiusX="16" RadiusY="16" />
-                                        <Rectangle RadiusX="16" RadiusY="16" Visibility="{x:Bind HasIcon, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Rectangle.Fill>
-                                                <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                            </Rectangle.Fill>
-                                        </Rectangle>
-                                        <TextBlock Text="{x:Bind Initials}" HorizontalAlignment="Center"
-                                                   Visibility="{x:Bind ShowInitials, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                   VerticalAlignment="Center" FontWeight="SemiBold" FontSize="14" />
+                                        <!-- Conteneur d'icône 48x48 du dossier -->
+                                        <Grid Width="48" Height="48" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              PointerEntered="OnAvatarPointerEntered" PointerExited="OnAvatarPointerExited">
+                                            <Rectangle RadiusX="16" RadiusY="16">
+                                                <Rectangle.Fill>
+                                                    <SolidColorBrush Color="#2B2D31" />
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                            <FontIcon Glyph="{x:Bind FolderIconGlyph, Mode=OneWay}" FontSize="22" Foreground="#5865F2"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
 
-                                        <!-- Badge Vocal en haut à droite (haut-parleur sur fond noir) -->
-                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                Margin="0,-3,-3,0"
-                                                Background="#111214"
-                                                BorderBrush="#1E1F22" BorderThickness="2"
-                                                CornerRadius="9" Width="18" Height="18"
-                                                Visibility="{x:Bind HasVoiceBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                ToolTipService.ToolTip="Membres connectés en vocal">
-                                            <FontIcon Glyph="&#xE767;" FontSize="9" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
+                                            <!-- Badge décompte serveurs en haut à droite -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Margin="0,-3,-3,0" Background="#111214" BorderBrush="#1E1F22" BorderThickness="1.5"
+                                                    CornerRadius="7" MinWidth="16" Height="16" Padding="3,0">
+                                                <TextBlock Text="{x:Bind FolderChildCountText, Mode=OneWay}" FontSize="9" FontWeight="Bold" Foreground="#DBDEE1"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
 
-                                        <!-- Badge Stream en haut à droite (écran sur fond noir si stream en cours) -->
-                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                Margin="0,-3,-3,0"
-                                                Background="#111214"
-                                                BorderBrush="#1E1F22" BorderThickness="2"
-                                                CornerRadius="9" Width="18" Height="18"
-                                                Visibility="{x:Bind HasStreamBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                ToolTipService.ToolTip="Partage d'écran / Stream en cours">
-                                            <FontIcon Glyph="&#xE7F4;" FontSize="9" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
+                                            <!-- Badge Rouge de MENTION sur le dossier si des mentions sont présentes -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    Margin="0,0,-4,-4" Background="#DA373C" BorderBrush="#1E1F22" BorderThickness="3"
+                                                    CornerRadius="9" MinWidth="18" Height="18" Padding="4,0"
+                                                    Visibility="{x:Bind FolderHasMentions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="{x:Bind FolderMentionCountText, Mode=OneWay}"
+                                                           Foreground="White" FontSize="11" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
 
-                                        <!-- Badge Rouge de MENTION en bas à droite (exactement comme Discord officiel) -->
-                                        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                Margin="0,0,-4,-4"
-                                                Background="#DA373C"
-                                                BorderBrush="#1E1F22" BorderThickness="3"
-                                                CornerRadius="9" MinWidth="18" Height="18" Padding="4,0"
-                                                Visibility="{x:Bind HasMentions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                ToolTipService.ToolTip="{x:Bind MentionTooltip, Mode=OneWay}">
-                                            <TextBlock Text="{x:Bind MentionCountText, Mode=OneWay}"
-                                                       Foreground="White" FontSize="11" FontWeight="Bold"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
+                                    <!-- 2. CAS SERVEUR ORDINAIRE (IsNotFolder == true) -->
+                                    <Grid Visibility="{x:Bind IsNotFolder, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                          ToolTipService.ToolTip="{x:Bind Name}"
+                                          PointerEntered="OnAvatarPointerEntered" PointerExited="OnAvatarPointerExited">
+                                        <Grid.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Marquer comme lu" Click="OnMarkGuildReadClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8FB;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Créer un dossier de serveurs" Tag="{x:Bind}" Click="OnCreateFolderFromGuildMenuClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xED43;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Inviter des personnes" Click="OnInvitePeopleFromGuildMenuClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE72D;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSubItem Text="Mettre en sourdine le serveur">
+                                                    <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xE74F;" /></MenuFlyoutSubItem.Icon>
+                                                    <MenuFlyoutItem Text="Pendant 15 minutes" Tag="15m" Click="OnMuteDurationClicked" />
+                                                    <MenuFlyoutItem Text="Pendant 1 heure" Tag="1h" Click="OnMuteDurationClicked" />
+                                                    <MenuFlyoutItem Text="Pendant 3 heures" Tag="3h" Click="OnMuteDurationClicked" />
+                                                    <MenuFlyoutItem Text="Pendant 8 heures" Tag="8h" Click="OnMuteDurationClicked" />
+                                                    <MenuFlyoutItem Text="Pendant 24 heures" Tag="24h" Click="OnMuteDurationClicked" />
+                                                    <MenuFlyoutItem Text="Jusqu'à réactivation" Tag="forever" Click="OnMuteDurationClicked" />
+                                                </MenuFlyoutSubItem>
+                                                <MenuFlyoutSubItem Text="Paramètres de notification">
+                                                    <MenuFlyoutSubItem.Icon><FontIcon Glyph="&#xEA8F;" /></MenuFlyoutSubItem.Icon>
+                                                    <MenuFlyoutItem Text="Tous les messages" Tag="all" Click="OnNotificationSettingClicked" />
+                                                    <MenuFlyoutItem Text="Seulement les mentions @everyone et @here" Tag="mentions" Click="OnNotificationSettingClicked" />
+                                                    <MenuFlyoutItem Text="Rien" Tag="nothing" Click="OnNotificationSettingClicked" />
+                                                </MenuFlyoutSubItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutItem Text="Copier le nom" Click="OnCopyGuildNameClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Copier l'identifiant" Click="OnCopyGuildIdClicked">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator />
+                                                <MenuFlyoutItem Text="Quitter le serveur" Click="OnLeaveGuildClicked" Foreground="#FF453A">
+                                                    <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE89B;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Grid.ContextFlyout>
+
+                                        <!-- Connecteur visuel discret si le serveur est dans un dossier ouvert -->
+                                        <Border HorizontalAlignment="Left" Width="2" Height="36" Background="#383A40" Margin="4,0,0,0" CornerRadius="1"
+                                                Visibility="{x:Bind IsInFolder, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <!-- Pilule blanche sur le bord gauche (Non lu = petit point 8px, Survol = 20px, Sélectionné = barre 40px) -->
+                                        <Border HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                Width="8" Height="{x:Bind IndicatorHeight, Mode=OneWay}"
+                                                Margin="-4,0,0,0"
+                                                CornerRadius="0,4,4,0" Background="White"
+                                                Visibility="{x:Bind HasUnreadOrSelected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                        <!-- Conteneur d'icône du serveur centré 48x48 -->
+                                        <Grid Width="48" Height="48" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Rectangle Fill="{ThemeResource ControlFillColorSecondaryBrush}" RadiusX="16" RadiusY="16" />
+                                            <Rectangle RadiusX="16" RadiusY="16" Visibility="{x:Bind HasIcon, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Rectangle.Fill>
+                                                    <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                </Rectangle.Fill>
+                                            </Rectangle>
+                                            <TextBlock Text="{x:Bind Initials}" HorizontalAlignment="Center"
+                                                       Visibility="{x:Bind ShowInitials, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                       VerticalAlignment="Center" FontWeight="SemiBold" FontSize="14" />
+
+                                            <!-- Badge Vocal en haut à droite (haut-parleur sur fond noir) -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Margin="0,-3,-3,0"
+                                                    Background="#111214"
+                                                    BorderBrush="#1E1F22" BorderThickness="2"
+                                                    CornerRadius="9" Width="18" Height="18"
+                                                    Visibility="{x:Bind HasVoiceBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    ToolTipService.ToolTip="Membres connectés en vocal">
+                                                <FontIcon Glyph="&#xE767;" FontSize="9" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <!-- Badge Stream en haut à droite (écran sur fond noir si stream en cours) -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Margin="0,-3,-3,0"
+                                                    Background="#111214"
+                                                    BorderBrush="#1E1F22" BorderThickness="2"
+                                                    CornerRadius="9" Width="18" Height="18"
+                                                    Visibility="{x:Bind HasStreamBadge, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    ToolTipService.ToolTip="Partage d'écran / Stream en cours">
+                                                <FontIcon Glyph="&#xE7F4;" FontSize="9" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <!-- Badge Rouge de MENTION en bas à droite (exactement comme Discord officiel) -->
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    Margin="0,0,-4,-4"
+                                                    Background="#DA373C"
+                                                    BorderBrush="#1E1F22" BorderThickness="3"
+                                                    CornerRadius="9" MinWidth="18" Height="18" Padding="4,0"
+                                                    Visibility="{x:Bind HasMentions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    ToolTipService.ToolTip="{x:Bind MentionTooltip, Mode=OneWay}">
+                                                <TextBlock Text="{x:Bind MentionCountText, Mode=OneWay}"
+                                                           Foreground="White" FontSize="11" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                        </Grid>
                                     </Grid>
                                 </Grid>
                             </DataTemplate>

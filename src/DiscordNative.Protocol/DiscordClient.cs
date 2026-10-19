@@ -126,6 +126,10 @@ public sealed class DiscordClient : IAsyncDisposable
     public event Action<DiscordSoundboardEffect>? VoiceChannelEffectReceived;
     public event Action<GatewayConnectionState>? ConnectionStateChanged;
 
+    private List<DiscordGuildFolderData> _guildFolders = new();
+    public IReadOnlyList<DiscordGuildFolderData> GuildFolders => _guildFolders;
+    public event Action? GuildFoldersUpdated;
+
     public string? CurrentVoiceChannelId => _pendingVoiceChannelId;
 
     public DiscordClient(string token, ILoggerFactory? loggerFactory = null)
@@ -164,6 +168,7 @@ public sealed class DiscordClient : IAsyncDisposable
         try
         {
             _orderedGuildIds = await Rest.GetOrderedGuildIdsAsync(ct);
+            _guildFolders = await Rest.GetGuildFoldersAsync(ct);
             var guilds = await Rest.GetGuildsAsync(ct);
             if (guilds.Count > 0)
             {
@@ -171,7 +176,12 @@ public sealed class DiscordClient : IAsyncDisposable
                 App.RunOnUiThread(() =>
                 {
                     SyncGuildsCollection(sorted);
+                    GuildFoldersUpdated?.Invoke();
                 });
+            }
+            else
+            {
+                App.RunOnUiThread(() => GuildFoldersUpdated?.Invoke());
             }
         }
         catch { /* pas critique */ }
@@ -191,6 +201,7 @@ public sealed class DiscordClient : IAsyncDisposable
         try
         {
             _orderedGuildIds = await Rest.GetOrderedGuildIdsAsync(ct);
+            _guildFolders = await Rest.GetGuildFoldersAsync(ct);
             var guilds = await Rest.GetGuildsAsync(ct);
             if (guilds.Count > 0)
             {
@@ -198,7 +209,12 @@ public sealed class DiscordClient : IAsyncDisposable
                 App.RunOnUiThread(() =>
                 {
                     SyncGuildsCollection(sorted);
+                    GuildFoldersUpdated?.Invoke();
                 });
+            }
+            else
+            {
+                App.RunOnUiThread(() => GuildFoldersUpdated?.Invoke());
             }
         }
         catch { }
@@ -218,6 +234,7 @@ public sealed class DiscordClient : IAsyncDisposable
                 if (evt.Data.TryGetProperty("guild_folders", out _) || evt.Data.TryGetProperty("guild_positions", out _))
                 {
                     var updatedOrder = DiscordRestClient.ExtractOrderedGuildIds(evt.Data);
+                    _guildFolders = DiscordRestClient.ExtractGuildFolders(evt.Data);
                     if (updatedOrder.Count > 0)
                     {
                         _orderedGuildIds = updatedOrder;
@@ -225,7 +242,12 @@ public sealed class DiscordClient : IAsyncDisposable
                         {
                             var sorted = SortGuilds(Guilds.ToList(), _orderedGuildIds);
                             SyncGuildsCollection(sorted);
+                            GuildFoldersUpdated?.Invoke();
                         });
+                    }
+                    else
+                    {
+                        App.RunOnUiThread(() => GuildFoldersUpdated?.Invoke());
                     }
                 }
                 break;
