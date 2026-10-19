@@ -277,11 +277,20 @@ public sealed class DiscordRole
     [JsonPropertyName("color")]
     public int Color { get; set; }
 
+    [JsonPropertyName("hoist")]
+    public bool Hoist { get; set; }
+
     [JsonPropertyName("position")]
     public int Position { get; set; }
 
     [JsonPropertyName("permissions")]
     public string? Permissions { get; set; }
+
+    [JsonPropertyName("icon")]
+    public string? Icon { get; set; }
+
+    [JsonPropertyName("unicode_emoji")]
+    public string? UnicodeEmoji { get; set; }
 
     [JsonIgnore]
     public ulong PermissionBits => ulong.TryParse(Permissions, out var p) ? p : 0UL;
@@ -291,4 +300,7 @@ public sealed class DiscordRole
 
     [JsonIgnore]
     public bool HasColor => Color != 0;
+
+    [JsonIgnore]
+    public string RoleNameUpper => (Name ?? string.Empty).ToUpperInvariant();
 }

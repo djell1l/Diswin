@@ -24,6 +24,32 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     [JsonPropertyName("author")]
     public DiscordUser Author { get; set; } = new();
 
+    private DiscordGuildMember? _member;
+    [JsonPropertyName("member")]
+    public DiscordGuildMember? Member
+    {
+        get => _member;
+        set
+        {
+            _member = value;
+            if (_member != null && Author != null)
+            {
+                if (_member.Roles != null && _member.Roles.Count > 0)
+                {
+                    Author.Roles = _member.Roles;
+                }
+                if (!string.IsNullOrEmpty(_member.Nick))
+                {
+                    Author.ServerNick = _member.Nick;
+                }
+                if (!string.IsNullOrEmpty(_member.Avatar))
+                {
+                    Author.ServerAvatar = _member.Avatar;
+                }
+            }
+        }
+    }
+
     [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
 
@@ -499,5 +525,17 @@ public sealed class DiscordCallMetadata
 
     [JsonPropertyName("ended_timestamp")]
     public DateTimeOffset? EndedTimestamp { get; set; }
+}
+
+public sealed class DiscordGuildMember
+{
+    [JsonPropertyName("roles")]
+    public List<string> Roles { get; set; } = new();
+
+    [JsonPropertyName("nick")]
+    public string? Nick { get; set; }
+
+    [JsonPropertyName("avatar")]
+    public string? Avatar { get; set; }
 }
 

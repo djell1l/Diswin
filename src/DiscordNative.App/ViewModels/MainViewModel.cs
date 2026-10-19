@@ -102,6 +102,8 @@ public sealed partial class MainViewModel : ObservableObject
     public int OnlineMembersCount => OnlineMembers.Count;
     public int OfflineMembersCount => OfflineMembers.Count;
     public bool HasOfflineMembers => OfflineMembers.Count > 0;
+    public ObservableCollection<DiscordMemberGroup> MemberGroups { get; } = new();
+    public bool HasMemberGroups => MemberGroups.Count > 0;
 
     public ObservableCollection<AutocompleteItemViewModel> AutocompleteSuggestions { get; } = new();
 
@@ -460,6 +462,10 @@ public sealed partial class MainViewModel : ObservableObject
                 _client.ApplyCachedPresenceToUser(m);
                 var (_, vcName) = _client.GetUserVoiceChannel(m.Id);
                 m.CurrentVoiceChannelName = vcName;
+                if (_selectedGuild != null)
+                {
+                    m.UpdateDisplayRoles(_selectedGuild.Roles);
+                }
             }
 
             var online = allMembers.Where(m => m.Status != "offline").OrderBy(m => m.DisplayName).ToList();
@@ -474,6 +480,97 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(OnlineMembersCount));
             OnPropertyChanged(nameof(OfflineMembersCount));
             OnPropertyChanged(nameof(HasOfflineMembers));
+
+            MemberGroups.Clear();
+            if (_selectedGuild != null && _selectedGuild.Roles != null && _selectedGuild.Roles.Count > 0)
+            {
+                var hoistRoles = _selectedGuild.Roles
+                    .Where(r => r.Hoist)
+                    .OrderByDescending(r => r.Position)
+                    .ToList();
+
+                var groupedUserIds = new HashSet<string>();
+
+                foreach (var role in hoistRoles)
+                {
+                    var groupMembers = online
+                        .Where(u => u.TopHoistRole?.Id == role.Id)
+                        .OrderBy(u => u.DisplayName)
+                        .ToList();
+
+                    if (groupMembers.Count > 0)
+                    {
+                        var group = new DiscordMemberGroup
+                        {
+                            Name = role.Name,
+                            RoleColorHex = role.ColorHex,
+                            Position = role.Position
+                        };
+                        foreach (var u in groupMembers)
+                        {
+                            group.Members.Add(u);
+                            groupedUserIds.Add(u.Id);
+                        }
+                        group.NotifyMembersChanged();
+                        MemberGroups.Add(group);
+                    }
+                }
+
+                var remainingOnline = online.Where(u => !groupedUserIds.Contains(u.Id)).ToList();
+                if (remainingOnline.Count > 0)
+                {
+                    var onlineGroup = new DiscordMemberGroup
+                    {
+                        Name = "En ligne",
+                        RoleColorHex = "#949BA4",
+                        Position = -1
+                    };
+                    foreach (var u in remainingOnline) onlineGroup.Members.Add(u);
+                    onlineGroup.NotifyMembersChanged();
+                    MemberGroups.Add(onlineGroup);
+                }
+
+                if (offline.Count > 0)
+                {
+                    var offlineGroup = new DiscordMemberGroup
+                    {
+                        Name = "Hors ligne",
+                        RoleColorHex = "#949BA4",
+                        Position = -2
+                    };
+                    foreach (var u in offline) offlineGroup.Members.Add(u);
+                    offlineGroup.NotifyMembersChanged();
+                    MemberGroups.Add(offlineGroup);
+                }
+            }
+            else
+            {
+                if (online.Count > 0)
+                {
+                    var onlineGroup = new DiscordMemberGroup
+                    {
+                        Name = "En ligne",
+                        RoleColorHex = "#949BA4",
+                        Position = 0
+                    };
+                    foreach (var u in online) onlineGroup.Members.Add(u);
+                    onlineGroup.NotifyMembersChanged();
+                    MemberGroups.Add(onlineGroup);
+                }
+                if (offline.Count > 0)
+                {
+                    var offlineGroup = new DiscordMemberGroup
+                    {
+                        Name = "Hors ligne",
+                        RoleColorHex = "#949BA4",
+                        Position = -1
+                    };
+                    foreach (var u in offline) offlineGroup.Members.Add(u);
+                    offlineGroup.NotifyMembersChanged();
+                    MemberGroups.Add(offlineGroup);
+                }
+            }
+            OnPropertyChanged(nameof(HasMemberGroups));
         });
     }
 
@@ -1880,6 +1977,10 @@ public sealed partial class MainViewModel : ObservableObject
     private void ProcessMessageForGrouping(DiscordMessage current, DiscordMessage? previous)
     {
         current.IsOwnMessage = _client.CurrentUser != null && current.Author.Id == _client.CurrentUser.Id;
+        if (_selectedGuild != null)
+        {
+            current.Author.UpdateDisplayRoles(_selectedGuild.Roles);
+        }
         if (previous == null) return;
         if (!current.IsNormal || !previous.IsNormal) return;
         if (current.IsReply) return; // Toujours afficher l'en-tête pour une réponse

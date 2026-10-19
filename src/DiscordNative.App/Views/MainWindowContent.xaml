@@ -2718,7 +2718,8 @@
 
                                         <StackPanel VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"
+                                                           Foreground="{x:Bind Author.RoleColorHex, Mode=OneWay}">
                                                     <TextBlock.ContextFlyout>
                                                         <MenuFlyout>
                                                             <MenuFlyoutItem Text="Profil" Tag="{x:Bind Author}" Click="OnUserMenuProfileClicked">
@@ -3466,19 +3467,23 @@
                                     </ItemsControl>
                                 </StackPanel>
 
-                                <!-- 2. SECTION EN LIGNE -->
-                                <StackPanel Spacing="4">
-                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,2,6,4">
-                                        <TextBlock Text="EN LIGNE" FontSize="11" FontWeight="Bold" Foreground="#949BA4" />
-                                        <TextBlock Text="—" FontSize="11" FontWeight="Bold" Foreground="#949BA4" />
-                                        <TextBlock Text="{x:Bind ViewModel.OnlineMembersCount, Mode=OneWay}" FontSize="11" FontWeight="Bold" Foreground="#949BA4" />
-                                    </StackPanel>
+                                <!-- 2. SECTIONS DE MEMBRES GROUPÉES PAR RÔLES (Discord 1:1) -->
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.MemberGroups, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DiscordMemberGroup">
+                                            <StackPanel Spacing="2" Margin="0,2,0,8">
+                                                <!-- En-tête de Rôle / Groupe (Nom majuscule, Couleur du rôle, Compteur) -->
+                                                <TextBlock Text="{x:Bind HeaderText, Mode=OneWay}"
+                                                           FontSize="11" FontWeight="Bold"
+                                                           Foreground="{x:Bind RoleColorHex, Mode=OneWay}"
+                                                           Margin="6,4,6,2" />
 
-                                    <ItemsControl ItemsSource="{x:Bind ViewModel.OnlineMembers, Mode=OneWay}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="models:DiscordUser">
-                                                <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch"
-                                                        HorizontalContentAlignment="Left" Padding="6,5" CornerRadius="8"
+                                                <ItemsControl ItemsSource="{x:Bind Members, Mode=OneWay}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:DiscordUser">
+                                                            <Button Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Left" Padding="6,5" CornerRadius="8"
+                                                                    Opacity="{x:Bind MemberItemOpacity, Mode=OneWay}"
                                                         Tag="{x:Bind}" Click="OnMemberItemClicked" DoubleTapped="OnMemberItemDoubleTapped"
                                                         ToolTipService.ToolTip="{x:Bind DisplayName}">
                                                     <Button.ContextFlyout>
@@ -3919,7 +3924,7 @@
                                                         </Grid>
                                                         <StackPanel VerticalAlignment="Center" MaxWidth="150">
                                                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <TextBlock Text="{x:Bind DisplayName}" FontSize="13" FontWeight="Medium" Foreground="#F2F3F5" TextTrimming="CharacterEllipsis" MaxWidth="110" />
+                                                                <TextBlock Text="{x:Bind DisplayName}" FontSize="13" FontWeight="Medium" Foreground="{x:Bind RoleColorHex, Mode=OneWay}" TextTrimming="CharacterEllipsis" MaxWidth="110" />
                                                                 <!-- Tag de Clan -->
                                                                 <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="4"
                                                                         Visibility="{x:Bind HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -3951,9 +3956,12 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                                <!-- 3. SECTION HORS LIGNE -->
-                                <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasOfflineMembers, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <!-- 3. SECTION HORS LIGNE (Gérée via MemberGroups ci-dessus) -->
+                                <StackPanel Visibility="Collapsed">
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="6,8,6,4">
                                         <TextBlock Text="HORS LIGNE" FontSize="11" FontWeight="Bold" Foreground="#949BA4" />
                                         <TextBlock Text="—" FontSize="11" FontWeight="Bold" Foreground="#949BA4" />

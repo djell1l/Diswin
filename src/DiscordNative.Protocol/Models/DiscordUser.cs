@@ -32,6 +32,8 @@ public sealed class DiscordUser : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasNonGameActivitySummary));
         OnPropertyChanged(nameof(IsCurrentUser));
         OnPropertyChanged(nameof(IsNotCurrentUser));
+        OnPropertyChanged(nameof(RoleColorHex));
+        OnPropertyChanged(nameof(MemberItemOpacity));
     }
 
     public void NotifyProfileEnriched()
@@ -152,7 +154,30 @@ public sealed class DiscordUser : INotifyPropertyChanged
             }
         }
         OnPropertyChanged(nameof(HasDisplayRoles));
+        OnPropertyChanged(nameof(TopRole));
+        OnPropertyChanged(nameof(TopHoistRole));
+        OnPropertyChanged(nameof(RoleColorHex));
     }
+
+    [JsonIgnore]
+    public DiscordRole? TopRole => _displayRoles.FirstOrDefault();
+
+    [JsonIgnore]
+    public DiscordRole? TopHoistRole => _displayRoles.FirstOrDefault(r => r.Hoist);
+
+    [JsonIgnore]
+    public string RoleColorHex
+    {
+        get
+        {
+            if (Status == "offline") return "#949BA4";
+            var colored = _displayRoles.FirstOrDefault(r => r.Color != 0);
+            return colored != null ? colored.ColorHex : "#F2F3F5";
+        }
+    }
+
+    [JsonIgnore]
+    public double MemberItemOpacity => Status == "offline" ? 0.65 : 1.0;
 
     private string? _currentVoiceChannelName;
     [JsonIgnore]
