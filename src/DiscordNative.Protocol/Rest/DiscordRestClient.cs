@@ -846,6 +846,57 @@ public sealed class DiscordRestClient : IDisposable
         return new();
     }
 
+    public static readonly List<DiscordSoundboardSound> FallbackDefaultSounds = new()
+    {
+        new() { SoundId = "1", Name = "Coin-coin", EmojiName = "🦆", Volume = 1.0 },
+        new() { SoundId = "2", Name = "Klaxon de fête", EmojiName = "📢", Volume = 1.0 },
+        new() { SoundId = "3", Name = "Grillons", EmojiName = "🦗", Volume = 1.0 },
+        new() { SoundId = "4", Name = "Applaudissements", EmojiName = "👏", Volume = 1.0 },
+        new() { SoundId = "5", Name = "Ba-Dum-Tss", EmojiName = "🥁", Volume = 1.0 },
+        new() { SoundId = "6", Name = "Klaxon triste", EmojiName = "📯", Volume = 1.0 },
+    };
+
+    public async Task<List<DiscordSoundboardSound>> GetDefaultSoundboardSoundsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var sounds = await _http.GetFromJsonAsync<List<DiscordSoundboardSound>>($"{ApiBase}/soundboard-default-sounds", ct);
+            if (sounds != null && sounds.Count > 0) return sounds;
+        }
+        catch { }
+        return FallbackDefaultSounds;
+    }
+
+    public async Task<List<DiscordSoundboardSound>> GetGuildSoundboardSoundsAsync(string guildId, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetFromJsonAsync<DiscordSoundboardGuildResponse>($"{ApiBase}/guilds/{guildId}/soundboard-sounds", ct);
+            if (res?.Items != null) return res.Items;
+        }
+        catch { }
+        return new();
+    }
+
+    public async Task SendVoiceChannelEffectAsync(string channelId, string soundId, string? sourceGuildId = null, string? emojiName = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var payload = new
+            {
+                sound_id = soundId,
+                source_guild_id = sourceGuildId,
+                emoji_name = emojiName,
+                animation_type = 0,
+                animation_id = 0
+            };
+            var response = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/voice-channel-effects", payload, ct);
+            response.EnsureSuccessStatusCode();
+        }
+        catch { }
+    }
+
+
     public async Task<DiscordChannel?> CreateDmAsync(string recipientUserId, CancellationToken ct = default)
     {
         var response = await _http.PostAsJsonAsync($"{ApiBase}/users/@me/channels", new { recipient_id = recipientUserId }, ct);

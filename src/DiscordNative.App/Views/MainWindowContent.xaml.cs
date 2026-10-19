@@ -711,6 +711,24 @@ public sealed partial class MainWindowContent : UserControl
         ViewModel.ToggleKrisp();
     }
 
+    private void OnVoiceSoundboardFlyoutOpening(object sender, object e)
+    {
+        VoiceBarSoundboardPicker.Initialize(ViewModel);
+        _ = ViewModel.LoadSoundboardSoundsAsync();
+    }
+
+    private void OnMiniVoiceSoundboardFlyoutOpening(object sender, object e)
+    {
+        MiniVoiceSoundboardPicker.Initialize(ViewModel);
+        _ = ViewModel.LoadSoundboardSoundsAsync();
+    }
+
+    private void OnSoundboardPickerSoundSelected(DiscordSoundboardSound sound, bool previewOnly)
+    {
+        _ = ViewModel.PlaySoundboardSoundAsync(sound, previewOnly);
+    }
+
+
     private async void OnToggleCameraClicked(object sender, RoutedEventArgs e)
     {
         await ViewModel.ToggleCameraAsync();

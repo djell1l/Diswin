@@ -123,7 +123,10 @@ public sealed class DiscordClient : IAsyncDisposable
     public event Action<string, bool>? VoiceSpeakingChanged; // userId, isSpeaking
     public event Action<string>? PresenceUpdated; // userId
     public event Action<string>? GuildMembersUpdated; // guildId
+    public event Action<DiscordSoundboardEffect>? VoiceChannelEffectReceived;
     public event Action<GatewayConnectionState>? ConnectionStateChanged;
+
+    public string? CurrentVoiceChannelId => _pendingVoiceChannelId;
 
     public DiscordClient(string token, ILoggerFactory? loggerFactory = null)
     {
@@ -396,6 +399,9 @@ public sealed class DiscordClient : IAsyncDisposable
                     });
                 }
                 break;
+            case "VOICE_CHANNEL_EFFECT_SEND":
+                HandleVoiceChannelEffect(evt.Data);
+                break;
             case "RELATIONSHIP_REMOVE":
                 var relId = evt.Data.TryGetProperty("id", out var rIdEl) ? rIdEl.GetString() : null;
                 if (!string.IsNullOrEmpty(relId))
@@ -409,6 +415,20 @@ public sealed class DiscordClient : IAsyncDisposable
                 break;
         }
     }
+
+    private void HandleVoiceChannelEffect(JsonElement data)
+    {
+        try
+        {
+            var effect = data.Deserialize<DiscordSoundboardEffect>(JsonOptions);
+            if (effect is not null && !string.IsNullOrEmpty(effect.SoundId))
+            {
+                VoiceChannelEffectReceived?.Invoke(effect);
+            }
+        }
+        catch { }
+    }
+
 
     public void CacheGuildMember(string? guildId, JsonElement memberEl)
     {

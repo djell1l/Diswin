@@ -126,6 +126,7 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     public bool IsCategory => Type == DiscordChannelType.GuildCategory;
     public bool IsNotCategory => Type != DiscordChannelType.GuildCategory;
     public bool IsInParentCategory => !IsCategory && !string.IsNullOrEmpty(ParentId);
+    public string ChannelRowMargin => IsInParentCategory ? "12,0,0,0" : "0,0,0,0";
     public string CategoryNameUpper => (Name ?? DisplayName).ToUpperInvariant();
 
     private bool _isCollapsed;

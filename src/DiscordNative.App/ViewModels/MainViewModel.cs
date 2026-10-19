@@ -105,6 +105,10 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<DiscordMemberGroup> MemberGroups { get; } = new();
     public bool HasMemberGroups => MemberGroups.Count > 0;
 
+    public ObservableCollection<DiscordSoundboardGroup> SoundboardGroups { get; } = new();
+    public ObservableCollection<DiscordSoundboardGroup> FilteredSoundboardGroups { get; } = new();
+    public bool HasSoundboardGroups => FilteredSoundboardGroups.Count > 0;
+
     public ObservableCollection<AutocompleteItemViewModel> AutocompleteSuggestions { get; } = new();
 
     [ObservableProperty]
@@ -373,6 +377,7 @@ public sealed partial class MainViewModel : ObservableObject
         _client.VoiceSpeakingChanged += OnVoiceSpeakingChanged;
         _client.PresenceUpdated += OnPresenceUpdated;
         _client.GuildMembersUpdated += OnGuildMembersUpdated;
+        _client.VoiceChannelEffectReceived += OnVoiceChannelEffectReceived;
         _client.Friends.CollectionChanged += (_, _) => RefreshFilteredFriends();
 
         _rpcTickerTimer.Interval = TimeSpan.FromSeconds(1);
@@ -2022,6 +2027,10 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (seen.Add(m.Id))
             {
+                if (_selectedGuild?.Roles != null && m.Roles != null)
+                {
+                    m.UpdateDisplayRoles(_selectedGuild.Roles);
+                }
                 channel.ConnectedVoiceMembers.Add(m);
             }
         }
@@ -2036,9 +2045,14 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (seen.Add(user.Id))
             {
+                if (_selectedGuild?.Roles != null && user.Roles != null)
+                {
+                    user.UpdateDisplayRoles(_selectedGuild.Roles);
+                }
                 VoiceParticipants.Add(user);
             }
         }
+
         if (IsVoiceConnected && _selectedChannel?.Id == channelId && _client.CurrentUser is not null && seen.Add(_client.CurrentUser.Id))
         {
             VoiceParticipants.Insert(0, _client.CurrentUser);
@@ -2139,7 +2153,130 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CameraTooltipText));
     }
 
+    private void OnVoiceChannelEffectReceived(DiscordSoundboardEffect effect)
+    {
+        if (effect != null && !string.IsNullOrEmpty(effect.SoundId))
+        {
+            var currentVcId = _client.CurrentVoiceChannelId;
+            if (!string.IsNullOrEmpty(currentVcId) && currentVcId == effect.ChannelId)
+            {
+                _ = SoundboardPlayerService.PlaySoundAsync(effect.SoundId, effect.SoundVolume);
+            }
+        }
+    }
+
+    private string _soundboardSearchQuery = string.Empty;
+
+    public async Task LoadSoundboardSoundsAsync()
+    {
+        try
+        {
+            SoundboardGroups.Clear();
+
+            // 1. Sons personnalisés du serveur actuel (si dans un serveur)
+            if (_selectedGuild != null && !string.IsNullOrEmpty(_selectedGuild.Id))
+            {
+                var guildSounds = await _client.Rest.GetGuildSoundboardSoundsAsync(_selectedGuild.Id);
+                if (guildSounds.Count > 0)
+                {
+                    var guildGroup = new DiscordSoundboardGroup
+                    {
+                        Header = _selectedGuild.Name,
+                        IconGlyph = "\uE74F"
+                    };
+                    foreach (var s in guildSounds)
+                    {
+                        guildGroup.Sounds.Add(s);
+                    }
+                    guildGroup.NotifyChanged();
+                    SoundboardGroups.Add(guildGroup);
+                }
+            }
+
+            // 2. Sons officiels par défaut de Discord
+            var defaultSounds = await _client.Rest.GetDefaultSoundboardSoundsAsync();
+            var discordGroup = new DiscordSoundboardGroup
+            {
+                Header = "Discord",
+                IconGlyph = "\uE803"
+            };
+            foreach (var s in defaultSounds)
+            {
+                discordGroup.Sounds.Add(s);
+            }
+            discordGroup.NotifyChanged();
+            SoundboardGroups.Add(discordGroup);
+
+            FilterSoundboardSounds(_soundboardSearchQuery);
+        }
+        catch { }
+    }
+
+    public void FilterSoundboardSounds(string query)
+    {
+        _soundboardSearchQuery = query?.Trim() ?? string.Empty;
+        FilteredSoundboardGroups.Clear();
+
+        if (string.IsNullOrEmpty(_soundboardSearchQuery))
+        {
+            foreach (var g in SoundboardGroups) FilteredSoundboardGroups.Add(g);
+        }
+        else
+        {
+            foreach (var g in SoundboardGroups)
+            {
+                var matchedSounds = g.Sounds
+                    .Where(s => s.Name.Contains(_soundboardSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                (s.EmojiName != null && s.EmojiName.Contains(_soundboardSearchQuery, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                if (matchedSounds.Count > 0)
+                {
+                    var filteredGroup = new DiscordSoundboardGroup
+                    {
+                        Header = g.Header,
+                        IconGlyph = g.IconGlyph
+                    };
+                    foreach (var ms in matchedSounds) filteredGroup.Sounds.Add(ms);
+                    filteredGroup.NotifyChanged();
+                    FilteredSoundboardGroups.Add(filteredGroup);
+                }
+            }
+        }
+        OnPropertyChanged(nameof(HasSoundboardGroups));
+    }
+
+    public async Task PlaySoundboardSoundAsync(DiscordSoundboardSound sound, bool previewOnly = false)
+    {
+        if (sound == null) return;
+        try
+        {
+            sound.IsPlaying = true;
+            _ = SoundboardPlayerService.PlaySoundAsync(sound.SoundId, sound.Volume);
+
+            var voiceChannelId = _client.CurrentVoiceChannelId;
+            if (!previewOnly && !string.IsNullOrEmpty(voiceChannelId))
+            {
+                await _client.Rest.SendVoiceChannelEffectAsync(
+                    voiceChannelId,
+                    sound.SoundId,
+                    sound.GuildId,
+                    sound.EmojiName);
+            }
+        }
+        catch { }
+        finally
+        {
+            _ = Task.Delay(1000).ContinueWith(_ =>
+            {
+                Protocol.App.RunOnUiThread(() => sound.IsPlaying = false);
+            });
+
+        }
+    }
+
     public async Task CreatePollInCurrentChannelAsync(string question, List<string> answers, int durationHours, bool allowMultiselect)
+
     {
         if (_selectedChannel is null) return;
         await _client.Rest.CreatePollMessageAsync(_selectedChannel.Id, question, answers, durationHours, allowMultiselect);

@@ -1,0 +1,110 @@
+<UserControl
+    x:Class="DiscordNative.App.Controls.DiscordSoundboardPickerControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:DiscordNative.Protocol.Models"
+    xmlns:services="using:DiscordNative.App.Services"
+    Width="380" Height="440">
+
+    <UserControl.Resources>
+        <services:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <services:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid Background="#1E1F22" CornerRadius="12" BorderBrush="#2B2D31" BorderThickness="1">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 1. En-tête : Barre de recherche du Soundboard -->
+        <Border Grid.Row="0" Padding="12,10,12,8" Background="#232428" CornerRadius="12,12,0,0">
+            <Grid>
+                <TextBox x:Name="SearchTextBox" PlaceholderText="Rechercher un son..."
+                         Background="#111214" Foreground="#F2F3F5" BorderThickness="0"
+                         CornerRadius="6" Padding="32,7,10,7" FontSize="13"
+                         TextChanged="OnSearchTextChanged" />
+                <FontIcon Glyph="&#xE721;" FontSize="13" Foreground="#949BA4"
+                          HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" />
+            </Grid>
+        </Border>
+
+        <!-- 2. Corps : Groupes et cartes de sons -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,8">
+            <StackPanel Spacing="12">
+                <!-- État vide si aucun son -->
+                <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" Spacing="6" HorizontalAlignment="Center" Margin="0,40,0,0">
+                    <FontIcon Glyph="&#xE74F;" FontSize="28" Foreground="#949BA4" HorizontalAlignment="Center" />
+                    <TextBlock Text="Aucun son trouvé" FontSize="13" FontWeight="SemiBold" Foreground="#949BA4" HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Liste des groupes (Serveur actuel, Discord) -->
+                <ItemsControl x:Name="GroupsItemsControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:DiscordSoundboardGroup">
+                            <StackPanel Margin="0,0,0,14" Spacing="8">
+                                <!-- En-tête de catégorie -->
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,2">
+                                    <FontIcon Glyph="{x:Bind IconGlyph}" FontSize="12" Foreground="#949BA4" VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Bind Header}" FontSize="11" FontWeight="Bold" Foreground="#949BA4"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="320" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <!-- Grille de boutons de sons -->
+                                <GridView ItemsSource="{x:Bind Sounds}"
+                                          SelectionMode="None" IsItemClickEnabled="False"
+                                          Padding="0" Margin="0">
+                                    <GridView.ItemContainerStyle>
+                                        <Style TargetType="GridViewItem">
+                                            <Setter Property="MinWidth" Value="112" />
+                                            <Setter Property="MinHeight" Value="48" />
+                                            <Setter Property="Width" Value="112" />
+                                            <Setter Property="Height" Value="48" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Margin" Value="2" />
+                                            <Setter Property="CornerRadius" Value="8" />
+                                        </Style>
+                                    </GridView.ItemContainerStyle>
+                                    <GridView.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DiscordSoundboardSound">
+                                            <Button HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                    Background="#2B2D31" BorderBrush="#383A40" BorderThickness="1"
+                                                    CornerRadius="8" Padding="6,4"
+                                                    Tag="{x:Bind}" Click="OnPlaySoundClicked">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Emoji du son -->
+                                                    <TextBlock Grid.Column="0" Text="{x:Bind DisplayEmoji}" FontSize="18"
+                                                               VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                                    <!-- Nom du son -->
+                                                    <TextBlock Grid.Column="1" Text="{x:Bind Name}" FontSize="11"
+                                                               FontWeight="SemiBold" Foreground="#F2F3F5"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                                                    <!-- Bouton d'aperçu rapide sans diffuser en vocal -->
+                                                    <Button Grid.Column="2" Width="22" Height="22" Padding="0"
+                                                            Background="Transparent" BorderThickness="0" CornerRadius="11"
+                                                            Tag="{x:Bind}" Click="OnPreviewSoundClicked"
+                                                            ToolTipService.ToolTip="Écouter l'aperçu"
+                                                            VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE767;" FontSize="9" Foreground="#949BA4" />
+                                                    </Button>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </GridView.ItemTemplate>
+                                </GridView>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
