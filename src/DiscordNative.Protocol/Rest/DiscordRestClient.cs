@@ -753,6 +753,32 @@ public sealed class DiscordRestClient : IDisposable
     public async Task<List<DiscordMessage>> GetMentionsAsync(int limit = 25, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<DiscordMessage>>($"{ApiBase}/users/@me/mentions?limit={limit}&roles=true&everyone=true", ct) ?? new();
 
+    public async Task<List<DiscordMessage>> SearchChannelMessagesAsync(string channelId, string query, CancellationToken ct = default)
+    {
+        try
+        {
+            var encoded = Uri.EscapeDataString(query);
+            var res = await _http.GetFromJsonAsync<DiscordSearchResponse>($"{ApiBase}/channels/{channelId}/messages/search?content={encoded}", ct);
+            if (res?.Messages != null)
+            {
+                var list = new List<DiscordMessage>();
+                foreach (var group in res.Messages)
+                {
+                    if (group != null && group.Count > 0)
+                    {
+                        list.Add(group[0]);
+                    }
+                }
+                return list;
+            }
+        }
+        catch
+        {
+            // Ignore search API failure (e.g. rate limit or indexing in progress)
+        }
+        return new();
+    }
+
     public async Task<DiscordChannel?> CreateDmAsync(string recipientUserId, CancellationToken ct = default)
     {
         var response = await _http.PostAsJsonAsync($"{ApiBase}/users/@me/channels", new { recipient_id = recipientUserId }, ct);

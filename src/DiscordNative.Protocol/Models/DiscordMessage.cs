@@ -36,6 +36,25 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     [JsonPropertyName("pinned")]
     public bool Pinned { get; set; }
 
+    private bool _isHighlighted;
+    [JsonIgnore]
+    public bool IsHighlighted
+    {
+        get => _isHighlighted;
+        set
+        {
+            if (_isHighlighted != value)
+            {
+                _isHighlighted = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HighlightBackgroundBrushHex));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public string HighlightBackgroundBrushHex => _isHighlighted ? "#2A5865F2" : "Transparent";
+
     private List<DiscordAttachment> _attachments = new();
     [JsonPropertyName("attachments")]
     public List<DiscordAttachment> Attachments

@@ -29,6 +29,56 @@
             </FlyoutBase.AttachedFlyout>
         </Border>
 
+        <!-- Ancrage pour les résultats de recherche de messages dans le salon -->
+        <Border x:Name="ChannelSearchFlyoutAnchor" Visibility="Collapsed">
+            <FlyoutBase.AttachedFlyout>
+                <Flyout x:Name="ChannelSearchResultsFlyout" Placement="BottomEdgeAlignedRight">
+                    <Border Width="380" Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel Spacing="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Résultats de recherche" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.ChannelSearchResultsCountText, Mode=OneWay}"
+                                           FontSize="11" Opacity="0.6" VerticalAlignment="Center" />
+                            </Grid>
+                            <ProgressBar IsIndeterminate="True" Visibility="{x:Bind ViewModel.IsSearchingChannel, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                            <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{x:Bind ViewModel.ChannelSearchResults, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:DiscordMessage">
+                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    Background="#2B2D31" BorderBrush="#383A40" BorderThickness="1"
+                                                    Padding="10" CornerRadius="6" Tag="{x:Bind}" Click="OnJumpToSearchResultClicked" Margin="0,0,0,6">
+                                                <Grid RowSpacing="4">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid Grid.Row="0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="12" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind ShortTime}" FontSize="10" Opacity="0.5" />
+                                                    </Grid>
+                                                    <TextBlock Grid.Row="1" Text="{x:Bind Content}" FontSize="12" TextWrapping="Wrap" Opacity="0.9" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                </Flyout>
+            </FlyoutBase.AttachedFlyout>
+        </Border>
+
+
         <!-- Splash Screen animé au démarrage façon Discord -->
         <Grid x:Name="StartupSplash" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
               Canvas.ZIndex="1000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
@@ -934,10 +984,31 @@
                                            FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock Text="|" Opacity="0.3" VerticalAlignment="Center"
                                            Visibility="{x:Bind ViewModel.TopicVisibility, Mode=OneWay}" />
-                                <TextBlock Text="{x:Bind ViewModel.SelectedChannelTopic, Mode=OneWay}"
-                                           FontSize="12" Opacity="0.6" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="360"
-                                           Visibility="{x:Bind ViewModel.TopicVisibility, Mode=OneWay}" />
+                                <Button Background="Transparent" BorderThickness="0" Padding="4,2" CornerRadius="6"
+                                        Visibility="{x:Bind ViewModel.TopicVisibility, Mode=OneWay}"
+                                        ToolTipService.ToolTip="Afficher le sujet complet du salon">
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedChannelTopic, Mode=OneWay}"
+                                               FontSize="12" Opacity="0.65" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="360" />
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedLeft">
+                                            <Border Width="380" Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="8" Padding="14">
+                                                <StackPanel Spacing="10">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                        <TextBlock Text="#" FontSize="18" FontWeight="Bold" Foreground="#5865F2" />
+                                                        <TextBlock Text="{x:Bind ViewModel.SelectedChannelName, Mode=OneWay}" FontSize="15" FontWeight="Bold" />
+                                                    </StackPanel>
+                                                    <Border Height="1" Background="#2B2D31" />
+                                                    <TextBlock Text="SUJET DU SALON" FontSize="11" FontWeight="Bold" Opacity="0.6" />
+                                                    <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                                                        <TextBlock Text="{x:Bind ViewModel.SelectedChannelTopic, Mode=OneWay}"
+                                                                   TextWrapping="Wrap" FontSize="13" IsTextSelectionEnabled="True" LineHeight="18" />
+                                                    </ScrollViewer>
+                                                </StackPanel>
+                                            </Border>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -959,39 +1030,95 @@
                                     <FontIcon Glyph="&#xE718;" FontSize="15" />
                                     <Button.Flyout>
                                         <Flyout Placement="BottomEdgeAlignedRight">
-                                            <StackPanel Width="360" Spacing="10">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <FontIcon Glyph="&#xE718;" FontSize="15" VerticalAlignment="Center" />
-                                                    <TextBlock Text="Messages épinglés" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                                <ScrollViewer MaxHeight="380">
-                                                    <ItemsControl ItemsSource="{x:Bind ViewModel.PinnedMessages, Mode=OneWay}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="models:DiscordMessage">
-                                                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                        BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
-                                                                    <StackPanel Spacing="4">
-                                                                        <Grid>
-                                                                            <Grid.ColumnDefinitions>
-                                                                                <ColumnDefinition Width="*" />
-                                                                                <ColumnDefinition Width="Auto" />
-                                                                            </Grid.ColumnDefinitions>
-                                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                                <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="13" />
-                                                                                <TextBlock Text="{x:Bind TimeText}" FontSize="11" Opacity="0.5" VerticalAlignment="Center" />
-                                                                            </StackPanel>
-                                                                            <Button Grid.Column="1" Content="Désépingler" FontSize="10" Padding="6,2"
-                                                                                    Click="OnUnpinFromFlyoutClicked" />
+                                            <Border Width="380" Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="8" Padding="12">
+                                                <StackPanel Spacing="10">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE718;" FontSize="15" Foreground="#5865F2" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{x:Bind ViewModel.PinnedMessagesCountText, Mode=OneWay}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    
+                                                    <!-- État vide (aucun message épinglé) -->
+                                                    <StackPanel Visibility="{x:Bind ViewModel.HasPinnedMessages, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
+                                                                Spacing="10" Padding="16" HorizontalAlignment="Center">
+                                                        <Border Width="48" Height="48" CornerRadius="24" Background="#2B2D31" HorizontalAlignment="Center">
+                                                            <FontIcon Glyph="&#xE718;" FontSize="20" Opacity="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                        <TextBlock Text="Ce salon n'a aucun message épinglé... pour l'instant."
+                                                                   FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                                                        <TextBlock Text="Astuce : vous pouvez épingler un message depuis son menu contextuel."
+                                                                   FontSize="11" Opacity="0.55" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                                                    </StackPanel>
+
+                                                    <!-- Liste des messages épinglés -->
+                                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto"
+                                                                  Visibility="{x:Bind ViewModel.HasPinnedMessages, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <ItemsControl ItemsSource="{x:Bind ViewModel.PinnedMessages, Mode=OneWay}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:DiscordMessage">
+                                                                    <Border Background="#2B2D31" BorderBrush="#383A40"
+                                                                            BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                                                        <Grid RowSpacing="6">
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto" />
+                                                                                <RowDefinition Height="Auto" />
+                                                                                <RowDefinition Height="Auto" />
+                                                                            </Grid.RowDefinitions>
+                                                                            <Grid Grid.Row="0">
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                    <ColumnDefinition Width="*" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" Margin="0,0,8,0">
+                                                                                    <Ellipse>
+                                                                                        <Ellipse.Fill>
+                                                                                            <ImageBrush ImageSource="{x:Bind Author.AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                        </Ellipse.Fill>
+                                                                                    </Ellipse>
+                                                                                </Border>
+                                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                                                    <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="12" />
+                                                                                    <TextBlock Text="{x:Bind TimeText}" FontSize="10" Opacity="0.5" />
+                                                                                </StackPanel>
+                                                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                                                                    <Button Content="Aller au message" FontSize="10" Padding="6,2" CornerRadius="4"
+                                                                                            Background="#1E1F22" BorderThickness="0"
+                                                                                            Tag="{x:Bind}" Click="OnJumpToPinnedMessageClicked"
+                                                                                            ToolTipService.ToolTip="Afficher ce message dans la conversation" />
+                                                                                    <Button Content="&#xE711;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="9" Padding="4,2" CornerRadius="4"
+                                                                                            Background="Transparent" BorderThickness="0" Opacity="0.7"
+                                                                                            Tag="{x:Bind}" Click="OnUnpinFromFlyoutClicked"
+                                                                                            ToolTipService.ToolTip="Désépingler ce message" />
+                                                                                </StackPanel>
+                                                                            </Grid>
+                                                                            <TextBlock Grid.Row="1" Text="{x:Bind Content}" TextWrapping="Wrap" FontSize="12" Opacity="0.95" Margin="36,0,0,0"
+                                                                                       Visibility="{x:Bind HasContent, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                            <ItemsControl Grid.Row="2" ItemsSource="{x:Bind ImageAttachments}" Margin="36,2,0,0"
+                                                                                          Visibility="{x:Bind HasImages, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="models:DiscordAttachment">
+                                                                                        <Border CornerRadius="6" Margin="0,2,0,2">
+                                                                                            <Image Source="{x:Bind Url, Converter={StaticResource StringToImageSourceConverter}}"
+                                                                                                   MaxHeight="100" MaxWidth="180" Stretch="UniformToFill" />
+                                                                                        </Border>
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+
+                                                                            </ItemsControl>
                                                                         </Grid>
-                                                                        <TextBlock Text="{x:Bind Content}" TextWrapping="Wrap" FontSize="13" Opacity="0.9" />
-                                                                    </StackPanel>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </ScrollViewer>
-                                            </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
+                                                </StackPanel>
+                                            </Border>
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
@@ -1002,34 +1129,64 @@
                                     <FontIcon Glyph="&#xE715;" FontSize="15" />
                                     <Button.Flyout>
                                         <Flyout Placement="BottomEdgeAlignedRight">
-                                            <StackPanel Width="360" Spacing="10">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <FontIcon Glyph="&#xE715;" FontSize="15" VerticalAlignment="Center" />
-                                                    <TextBlock Text="Mentions récentes" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
+                                            <Border Width="380" Background="#1E1F22" BorderBrush="#2B2D31" BorderThickness="1" CornerRadius="8" Padding="12">
+                                                <StackPanel Spacing="10">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <FontIcon Glyph="&#xE715;" FontSize="15" Foreground="#5865F2" VerticalAlignment="Center" />
+                                                        <TextBlock Text="Mentions récentes" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
+                                                        <ItemsControl ItemsSource="{x:Bind ViewModel.RecentMentions, Mode=OneWay}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:DiscordMessage">
+                                                                    <Border Background="#2B2D31" BorderBrush="#383A40"
+                                                                            BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                                                        <Grid RowSpacing="6">
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto" />
+                                                                                <RowDefinition Height="Auto" />
+                                                                            </Grid.RowDefinitions>
+                                                                            <Grid Grid.Row="0">
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                    <ColumnDefinition Width="*" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" Margin="0,0,8,0">
+                                                                                    <Ellipse>
+                                                                                        <Ellipse.Fill>
+                                                                                            <ImageBrush ImageSource="{x:Bind Author.AvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                                                        </Ellipse.Fill>
+                                                                                    </Ellipse>
+                                                                                </Border>
+                                                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                                                    <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="12" />
+                                                                                    <TextBlock Text="{x:Bind TimeText}" FontSize="10" Opacity="0.5" />
+                                                                                </StackPanel>
+                                                                                <Button Grid.Column="2" Content="Aller au message" FontSize="10" Padding="6,2" CornerRadius="4"
+                                                                                        Background="#1E1F22" BorderThickness="0"
+                                                                                        Tag="{x:Bind}" Click="OnJumpToPinnedMessageClicked" />
+                                                                            </Grid>
+                                                                            <TextBlock Grid.Row="1" Text="{x:Bind Content}" TextWrapping="Wrap" FontSize="12" Opacity="0.95" Margin="36,0,0,0" />
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
                                                 </StackPanel>
-                                                <ScrollViewer MaxHeight="380">
-                                                    <ItemsControl ItemsSource="{x:Bind ViewModel.RecentMentions, Mode=OneWay}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="models:DiscordMessage">
-                                                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                        BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
-                                                                    <StackPanel Spacing="4">
-                                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                            <TextBlock Text="{x:Bind Author.DisplayName}" FontWeight="SemiBold" FontSize="13" />
-                                                                            <TextBlock Text="{x:Bind TimeText}" FontSize="11" Opacity="0.5" VerticalAlignment="Center" />
-                                                                        </StackPanel>
-                                                                        <TextBlock Text="{x:Bind Content}" TextWrapping="Wrap" FontSize="13" Opacity="0.9" />
-                                                                    </StackPanel>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </ScrollViewer>
-                                            </StackPanel>
+                                            </Border>
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
+
+                                <!-- Barre de Recherche dans le salon (Ctrl+F) -->
+                                <AutoSuggestBox x:Name="InChannelSearchBox" Width="145" PlaceholderText="Rechercher"
+                                                QueryIcon="Find" CornerRadius="6" VerticalAlignment="Center"
+                                                TextChanged="OnChannelSearchTextChanged"
+                                                QuerySubmitted="OnChannelSearchQuerySubmitted"
+                                                ToolTipService.ToolTip="Rechercher dans ce salon (Ctrl+F)" />
+
 
                                 <!-- Afficher / Masquer la liste des membres -->
                                 <Button Width="34" Height="34" Padding="0" CornerRadius="8" Background="Transparent" BorderThickness="0"
@@ -1202,7 +1359,10 @@
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="models:DiscordMessage">
-                                <StackPanel Margin="0,2,0,6" Spacing="2">
+                                <Grid Margin="0,1,0,3">
+                                    <Border Background="#2B5865F2" CornerRadius="6"
+                                            Visibility="{x:Bind IsHighlighted, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <StackPanel Padding="6,2" Spacing="2">
                                     <StackPanel.ContextFlyout>
                                         <Flyout Placement="RightEdgeAlignedTop">
                                             <Flyout.FlyoutPresenterStyle>
@@ -2123,6 +2283,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
+                            </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>

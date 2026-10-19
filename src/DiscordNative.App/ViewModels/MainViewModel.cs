@@ -25,6 +25,17 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<DiscordChannel> PrivateChannels => _client.PrivateChannels;
     public ObservableCollection<DiscordMessage> Messages { get; } = new();
     public ObservableCollection<DiscordMessage> PinnedMessages { get; } = new();
+    public bool HasPinnedMessages => PinnedMessages.Count > 0;
+    public string PinnedMessagesCountText => $"Messages épinglés ({PinnedMessages.Count})";
+
+    public ObservableCollection<DiscordMessage> ChannelSearchResults { get; } = new();
+
+    [ObservableProperty]
+    private bool isSearchingChannel;
+
+    public bool HasChannelSearchResults => ChannelSearchResults.Count > 0;
+    public string ChannelSearchResultsCountText => $"{ChannelSearchResults.Count} résultat{(ChannelSearchResults.Count > 1 ? "s" : "")}";
+
     public ObservableCollection<DiscordMessage> RecentMentions { get; } = new();
     public ObservableCollection<DiscordUser> ChannelMembers { get; } = new();
     public ObservableCollection<MemberActivityCardViewModel> RecentMemberActivities { get; } = new();
@@ -1101,12 +1112,19 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (_selectedChannel is null) return;
         PinnedMessages.Clear();
+        OnPropertyChanged(nameof(HasPinnedMessages));
+        OnPropertyChanged(nameof(PinnedMessagesCountText));
         try
         {
             var pins = await _client.Rest.GetPinnedMessagesAsync(_selectedChannel.Id);
             foreach (var pin in pins) PinnedMessages.Add(pin);
         }
         catch { }
+        finally
+        {
+            OnPropertyChanged(nameof(HasPinnedMessages));
+            OnPropertyChanged(nameof(PinnedMessagesCountText));
+        }
     }
 
     public async Task TogglePinMessageAsync(DiscordMessage message)
@@ -1118,14 +1136,75 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 await _client.Rest.UnpinMessageAsync(_selectedChannel.Id, message.Id);
                 message.Pinned = false;
+                var existing = PinnedMessages.FirstOrDefault(p => p.Id == message.Id);
+                if (existing != null) PinnedMessages.Remove(existing);
             }
             else
             {
                 await _client.Rest.PinMessageAsync(_selectedChannel.Id, message.Id);
                 message.Pinned = true;
+                if (!PinnedMessages.Any(p => p.Id == message.Id)) PinnedMessages.Insert(0, message);
             }
+            OnPropertyChanged(nameof(HasPinnedMessages));
+            OnPropertyChanged(nameof(PinnedMessagesCountText));
         }
         catch { }
+    }
+
+    private System.Threading.CancellationTokenSource? _searchCts;
+    public async Task SearchCurrentChannelAsync(string query)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        var ct = _searchCts.Token;
+
+        ChannelSearchResults.Clear();
+        OnPropertyChanged(nameof(HasChannelSearchResults));
+        OnPropertyChanged(nameof(ChannelSearchResultsCountText));
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            IsSearchingChannel = false;
+            return;
+        }
+
+        IsSearchingChannel = true;
+        try
+        {
+            // 1. Instant local search from loaded messages
+            var localMatches = Messages
+                .Where(m => (!string.IsNullOrEmpty(m.Content) && m.Content.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                            (m.Author?.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+            foreach (var msg in localMatches)
+            {
+                if (!ChannelSearchResults.Any(r => r.Id == msg.Id))
+                    ChannelSearchResults.Add(msg);
+            }
+
+            // 2. Query REST search endpoint if channel is selected
+            if (_selectedChannel != null)
+            {
+                var remoteMatches = await _client.Rest.SearchChannelMessagesAsync(_selectedChannel.Id, query, ct);
+                if (!ct.IsCancellationRequested)
+                {
+                    foreach (var msg in remoteMatches)
+                    {
+                        if (!ChannelSearchResults.Any(r => r.Id == msg.Id))
+                            ChannelSearchResults.Add(msg);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch { }
+        finally
+        {
+            IsSearchingChannel = false;
+            OnPropertyChanged(nameof(HasChannelSearchResults));
+            OnPropertyChanged(nameof(ChannelSearchResultsCountText));
+        }
     }
 
     public async Task LoadMentionsAsync()

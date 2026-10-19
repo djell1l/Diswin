@@ -110,6 +110,15 @@ public sealed partial class MainWindowContent : UserControl
         Loaded += OnLoaded;
         KeyDown += (s, e) =>
         {
+            var ctrlState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control);
+            bool isCtrl = (ctrlState & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+            if (isCtrl && e.Key == VirtualKey.F)
+            {
+                InChannelSearchBox?.Focus(FocusState.Programmatic);
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == VirtualKey.Escape)
             {
                 if (AvatarZoomOverlay.Visibility == Visibility.Visible)
@@ -900,7 +909,7 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
-    // --- Actions En-tête de Salon : Invitations, Messages Épinglés, Mentions, Membres ---
+    // --- Actions En-tête de Salon : Invitations, Messages Épinglés, Mentions, Membres, Recherche ---
     private void OnOpenPinsFlyoutClicked(object sender, RoutedEventArgs e)
     {
         _ = ViewModel.LoadPinnedMessagesAsync();
@@ -913,6 +922,66 @@ public sealed partial class MainWindowContent : UserControl
         {
             await ViewModel.TogglePinMessageAsync(msg);
             await ViewModel.LoadPinnedMessagesAsync();
+        }
+    }
+
+    private void OnJumpToPinnedMessageClicked(object sender, RoutedEventArgs e)
+    {
+        var msg = GetMessageFromSender(sender);
+        JumpToMessage(msg);
+    }
+
+    private void OnJumpToSearchResultClicked(object sender, RoutedEventArgs e)
+    {
+        ChannelSearchResultsFlyout?.Hide();
+        var msg = GetMessageFromSender(sender);
+        JumpToMessage(msg);
+    }
+
+    private void JumpToMessage(DiscordMessage? msg)
+    {
+        if (msg == null) return;
+        var existing = ViewModel.Messages.FirstOrDefault(m => m.Id == msg.Id);
+        if (existing == null)
+        {
+            ViewModel.Messages.Add(msg);
+            existing = msg;
+        }
+
+        MessageList.ScrollIntoView(existing, ScrollIntoViewAlignment.Leading);
+
+        // Animation de mise en surbrillance temporaire
+        existing.IsHighlighted = true;
+        _ = System.Threading.Tasks.Task.Run(async () =>
+        {
+            await System.Threading.Tasks.Task.Delay(2000);
+            Protocol.App.RunOnUiThread(() =>
+            {
+                existing.IsHighlighted = false;
+            });
+        });
+    }
+
+    private void OnChannelSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            string query = sender.Text?.Trim() ?? string.Empty;
+            if (!string.IsNullOrEmpty(query))
+            {
+                ChannelSearchResultsFlyout?.ShowAt(sender);
+            }
+            _ = ViewModel.SearchCurrentChannelAsync(query);
+        }
+    }
+
+    private void OnChannelSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        string query = sender.Text?.Trim() ?? string.Empty;
+        if (!string.IsNullOrEmpty(query))
+        {
+            ChannelSearchResultsFlyout?.ShowAt(sender);
+            _ = ViewModel.SearchCurrentChannelAsync(query);
         }
     }
 
