@@ -115,6 +115,14 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     public DiscordCallMetadata? Call { get; set; }
 
     // ---------- Propriétés calculées pour l'UI ----------
+    [JsonIgnore] public string? GuildName { get; set; }
+    [JsonIgnore] public string? ChannelName { get; set; }
+    [JsonIgnore] public string? GuildIconUrl { get; set; }
+    [JsonIgnore] public bool HasGuildIcon => !string.IsNullOrEmpty(GuildIconUrl);
+    [JsonIgnore] public string HeaderContextText => !string.IsNullOrEmpty(GuildName)
+        ? (!string.IsNullOrEmpty(ChannelName) ? $"{GuildName} › #{ChannelName}" : GuildName)
+        : (!string.IsNullOrEmpty(ChannelName) ? $"#{ChannelName}" : "Message");
+    [JsonIgnore] public bool IsBookmarked { get; set; }
 
     /// <summary>Faux = message "suite" du même auteur (en-tête masqué, comme Discord).</summary>
     [JsonIgnore] public bool ShowHeader { get; set; } = true;

@@ -1832,12 +1832,10 @@ public sealed partial class MainWindowContent : UserControl
     private void OnBookmarkMessageClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
-        var msg = GetMessageFromSender(sender);
+        var msg = GetMessageFromSender(sender) ?? (sender as FrameworkElement)?.Tag as DiscordMessage;
         if (msg != null)
         {
-            var guildPart = string.IsNullOrWhiteSpace(msg.GuildId) ? "@me" : msg.GuildId;
-            var link = $"https://discord.com/channels/{guildPart}/{msg.ChannelId}/{msg.Id}";
-            CopyToClipboard(link);
+            ViewModel.ToggleBookmark(msg);
         }
     }
 
@@ -4314,5 +4312,109 @@ public sealed partial class MainWindowContent : UserControl
         await ViewModel.ClearCustomStatusAsync();
         CustomStatusModalOverlay.Visibility = Visibility.Collapsed;
     }
+
+    // --- Discord Inbox Popout (Non lus, Mentions, Favoris) & Bookmarks ---
+    private void OnOpenInboxFlyoutClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.RefreshUnreadChannels();
+        _ = ViewModel.LoadMentionsAsync();
+    }
+
+    private void OnInboxTabClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int tabIdx))
+        {
+            ViewModel.SelectedInboxTabIndex = tabIdx;
+        }
+    }
+
+    private void OnInboxMarkAllReadClicked(object sender, RoutedEventArgs e)
+    {
+        ViewModel.MarkAllAsRead();
+    }
+
+    private async void OnInboxJumpToChannelClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && (fe.Tag is DiscordChannel ch || (fe.DataContext is DiscordChannel ch2 && (ch = ch2) != null)))
+        {
+            InboxFlyout?.Hide();
+            var guild = ViewModel.Guilds.FirstOrDefault(g => g.Channels != null && g.Channels.Any(c => c.Id == ch.Id));
+            if (guild != null)
+            {
+                GuildList.SelectedItem = guild;
+                await ViewModel.SelectGuildAsync(guild);
+                await ViewModel.SelectChannelAsync(ch);
+            }
+            else
+            {
+                GuildList.SelectedItem = null;
+                ViewModel.ShowFriendsView();
+                var dm = ViewModel.PrivateChannels.FirstOrDefault(c => c.Id == ch.Id);
+                if (dm != null)
+                {
+                    await ViewModel.SelectChannelAsync(dm);
+                }
+                else
+                {
+                    await ViewModel.SelectChannelAsync(ch);
+                }
+            }
+        }
+    }
+
+    private void OnInboxMarkChannelReadClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && (fe.Tag is DiscordChannel ch || (fe.DataContext is DiscordChannel ch2 && (ch = ch2) != null)))
+        {
+            ch.HasUnread = false;
+            ch.MentionCount = 0;
+            ViewModel.UnreadChannels.Remove(ch);
+            if (!string.IsNullOrEmpty(ch.LastMessageId))
+            {
+                _ = ViewModel.AckMessageAsync(ch.LastMessageId, ch.Id);
+            }
+            ViewModel.RefreshUnreadChannels();
+        }
+    }
+
+    private async void OnInboxJumpToMessageClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && (fe.Tag is DiscordMessage msg || (fe.DataContext is DiscordMessage msg2 && (msg = msg2) != null)))
+        {
+            InboxFlyout?.Hide();
+            if (!string.IsNullOrEmpty(msg.ChannelId) && ViewModel.SelectedChannel?.Id != msg.ChannelId)
+            {
+                if (!string.IsNullOrEmpty(msg.GuildId))
+                {
+                    var g = ViewModel.Guilds.FirstOrDefault(x => x.Id == msg.GuildId);
+                    if (g != null)
+                    {
+                        GuildList.SelectedItem = g;
+                        await ViewModel.SelectGuildAsync(g);
+                        var ch = g.Channels?.FirstOrDefault(c => c.Id == msg.ChannelId);
+                        if (ch != null) await ViewModel.SelectChannelAsync(ch);
+                    }
+                }
+                else
+                {
+                    GuildList.SelectedItem = null;
+                    ViewModel.ShowFriendsView();
+                    var dm = ViewModel.PrivateChannels.FirstOrDefault(c => c.Id == msg.ChannelId);
+                    if (dm != null) await ViewModel.SelectChannelAsync(dm);
+                }
+                await Task.Delay(350);
+            }
+            JumpToMessage(msg);
+        }
+    }
+
+    private void OnInboxRemoveBookmarkClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && (fe.Tag is DiscordMessage msg || (fe.DataContext is DiscordMessage msg2 && (msg = msg2) != null)))
+        {
+            ViewModel.RemoveBookmark(msg);
+        }
+    }
 }
+
 

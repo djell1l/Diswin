@@ -49,6 +49,51 @@ public sealed partial class MainViewModel : ObservableObject
     public string ChannelSearchResultsCountText => $"{ChannelSearchResults.Count} résultat{(ChannelSearchResults.Count > 1 ? "s" : "")}";
 
     public ObservableCollection<DiscordMessage> RecentMentions { get; } = new();
+    public ObservableCollection<DiscordChannel> UnreadChannels { get; } = new();
+    public bool HasUnreadChannels => UnreadChannels.Count > 0;
+    public string UnreadChannelsCountText => UnreadChannels.Count.ToString();
+
+    public ObservableCollection<DiscordMessage> Bookmarks { get; } = new();
+    public bool HasBookmarks => Bookmarks.Count > 0;
+    public string BookmarksCountText => Bookmarks.Count.ToString();
+
+    private int _selectedInboxTabIndex = 0; // 0 = Non lus, 1 = Mentions, 2 = Favoris
+    public int SelectedInboxTabIndex
+    {
+        get => _selectedInboxTabIndex;
+        set
+        {
+            if (_selectedInboxTabIndex != value)
+            {
+                _selectedInboxTabIndex = value;
+                OnPropertyChanged(nameof(SelectedInboxTabIndex));
+                OnPropertyChanged(nameof(IsInboxUnreadsSelected));
+                OnPropertyChanged(nameof(IsInboxMentionsSelected));
+                OnPropertyChanged(nameof(IsInboxBookmarksSelected));
+                OnPropertyChanged(nameof(InboxUnreadsVisibility));
+                OnPropertyChanged(nameof(InboxMentionsVisibility));
+                OnPropertyChanged(nameof(InboxBookmarksVisibility));
+                OnPropertyChanged(nameof(InboxTabUnreadsBackground));
+                OnPropertyChanged(nameof(InboxTabMentionsBackground));
+                OnPropertyChanged(nameof(InboxTabBookmarksBackground));
+            }
+        }
+    }
+
+    public bool IsInboxUnreadsSelected => SelectedInboxTabIndex == 0;
+    public bool IsInboxMentionsSelected => SelectedInboxTabIndex == 1;
+    public bool IsInboxBookmarksSelected => SelectedInboxTabIndex == 2;
+    public string InboxTabUnreadsBackground => IsInboxUnreadsSelected ? "#2B2D31" : "Transparent";
+    public string InboxTabMentionsBackground => IsInboxMentionsSelected ? "#2B2D31" : "Transparent";
+    public string InboxTabBookmarksBackground => IsInboxBookmarksSelected ? "#2B2D31" : "Transparent";
+
+    public bool HasMentionsInInbox => RecentMentions.Count > 0;
+    public bool HasNoMentionsInInbox => RecentMentions.Count == 0;
+
+    public Microsoft.UI.Xaml.Visibility InboxUnreadsVisibility => IsInboxUnreadsSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility InboxMentionsVisibility => IsInboxMentionsSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility InboxBookmarksVisibility => IsInboxBookmarksSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
     public ObservableCollection<DiscordUser> ChannelMembers { get; } = new();
     public ObservableCollection<MemberActivityCardViewModel> RecentMemberActivities { get; } = new();
     public bool HasRecentMemberActivities => RecentMemberActivities.Count > 0;
@@ -333,6 +378,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
         };
         _rpcTickerTimer.Start();
+        LoadBookmarks();
     }
 
     private void OnVoiceSpeakingChanged(string userId, bool isSpeaking)
@@ -1255,8 +1301,161 @@ public sealed partial class MainViewModel : ObservableObject
         RecentMentions.Clear();
         try
         {
-            var mentions = await _client.Rest.GetMentionsAsync(25);
-            foreach (var m in mentions) RecentMentions.Add(m);
+            var mentions = await _client.Rest.GetMentionsAsync(30);
+            foreach (var m in mentions)
+            {
+                if (!string.IsNullOrEmpty(m.GuildId))
+                {
+                    var g = Guilds.FirstOrDefault(x => x.Id == m.GuildId);
+                    if (g != null)
+                    {
+                        m.GuildName = g.Name;
+                        m.GuildIconUrl = g.IconUrl;
+                        var ch = g.Channels?.FirstOrDefault(c => c.Id == m.ChannelId);
+                        if (ch != null) m.ChannelName = ch.DisplayName;
+                    }
+                }
+                else
+                {
+                    var dm = PrivateChannels.FirstOrDefault(c => c.Id == m.ChannelId);
+                    if (dm != null)
+                    {
+                        m.GuildName = "Message privé";
+                        m.ChannelName = dm.DisplayName;
+                        m.GuildIconUrl = dm.IconUrl;
+                    }
+                }
+                RecentMentions.Add(m);
+            }
+        }
+        catch { }
+        finally
+        {
+            OnPropertyChanged(nameof(HasMentionsInInbox));
+            OnPropertyChanged(nameof(HasNoMentionsInInbox));
+        }
+    }
+
+    public void RefreshUnreadChannels()
+    {
+        UnreadChannels.Clear();
+        foreach (var g in Guilds)
+        {
+            if (g.Channels == null) continue;
+            foreach (var ch in g.Channels)
+            {
+                if (ch.HasUnread || ch.MentionCount > 0)
+                {
+                    ch.GuildName = g.Name;
+                    ch.GuildIconUrl = g.IconUrl;
+                    UnreadChannels.Add(ch);
+                }
+            }
+        }
+        foreach (var dm in PrivateChannels)
+        {
+            if (dm.HasUnread || dm.MentionCount > 0)
+            {
+                dm.GuildName = "Message privé";
+                dm.GuildIconUrl = dm.IconUrl;
+                UnreadChannels.Add(dm);
+            }
+        }
+        OnPropertyChanged(nameof(HasUnreadChannels));
+        OnPropertyChanged(nameof(UnreadChannelsCountText));
+    }
+
+    public void MarkAllAsRead()
+    {
+        foreach (var g in Guilds)
+        {
+            g.MentionCount = 0;
+            g.HasUnread = false;
+            if (g.Channels == null) continue;
+            foreach (var ch in g.Channels)
+            {
+                ch.MentionCount = 0;
+                ch.HasUnread = false;
+            }
+        }
+        foreach (var dm in PrivateChannels)
+        {
+            dm.MentionCount = 0;
+            dm.HasUnread = false;
+        }
+        UnreadChannels.Clear();
+        OnPropertyChanged(nameof(HasUnreadChannels));
+        OnPropertyChanged(nameof(UnreadChannelsCountText));
+        OnPropertyChanged(nameof(TotalDmMentionCount));
+    }
+
+    public void ToggleBookmark(DiscordMessage msg)
+    {
+        var existing = Bookmarks.FirstOrDefault(b => b.Id == msg.Id);
+        if (existing != null)
+        {
+            Bookmarks.Remove(existing);
+        }
+        else
+        {
+            Bookmarks.Insert(0, msg);
+        }
+        SaveBookmarks();
+        OnPropertyChanged(nameof(HasBookmarks));
+        OnPropertyChanged(nameof(BookmarksCountText));
+    }
+
+    public void RemoveBookmark(DiscordMessage msg)
+    {
+        var existing = Bookmarks.FirstOrDefault(b => b.Id == msg.Id);
+        if (existing != null)
+        {
+            Bookmarks.Remove(existing);
+            SaveBookmarks();
+            OnPropertyChanged(nameof(HasBookmarks));
+            OnPropertyChanged(nameof(BookmarksCountText));
+        }
+    }
+
+    private void SaveBookmarks()
+    {
+        try
+        {
+            var folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Diswin");
+            System.IO.Directory.CreateDirectory(folder);
+            var file = System.IO.Path.Combine(folder, "bookmarks.json");
+            var json = System.Text.Json.JsonSerializer.Serialize(Bookmarks);
+            System.IO.File.WriteAllText(file, json);
+        }
+        catch { }
+    }
+
+    public void LoadBookmarks()
+    {
+        try
+        {
+            var file = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Diswin", "bookmarks.json");
+            if (System.IO.File.Exists(file))
+            {
+                var json = System.IO.File.ReadAllText(file);
+                var items = System.Text.Json.JsonSerializer.Deserialize<List<DiscordMessage>>(json);
+                if (items != null)
+                {
+                    Bookmarks.Clear();
+                    foreach (var it in items) Bookmarks.Add(it);
+                    OnPropertyChanged(nameof(HasBookmarks));
+                    OnPropertyChanged(nameof(BookmarksCountText));
+                }
+            }
+        }
+        catch { }
+    }
+
+    public async Task AckMessageAsync(string messageId, string channelId)
+    {
+        try
+        {
+            await _client.Rest.AckMessageAsync(channelId, messageId);
         }
         catch { }
     }

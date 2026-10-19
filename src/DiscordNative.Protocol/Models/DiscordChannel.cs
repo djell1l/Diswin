@@ -185,6 +185,11 @@ public sealed class DiscordChannel : INotifyPropertyChanged
         DiscordChannelType.GroupDm => null, // Discord handles group DM icons separately
         _ => null
     };
+
+    [JsonIgnore] public string? GuildName { get; set; }
+    [JsonIgnore] public string? GuildIconUrl { get; set; }
+    [JsonIgnore] public bool HasGuildIcon => !string.IsNullOrEmpty(GuildIconUrl);
+    [JsonIgnore] public string HeaderContextText => !string.IsNullOrEmpty(GuildName) ? $"{GuildName} › #{DisplayName}" : DisplayName;
 }
 
 public sealed class DiscordPermissionOverwrite
