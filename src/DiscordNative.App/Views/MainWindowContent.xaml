@@ -762,6 +762,13 @@
                                                         <MenuFlyoutItem Text="Copier l'identifiant" Click="OnCopyChannelIdClicked">
                                                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8C8;" /></MenuFlyoutItem.Icon>
                                                         </MenuFlyoutItem>
+                                                        <MenuFlyoutItem Text="Modifier le groupe" Click="OnEditGroupDmClicked">
+                                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE70F;" /></MenuFlyoutItem.Icon>
+                                                        </MenuFlyoutItem>
+                                                        <MenuFlyoutSeparator />
+                                                        <MenuFlyoutItem Text="Quitter le groupe" Click="OnLeaveGroupDmClicked" Foreground="#FF453A">
+                                                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE89B;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                        </MenuFlyoutItem>
                                                         <MenuFlyoutSeparator />
                                                         <MenuFlyoutItem Text="Fermer le message privé" Click="OnCloseDmChannelClicked" Foreground="#FF453A">
                                                             <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE711;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
@@ -770,11 +777,16 @@
                                                 </StackPanel.ContextFlyout>
                                                 <Grid Width="28" Height="28" PointerEntered="OnAvatarPointerEntered" PointerExited="OnAvatarPointerExited">
                                                     <Ellipse Fill="{ThemeResource ControlFillColorSecondaryBrush}" />
-                                                    <Ellipse>
+                                                    <!-- Avatar si photo de groupe présente ou DM individuel -->
+                                                    <Ellipse Visibility="{x:Bind ShowDefaultGroupIcon, Mode=OneWay, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
                                                         <Ellipse.Fill>
                                                             <ImageBrush ImageSource="{x:Bind IconUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
                                                         </Ellipse.Fill>
                                                     </Ellipse>
+                                                    <!-- Silhouette par défaut Discord pour groupe sans photo -->
+                                                    <FontIcon Glyph="&#xE716;" FontSize="14" Foreground="#949BA4"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                              Visibility="{x:Bind ShowDefaultGroupIcon, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 </Grid>
                                                 <TextBlock Text="{x:Bind DisplayName}" VerticalAlignment="Center" />
                                                 <Border HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -6867,6 +6879,60 @@
                         </Grid>
                     </Border>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <!-- MODAL MODIFIER LE GROUPE (Fidèle à media_1792925666296_aedd643d.png) -->
+        <Grid x:Name="EditGroupDmModalOverlay" Visibility="Collapsed" Background="#80000000" Canvas.ZIndex="960"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Width="440" Background="#313338" CornerRadius="8" Padding="16,20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Modifier le groupe" FontSize="20" FontWeight="Bold" Foreground="White"
+                               HorizontalAlignment="Center" />
+
+                    <!-- Avatar circulaire du groupe avec bouton crayon -->
+                    <Grid Width="96" Height="96" HorizontalAlignment="Center" Margin="0,8">
+                        <Ellipse Fill="#2B2D31" />
+                        <Ellipse>
+                            <Ellipse.Fill>
+                                <ImageBrush x:Name="EditGroupIconPreview" Stretch="UniformToFill" />
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <FontIcon x:Name="EditGroupIconDefaultIcon" Glyph="&#xE716;" FontSize="38" Foreground="#949BA4"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                        <!-- Bouton crayon pour changer l'icône -->
+                        <Button Width="32" Height="32" CornerRadius="16" Padding="0"
+                                Background="#5865F2" BorderThickness="0"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Click="OnChangeGroupIconClicked" ToolTipService.ToolTip="Changer l'icône du groupe">
+                            <FontIcon Glyph="&#xE70F;" FontSize="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Champ du nom du groupe -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="NOM DU GROUPE" FontSize="12" FontWeight="Bold" Foreground="#B5BAC1" />
+                        <TextBox x:Name="EditGroupNameBox" PlaceholderText="Nom du groupe"
+                                 CornerRadius="4" Background="#1E1F22" Foreground="White" BorderThickness="0"
+                                 Padding="10,8" />
+                    </StackPanel>
+
+                    <!-- Boutons Annuler / Sauvegarder -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Annuler" Background="Transparent" Foreground="White"
+                                BorderThickness="0" Padding="14,8" CornerRadius="4"
+                                Click="OnCancelEditGroupDmClicked" HorizontalAlignment="Left" />
+                        <Button Grid.Column="1" Content="Sauvegarder" Background="#5865F2" Foreground="White"
+                                BorderThickness="0" Padding="20,8" CornerRadius="4" FontWeight="SemiBold"
+                                Click="OnSaveEditGroupDmClicked" HorizontalAlignment="Right" />
+                    </Grid>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>

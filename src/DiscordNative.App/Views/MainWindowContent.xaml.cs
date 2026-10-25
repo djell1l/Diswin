@@ -3452,6 +3452,197 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
+    private DiscordChannel? _editingGroupChannel;
+    private string? _editingGroupIconDataUri;
+    private bool _editingGroupRemoveIcon;
+
+    private void OnEditGroupDmClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender) ?? ViewModel?.SelectedChannel;
+        if (ch == null) return;
+
+        _editingGroupChannel = ch;
+        _editingGroupIconDataUri = null;
+        _editingGroupRemoveIcon = false;
+
+        EditGroupNameBox.Text = ch.Name ?? ch.DisplayName ?? string.Empty;
+
+        // Prévisualisation de l'icône actuelle
+        if (!string.IsNullOrEmpty(ch.IconUrl))
+        {
+            try
+            {
+                EditGroupIconPreview.ImageSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(ch.IconUrl));
+                EditGroupIconDefaultIcon.Visibility = Visibility.Collapsed;
+            }
+            catch
+            {
+                EditGroupIconPreview.ImageSource = null;
+                EditGroupIconDefaultIcon.Visibility = Visibility.Visible;
+            }
+        }
+        else
+        {
+            EditGroupIconPreview.ImageSource = null;
+            EditGroupIconDefaultIcon.Visibility = Visibility.Visible;
+        }
+
+        EditGroupDmModalOverlay.Visibility = Visibility.Visible;
+    }
+
+    private async void OnChangeGroupIconClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picked = await PickImageBytesAsync();
+            if (picked == null) return;
+
+            var mime = picked.Value.ext switch
+            {
+                ".gif" => "image/gif",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => "image/png"
+            };
+
+            _editingGroupIconDataUri = $"data:{mime};base64,{Convert.ToBase64String(picked.Value.bytes)}";
+            _editingGroupRemoveIcon = false;
+
+            using var ms = new System.IO.MemoryStream(picked.Value.bytes);
+            var bmp = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+            await bmp.SetSourceAsync(ms.AsRandomAccessStream());
+            EditGroupIconPreview.ImageSource = bmp;
+            EditGroupIconDefaultIcon.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Erreur choix icône groupe : {ex.Message}");
+        }
+    }
+
+    private void OnCancelEditGroupDmClicked(object sender, RoutedEventArgs e)
+    {
+        EditGroupDmModalOverlay.Visibility = Visibility.Collapsed;
+        _editingGroupChannel = null;
+        _editingGroupIconDataUri = null;
+        _editingGroupRemoveIcon = false;
+    }
+
+    private async void OnSaveEditGroupDmClicked(object sender, RoutedEventArgs e)
+    {
+        if (_editingGroupChannel == null || ViewModel?.Client?.Rest == null)
+        {
+            EditGroupDmModalOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var newName = EditGroupNameBox.Text?.Trim();
+        var targetCh = _editingGroupChannel;
+
+        EditGroupDmModalOverlay.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var updated = await ViewModel.Client.Rest.ModifyGroupDmAsync(
+                targetCh.Id,
+                name: newName,
+                iconDataUri: _editingGroupIconDataUri,
+                removeIcon: _editingGroupRemoveIcon);
+
+            if (updated != null)
+            {
+                targetCh.Name = updated.Name;
+                targetCh.Icon = updated.Icon;
+                if (ViewModel.SelectedChannel?.Id == targetCh.Id)
+                {
+                    ViewModel.SelectedChannelName = targetCh.DisplayName;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            var err = new ContentDialog
+            {
+                Title = "Erreur",
+                Content = $"Impossible de modifier le groupe : {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await err.ShowAsync();
+        }
+        finally
+        {
+            _editingGroupChannel = null;
+            _editingGroupIconDataUri = null;
+            _editingGroupRemoveIcon = false;
+        }
+    }
+
+    private async void OnLeaveGroupDmClicked(object sender, RoutedEventArgs e)
+    {
+        var ch = GetChannelFromSender(sender) ?? ViewModel?.SelectedChannel;
+        if (ch == null || ViewModel?.Client?.Rest == null) return;
+
+        var silentCheck = new CheckBox
+        {
+            Content = "Ne pas avertir les autres membres",
+            IsChecked = false,
+            Margin = new Thickness(0, 14, 0, 0),
+            Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LightGray)
+        };
+
+        var contentPanel = new StackPanel
+        {
+            Spacing = 8,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = $"Êtes-vous sûr de vouloir quitter {ch.DisplayName} ? Vous ne pourrez pas rejoindre ce groupe sans y être réinvité.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LightGray)
+                },
+                silentCheck
+            }
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = $"Quitter '{ch.DisplayName}'",
+            Content = contentPanel,
+            PrimaryButtonText = "Quitter le groupe",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = this.XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            bool isSilent = silentCheck.IsChecked == true;
+            try
+            {
+                await ViewModel.Client.Rest.LeaveGroupDmAsync(ch.Id, silent: isSilent);
+                ViewModel.PrivateChannels.Remove(ch);
+                if (ViewModel.SelectedChannel?.Id == ch.Id)
+                {
+                    ViewModel.ClearActiveChannel();
+                }
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog
+                {
+                    Title = "Erreur",
+                    Content = $"Impossible de quitter le groupe : {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await err.ShowAsync();
+            }
+        }
+    }
+
     private void OnOpenDmChannelClicked(object sender, RoutedEventArgs e)
     {
         var ch = GetChannelFromSender(sender);

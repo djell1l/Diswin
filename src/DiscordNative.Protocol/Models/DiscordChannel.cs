@@ -65,6 +65,23 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     [JsonPropertyName("last_message_id")]
     public string? LastMessageId { get; set; }
 
+    private string? _icon;
+    [JsonPropertyName("icon")]
+    public string? Icon
+    {
+        get => _icon;
+        set
+        {
+            if (_icon != value)
+            {
+                _icon = value;
+                OnPropertyChanged(nameof(Icon));
+                OnPropertyChanged(nameof(IconUrl));
+                OnPropertyChanged(nameof(HasGroupIcon));
+            }
+        }
+    }
+
     [JsonPropertyName("user_limit")]
     public int? UserLimit { get; set; }
 
@@ -257,13 +274,19 @@ public sealed class DiscordChannel : INotifyPropertyChanged
         _ => Name ?? "salon-inconnu",
     };
 
-    /// <summary>URL de l'icône : photo de profil pour un DM.</summary>
+    /// <summary>URL de l'icône : photo de profil pour un DM, icône personnalisée pour un groupe DM.</summary>
     public string? IconUrl => Type switch
     {
         DiscordChannelType.Dm => Recipients?.FirstOrDefault()?.AvatarUrl,
-        DiscordChannelType.GroupDm => null, // Discord handles group DM icons separately
+        DiscordChannelType.GroupDm => !string.IsNullOrEmpty(Icon)
+            ? $"https://cdn.discordapp.com/channel-icons/{Id}/{Icon}.png?size=128"
+            : null,
         _ => null
     };
+
+    [JsonIgnore] public bool IsGroupDm => Type == DiscordChannelType.GroupDm;
+    [JsonIgnore] public bool HasGroupIcon => IsGroupDm && !string.IsNullOrEmpty(Icon);
+    [JsonIgnore] public bool ShowDefaultGroupIcon => IsGroupDm && string.IsNullOrEmpty(Icon);
 
     [JsonIgnore] public string? GuildName { get; set; }
     [JsonIgnore] public string? GuildIconUrl { get; set; }

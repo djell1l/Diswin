@@ -1346,6 +1346,31 @@ public sealed class DiscordRestClient : IDisposable
             ?? throw new InvalidOperationException("Impossible de lire la réponse du salon modifié.");
     }
 
+    public async Task<DiscordChannel> ModifyGroupDmAsync(
+        string channelId,
+        string? name = null,
+        string? iconDataUri = null,
+        bool removeIcon = false,
+        CancellationToken ct = default)
+    {
+        var payload = new Dictionary<string, object?>();
+        if (name != null) payload["name"] = name.Trim();
+        if (removeIcon) payload["icon"] = null;
+        else if (!string.IsNullOrWhiteSpace(iconDataUri)) payload["icon"] = iconDataUri;
+
+        var response = await _http.PatchAsJsonAsync($"{ApiBase}/channels/{channelId}", payload, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<DiscordChannel>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("Impossible de lire la reponse du groupe modifie.");
+    }
+
+    public async Task<bool> LeaveGroupDmAsync(string channelId, bool silent = false, CancellationToken ct = default)
+    {
+        var url = $"{ApiBase}/channels/{channelId}?silent=" + (silent ? "true" : "false");
+        var response = await _http.DeleteAsync(url, ct);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task LeaveGuildAsync(string guildId, CancellationToken ct = default)
     {
         var response = await _http.DeleteAsync($"{ApiBase}/users/@me/guilds/{guildId}", ct);
