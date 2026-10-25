@@ -1,3 +1,8 @@
+using System;
+using System.IO;
+using System.IO.Pipes;
+using System.Threading;
+using System.Threading.Tasks;
 using DiscordNative.App.Services;
 using DiscordNative.App.Views;
 using Microsoft.UI.Dispatching;
@@ -7,6 +12,11 @@ namespace DiscordNative.App;
 
 public partial class App : Application
 {
+    private const string SingleInstanceMutexName = "Global\\DiscordNative_Diswin_SingleInstance_Mutex";
+    private const string SingleInstancePipeName = "DiscordNative_Diswin_SingleInstance_Pipe";
+    private static Mutex? _singleInstanceMutex;
+    private static CancellationTokenSource? _pipeCts;
+
     public static Window? MainAppWindow { get; set; }
     public static SettingsService Settings { get; } = new();
 
@@ -14,6 +24,33 @@ public partial class App : Application
 
     public App()
     {
+        bool isFirstInstance = false;
+        try
+        {
+            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out isFirstInstance);
+        }
+        catch
+        {
+            isFirstInstance = true;
+        }
+
+        if (!isFirstInstance)
+        {
+            try
+            {
+                using var pipeClient = new NamedPipeClientStream(".", SingleInstancePipeName, PipeDirection.Out);
+                pipeClient.Connect(800);
+                pipeClient.WriteByte(1);
+                pipeClient.Flush();
+            }
+            catch { }
+
+            Environment.Exit(0);
+            return;
+        }
+
+        StartSingleInstancePipeServer();
+
         var theme = Settings.Current.ThemeMode;
         if (theme == "Light") RequestedTheme = ApplicationTheme.Light;
         else if (theme == "Dark") RequestedTheme = ApplicationTheme.Dark;
@@ -45,6 +82,48 @@ public partial class App : Application
             catch { }
         };
 #endif
+    }
+
+    private void StartSingleInstancePipeServer()
+    {
+        _pipeCts = new CancellationTokenSource();
+        var ct = _pipeCts.Token;
+        Task.Run(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    using var server = new NamedPipeServerStream(
+                        SingleInstancePipeName,
+                        PipeDirection.In,
+                        1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+
+                    await server.WaitForConnectionAsync(ct);
+                    _ = server.ReadByte();
+
+                    Protocol.App.RunOnUiThread(() =>
+                    {
+                        try
+                        {
+                            if (MainAppWindow is MainWindow mw)
+                            {
+                                mw.ShowAndActivate();
+                            }
+                            else if (MainAppWindow != null)
+                            {
+                                MainAppWindow.Activate();
+                            }
+                        }
+                        catch { }
+                    });
+                }
+                catch (OperationCanceledException) { break; }
+                catch { await Task.Delay(500, ct); }
+            }
+        }, ct);
     }
 
     private void OnAppUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

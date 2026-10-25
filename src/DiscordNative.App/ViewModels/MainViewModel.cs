@@ -434,6 +434,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(DmMentionCountText));
     }
     private readonly Microsoft.UI.Xaml.DispatcherTimer _rpcTickerTimer = new();
+    private readonly Microsoft.UI.Xaml.DispatcherTimer _presenceDebounceTimer = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _pendingPresenceUserIds = new();
+
     public MainViewModel(DiscordClient client)
     {
         _client = client;
@@ -463,6 +466,12 @@ public sealed partial class MainViewModel : ObservableObject
             }
         };
         _rpcTickerTimer.Start();
+        _presenceDebounceTimer.Interval = TimeSpan.FromMilliseconds(450);
+        _presenceDebounceTimer.Tick += (_, _) =>
+        {
+            _presenceDebounceTimer.Stop();
+            FlushPendingPresences();
+        };
         SoundWinBridge.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(SoundWinBridge.IsPlaying))
@@ -490,9 +499,27 @@ public sealed partial class MainViewModel : ObservableObject
         {
             NotifyCurrentUserRichPresenceChanged();
         }
-        foreach (var member in ChannelMembers.Where(m => m.Id == userId))
+        _pendingPresenceUserIds[userId] = 1;
+        Protocol.App.RunOnUiThread(() =>
         {
-            _client.ApplyCachedPresenceToUser(member);
+            _presenceDebounceTimer.Stop();
+            _presenceDebounceTimer.Start();
+        });
+    }
+
+    private void FlushPendingPresences()
+    {
+        if (_pendingPresenceUserIds.IsEmpty) return;
+        var userIds = _pendingPresenceUserIds.Keys.ToList();
+        _pendingPresenceUserIds.Clear();
+
+        var idSet = new HashSet<string>(userIds, StringComparer.OrdinalIgnoreCase);
+        foreach (var member in ChannelMembers)
+        {
+            if (member != null && idSet.Contains(member.Id))
+            {
+                _client.ApplyCachedPresenceToUser(member);
+            }
         }
         SyncOnlineOfflineMembers();
         RefreshRecentMemberActivities();
