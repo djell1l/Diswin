@@ -171,7 +171,8 @@ public sealed class DiscordUser : INotifyPropertyChanged
         get
         {
             if (Status == "offline") return "#949BA4";
-            var colored = _displayRoles.FirstOrDefault(r => r.Color != 0);
+            // Sur Discord, la couleur du pseudo provient du rôle le plus élevé dans la hiérarchie du serveur ayant une couleur non nulle
+            var colored = _displayRoles.OrderByDescending(r => r.Position).FirstOrDefault(r => r.Color != 0);
             return colored != null ? colored.ColorHex : "#F2F3F5";
         }
     }

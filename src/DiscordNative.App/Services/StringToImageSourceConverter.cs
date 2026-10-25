@@ -13,7 +13,12 @@ public sealed class StringToImageSourceConverter : IValueConverter
             {
                 if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 {
-                    return new BitmapImage(uri) { AutoPlay = false };
+                    // Pour les GIFs et images animées (klipy, tenor, discord cdn .gif), AutoPlay = true
+                    bool isAnimated = url.Contains(".gif", StringComparison.OrdinalIgnoreCase) ||
+                                      url.Contains("animated=true", StringComparison.OrdinalIgnoreCase) ||
+                                      url.Contains("klipy.com", StringComparison.OrdinalIgnoreCase);
+
+                    return new BitmapImage(uri) { AutoPlay = isAnimated };
                 }
                 else if (Uri.TryCreate($"ms-appx:///{url.TrimStart('/', '\\')}", UriKind.Absolute, out var localUri))
                 {
@@ -28,6 +33,8 @@ public sealed class StringToImageSourceConverter : IValueConverter
         return null;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, string language) =>
+    public object ConvertBack(object value, Type targetType, object parameter, string language)
+    {
         throw new NotImplementedException();
+    }
 }

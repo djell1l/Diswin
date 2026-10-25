@@ -102,7 +102,9 @@ New-Item -ItemType Directory -Force -Path "dist\InstallerBundle\AppXbf" | Out-Nu
 Copy-Item -Recurse -Force "$appReleaseDir\*" "dist\InstallerBundle\"
 
 # Save the App's App.xbf before overwriting with Installer's App.xbf
-Copy-Item -Force "$appReleaseDir\App.xbf" "dist\InstallerBundle\AppXbf\App.xbf"
+if (Test-Path "$appReleaseDir\App.xbf") {
+    Copy-Item -Force "$appReleaseDir\App.xbf" "dist\InstallerBundle\AppXbf\App.xbf"
+}
 
 # Overlay Installer-specific files (Setup.exe, Setup.dll, Setup.pri, App.xbf, MainWindow.xbf, etc.)
 Copy-Item -Force "$installerReleaseDir\Setup.*" "dist\InstallerBundle\"

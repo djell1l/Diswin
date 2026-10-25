@@ -575,7 +575,17 @@ public sealed class DiscordRestClient : IDisposable
     {
         try
         {
-            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/trending?media_format=webm&locale=fr-FR", ct) ?? new();
+            // Sur Discord, trending-gifs retourne directement la liste d'objets GIF animés
+            var result = await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/trending-gifs?media_format=gif&locale=fr-FR", ct);
+            if (result != null && result.Count > 0) return result;
+
+            // Fallback sur gifs/trending avec extraction du dictionnaire gifs/categories
+            using var doc = await _http.GetFromJsonAsync<System.Text.Json.JsonDocument>($"{ApiBase}/gifs/trending?media_format=gif&locale=fr-FR", ct);
+            if (doc != null && doc.RootElement.TryGetProperty("gifs", out var gifsEl) && gifsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<List<DiscordGifItem>>(gifsEl.GetRawText(), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+            }
+            return new();
         }
         catch
         {
@@ -588,7 +598,7 @@ public sealed class DiscordRestClient : IDisposable
         try
         {
             var encoded = Uri.EscapeDataString(query);
-            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/search?q={encoded}&media_format=webm&locale=fr-FR", ct) ?? new();
+            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/search?q={encoded}&media_format=gif&locale=fr-FR", ct) ?? new();
         }
         catch
         {

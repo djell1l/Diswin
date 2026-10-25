@@ -80,3 +80,23 @@ jobs:
         with:
           name: Diswin-${{ steps.meta.outputs.channel }}-v${{ steps.meta.outputs.version }}
           path: dist/*.*
+
+      - name: Publish GitHub Release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $channel = "${{ steps.meta.outputs.channel }}"
+          $ver = "${{ steps.meta.outputs.version }}"
+          $tag = "v$ver"
+          $prereleaseFlag = if ($channel -eq "Edge") { "--prerelease" } else { "" }
+          Write-Host "Creating/Updating GitHub Release for $tag ($channel)..."
+          $files = Get-ChildItem "dist\Diswin-Setup-*.exe", "dist\Diswin-*-portable.zip" | Select-Object -ExpandProperty FullName
+          if ($files) {
+              gh release delete $tag -y 2>$null
+              if ($prereleaseFlag) {
+                  gh release create $tag $files --title "Diswin $tag" --notes "Diswin $tag ($channel build)" --prerelease
+              } else {
+                  gh release create $tag $files --title "Diswin $tag" --notes "Diswin $tag ($channel build)"
+              }
+          }

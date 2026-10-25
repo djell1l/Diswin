@@ -637,17 +637,14 @@ public sealed partial class MainViewModel : ObservableObject
             var online = allMembers.Where(m => m.Status != "offline").OrderBy(m => m.DisplayName).ToList();
             var offline = allMembers.Where(m => m.Status == "offline").OrderBy(m => m.DisplayName).ToList();
 
-            OnlineMembers.Clear();
-            foreach (var m in online) OnlineMembers.Add(m);
-
-            OfflineMembers.Clear();
-            foreach (var m in offline) OfflineMembers.Add(m);
+            CollectionDiffHelper.SyncUsers(OnlineMembers, online);
+            CollectionDiffHelper.SyncUsers(OfflineMembers, offline);
 
             OnPropertyChanged(nameof(OnlineMembersCount));
             OnPropertyChanged(nameof(OfflineMembersCount));
             OnPropertyChanged(nameof(HasOfflineMembers));
 
-            MemberGroups.Clear();
+            var freshGroups = new List<DiscordMemberGroup>();
             if (_selectedGuild != null && _selectedGuild.Roles != null && _selectedGuild.Roles.Count > 0)
             {
                 var hoistRoles = _selectedGuild.Roles
@@ -678,7 +675,7 @@ public sealed partial class MainViewModel : ObservableObject
                             groupedUserIds.Add(u.Id);
                         }
                         group.NotifyMembersChanged();
-                        MemberGroups.Add(group);
+                        freshGroups.Add(group);
                     }
                 }
 
@@ -693,7 +690,7 @@ public sealed partial class MainViewModel : ObservableObject
                     };
                     foreach (var u in remainingOnline) onlineGroup.Members.Add(u);
                     onlineGroup.NotifyMembersChanged();
-                    MemberGroups.Add(onlineGroup);
+                    freshGroups.Add(onlineGroup);
                 }
 
                 if (offline.Count > 0)
@@ -706,7 +703,7 @@ public sealed partial class MainViewModel : ObservableObject
                     };
                     foreach (var u in offline) offlineGroup.Members.Add(u);
                     offlineGroup.NotifyMembersChanged();
-                    MemberGroups.Add(offlineGroup);
+                    freshGroups.Add(offlineGroup);
                 }
             }
             else
@@ -721,7 +718,7 @@ public sealed partial class MainViewModel : ObservableObject
                     };
                     foreach (var u in online) onlineGroup.Members.Add(u);
                     onlineGroup.NotifyMembersChanged();
-                    MemberGroups.Add(onlineGroup);
+                    freshGroups.Add(onlineGroup);
                 }
                 if (offline.Count > 0)
                 {
@@ -733,9 +730,10 @@ public sealed partial class MainViewModel : ObservableObject
                     };
                     foreach (var u in offline) offlineGroup.Members.Add(u);
                     offlineGroup.NotifyMembersChanged();
-                    MemberGroups.Add(offlineGroup);
+                    freshGroups.Add(offlineGroup);
                 }
             }
+            CollectionDiffHelper.SyncMemberGroups(MemberGroups, freshGroups);
             OnPropertyChanged(nameof(HasMemberGroups));
         });
     }

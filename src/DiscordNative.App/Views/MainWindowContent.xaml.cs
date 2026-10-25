@@ -627,7 +627,7 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnComposerEmojiPickerOpening(object sender, object e)
     {
-        ComposerEmojiPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id);
+        ComposerEmojiPicker.Initialize(ViewModel?.Guilds, ViewModel?.SelectedGuild?.Id, ViewModel?.Client?.Rest);
     }
 
     private void OnComposerStickerPickerOpening(object sender, object e)

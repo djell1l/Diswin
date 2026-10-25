@@ -5228,7 +5228,7 @@
                     </Border>
 
                     <!-- Barre de saisie de message (avec bannière Réponse/Édition, Collage Presse-papiers & Sélecteur d'Emojis) -->
-                    <StackPanel Grid.Row="2" Grid.Column="0" Visibility="{x:Bind ViewModel.TextViewVisibility, Mode=OneWay}" Padding="16,0,16,16" Spacing="6">
+                    <StackPanel Grid.Row="2" Grid.Column="0" Visibility="{x:Bind ViewModel.TextViewVisibility, Mode=OneWay}" Padding="16,10,16,16" Spacing="6">
                         <!-- Bannière Réponse ou Modification en cours -->
                         <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
