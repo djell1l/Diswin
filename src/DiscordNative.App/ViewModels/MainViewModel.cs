@@ -586,10 +586,10 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 Protocol.App.RunOnUiThread(() =>
                 {
-                    var seen = new HashSet<string>(ChannelMembers.Select(m => m.Id));
+                    var seen = new HashSet<string>(ChannelMembers.Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
                     foreach (var m in cached)
                     {
-                        if (seen.Add(m.Id))
+                        if (m != null && !string.IsNullOrEmpty(m.Id) && seen.Add(m.Id))
                         {
                             ChannelMembers.Add(m);
                         }
@@ -605,19 +605,23 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Protocol.App.RunOnUiThread(() =>
         {
-            var allMembers = new List<DiscordUser>(ChannelMembers);
+            // Déduplication absolue et préservation de la dernière référence
+            var memberDict = new Dictionary<string, DiscordUser>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in ChannelMembers)
+            {
+                if (m != null && !string.IsNullOrEmpty(m.Id))
+                    memberDict[m.Id] = m;
+            }
             if (_selectedGuild != null)
             {
                 var cached = _client.GetCachedGuildMembers(_selectedGuild.Id);
-                var seen = new HashSet<string>(allMembers.Select(m => m.Id));
                 foreach (var m in cached)
                 {
-                    if (seen.Add(m.Id))
-                    {
-                        allMembers.Add(m);
-                    }
+                    if (m != null && !string.IsNullOrEmpty(m.Id))
+                        memberDict[m.Id] = m;
                 }
             }
+            var allMembers = memberDict.Values.ToList();
 
             foreach (var m in allMembers)
             {
@@ -740,19 +744,23 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Protocol.App.RunOnUiThread(() =>
         {
-            var allMembers = new List<DiscordUser>(ChannelMembers);
+            // Déduplication absolue et préservation de la dernière référence
+            var memberDict = new Dictionary<string, DiscordUser>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in ChannelMembers)
+            {
+                if (m != null && !string.IsNullOrEmpty(m.Id))
+                    memberDict[m.Id] = m;
+            }
             if (_selectedGuild != null)
             {
                 var cached = _client.GetCachedGuildMembers(_selectedGuild.Id);
-                var seen = new HashSet<string>(allMembers.Select(m => m.Id));
                 foreach (var m in cached)
                 {
-                    if (seen.Add(m.Id))
-                    {
-                        allMembers.Add(m);
-                    }
+                    if (m != null && !string.IsNullOrEmpty(m.Id))
+                        memberDict[m.Id] = m;
                 }
             }
+            var allMembers = memberDict.Values.ToList();
 
             var cards = new List<MemberActivityCardViewModel>();
             var seenCards = new HashSet<string>();

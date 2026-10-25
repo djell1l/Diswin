@@ -4736,7 +4736,7 @@
                                                                         Visibility="{x:Bind HasActivityOrCustomStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                 <FontIcon Glyph="&#xE767;" FontSize="11" Foreground="#23A55A" VerticalAlignment="Center"
                                                                           Visibility="{x:Bind IsInVoice, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                                <TextBlock Text="{x:Bind ActivitySummaryText, Mode=OneWay}" FontSize="11" Foreground="#23A55A" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{x:Bind ActivitySummaryText, Mode=OneWay}" FontSize="11" Foreground="#949BA4" TextTrimming="CharacterEllipsis" />
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </StackPanel>

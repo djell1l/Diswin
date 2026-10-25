@@ -850,12 +850,13 @@ public sealed class DiscordActivity : INotifyPropertyChanged
 
     public string SummaryLine => Type switch
     {
-        0 => $"Joue à {Name}",
+        0 => !string.IsNullOrWhiteSpace(Details) ? $"{Name} : {Details}" : $"Joue à {Name}",
         1 => $"En stream : {Details ?? Name}",
-        2 => $"Écoute {Details ?? Name}",
+        2 => !string.IsNullOrWhiteSpace(Details) ? $"{Details} - {State ?? Name}" : (string.Equals(Name, "Spotify", StringComparison.OrdinalIgnoreCase) ? (State ?? Name) : $"Écoute {Name}"),
         3 => $"Regarde {Name}",
+        4 => !string.IsNullOrWhiteSpace(State) ? State : (!string.IsNullOrWhiteSpace(Details) ? Details : Name),
         5 => $"Participe à {Name}",
-        _ => Name
+        _ => !string.IsNullOrWhiteSpace(State) ? State : (!string.IsNullOrWhiteSpace(Details) ? Details : Name)
     };
 
     public bool HasDetails => !string.IsNullOrWhiteSpace(Details);
@@ -880,17 +881,47 @@ public sealed class DiscordActivity : INotifyPropertyChanged
         }
     }
 
-    public string EffectiveIconUrl => !string.IsNullOrWhiteSpace(LargeImageUrl)
-        ? LargeImageUrl
-        : !string.IsNullOrWhiteSpace(SmallImageUrl)
-            ? SmallImageUrl
-            : !string.IsNullOrWhiteSpace(ApplicationId)
-                ? $"https://cdn.discordapp.com/app-icons/{ApplicationId}/icon.png?size=128"
-                : string.Empty;
+    public string EffectiveIconUrl
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(LargeImageUrl)) return LargeImageUrl;
+            if (!string.IsNullOrWhiteSpace(SmallImageUrl)) return SmallImageUrl;
+            if (!string.IsNullOrWhiteSpace(CoverImageUrl)) return CoverImageUrl;
+
+            var app = DiscordApplicationCache.FindApplication(ApplicationId, Name);
+            if (app != null)
+            {
+                if (!string.IsNullOrEmpty(app.IconUrl)) return app.IconUrl;
+                if (!string.IsNullOrEmpty(app.CoverUrl)) return app.CoverUrl;
+            }
+
+            return string.Empty;
+        }
+    }
 
     public bool HasEffectiveIcon => !string.IsNullOrWhiteSpace(EffectiveIconUrl);
 
-    public string? LargeImageUrl => ResolveAssetUrl(ApplicationId, Assets?.LargeImage);
+    public string? CoverImageUrl
+    {
+        get
+        {
+            var app = DiscordApplicationCache.FindApplication(ApplicationId, Name);
+            return app?.CoverUrl ?? app?.IconUrl;
+        }
+    }
+
+    public string? LargeImageUrl
+    {
+        get
+        {
+            var resolved = ResolveAssetUrl(ApplicationId, Assets?.LargeImage);
+            if (!string.IsNullOrEmpty(resolved)) return resolved;
+            var app = DiscordApplicationCache.FindApplication(ApplicationId, Name);
+            return app?.CoverUrl ?? app?.IconUrl;
+        }
+    }
+
     public string? SmallImageUrl => ResolveAssetUrl(ApplicationId, Assets?.SmallImage);
 
     public string ElapsedText

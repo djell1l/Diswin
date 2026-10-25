@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using DiscordNative.Protocol;
 using DiscordNative.Protocol.Models;
 
 namespace DiscordNative.App.ViewModels;
@@ -19,6 +20,25 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
         User = user;
         Activity = activity;
         VoiceChannelName = voiceChannelName;
+
+        if (!string.IsNullOrEmpty(activity.ApplicationId) && !HasLargeImage)
+        {
+            _ = ResolveAppRpcAsync(activity.ApplicationId);
+        }
+    }
+
+    private async Task ResolveAppRpcAsync(string appId)
+    {
+        var app = await DiscordApplicationCache.FetchApplicationRpcAsync(appId);
+        if (app != null)
+        {
+            Protocol.App.RunOnUiThread(() =>
+            {
+                OnPropertyChanged(nameof(LargeImageUrl));
+                OnPropertyChanged(nameof(CoverImageUrl));
+                OnPropertyChanged(nameof(HasLargeImage));
+            });
+        }
     }
 
     public string UserName => User.DisplayName;
@@ -26,7 +46,8 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
     public string UserAvatarUrl => User.AvatarUrl;
 
     public string ActivityName => Activity.Name;
-    public string? LargeImageUrl => Activity.LargeImageUrl ?? Activity.SmallImageUrl ?? User.CurrentGameIconUrl;
+    public string? LargeImageUrl => Activity.LargeImageUrl ?? Activity.SmallImageUrl ?? Activity.CoverImageUrl ?? User.CurrentGameIconUrl;
+    public string? CoverImageUrl => Activity.CoverImageUrl ?? LargeImageUrl;
     public bool HasLargeImage => !string.IsNullOrWhiteSpace(LargeImageUrl);
 
     public string SubtitleLine

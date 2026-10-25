@@ -137,6 +137,7 @@ public sealed class DiscordClient : IAsyncDisposable
         _token = token;
         _loggerFactory = loggerFactory;
         Rest = new DiscordRestClient(token);
+        DiscordApplicationCache.Initialize();
     }
 
     public async Task StartAsync(CancellationToken ct = default)
