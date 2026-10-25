@@ -247,7 +247,7 @@ public sealed class DiscordChannel : INotifyPropertyChanged
     [JsonIgnore]
     public bool HasUnread
     {
-        get => _hasUnread;
+        get => _hasUnread && !_isMuted;
         set
         {
             if (_hasUnread != value)
@@ -257,6 +257,26 @@ public sealed class DiscordChannel : INotifyPropertyChanged
             }
         }
     }
+
+    private bool _isMuted;
+    [JsonIgnore]
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set
+        {
+            if (_isMuted != value)
+            {
+                _isMuted = value;
+                OnPropertyChanged(nameof(IsMuted));
+                OnPropertyChanged(nameof(HasUnread));
+                OnPropertyChanged(nameof(ChannelItemOpacity));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public double ChannelItemOpacity => _isMuted ? 0.5 : 1.0;
 
     public void NotifyVoiceMembersChanged()
     {

@@ -25,6 +25,7 @@ public sealed class AppSettings
     public string UpdateChannel { get; set; } = "Stable"; // Stable | Edge
     public bool ShowNotifications { get; set; } = true;
     public bool StartMinimized { get; set; } = false;
+    public bool MinimizeToTrayOnClose { get; set; } = true;
     public bool EnableKrispNoiseSuppression { get; set; } = true;
     public double InputVolume { get; set; } = 1.0;
     public double OutputVolume { get; set; } = 1.0;
@@ -37,6 +38,10 @@ public sealed class AppSettings
     public bool ForceAccentColorOnProfileCards { get; set; } = false;
     public Dictionary<string, string> UserNotes { get; set; } = new();
     public List<DiscordWidgetGame> CustomGameWidgets { get; set; } = new();
+    public HashSet<string> MutedGuildIds { get; set; } = new();
+    public HashSet<string> MutedChannelIds { get; set; } = new();
+    public HashSet<string> IgnoredUserIds { get; set; } = new();
+    public Dictionary<string, string> NotificationSettings { get; set; } = new();
 }
 
 /// <summary>
@@ -179,4 +184,3 @@ public sealed class SettingsService
         catch { /* déjà absent */ }
     }
 }
-

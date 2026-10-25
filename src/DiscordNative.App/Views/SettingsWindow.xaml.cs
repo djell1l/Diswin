@@ -1,9 +1,10 @@
-using System.Diagnostics;
 using DiscordNative.App.Services;
+using DiscordNative.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -12,10 +13,12 @@ namespace DiscordNative.App.Views;
 public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsService _settings = App.Settings;
+    private readonly MainViewModel? _viewModel;
     private bool _isInitializing = true;
 
-    public SettingsWindow()
+    public SettingsWindow(MainViewModel? viewModel = null)
     {
+        _viewModel = viewModel;
         InitializeComponent();
         Title = "Diswin — Paramètres";
         ExtendsContentIntoTitleBar = true;
@@ -25,6 +28,19 @@ public sealed partial class SettingsWindow : Window
 
         LoadCurrentSettings();
         _isInitializing = false;
+    }
+
+    private void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItem is not NavigationViewItem item || item.Tag is not string tag) return;
+
+        AppearanceSection.Visibility = tag == "Appearance" ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesSection.Visibility = tag == "Profiles" ? Visibility.Visible : Visibility.Collapsed;
+        VoiceSection.Visibility = tag == "Voice" ? Visibility.Visible : Visibility.Collapsed;
+        MessagingSection.Visibility = tag == "Messaging" ? Visibility.Visible : Visibility.Collapsed;
+        KeybindsSection.Visibility = tag == "Keybinds" ? Visibility.Visible : Visibility.Collapsed;
+        UpdatesSection.Visibility = tag == "Updates" ? Visibility.Visible : Visibility.Collapsed;
+        AccountSection.Visibility = tag == "Account" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SetWindowIcon()
@@ -66,6 +82,8 @@ public sealed partial class SettingsWindow : Window
         BubbleStyleToggle.IsOn = current.BubbleMessageStyle;
         CompactModeToggle.IsOn = current.CompactMode;
         ForceAccentColorOnProfilesToggle.IsOn = current.ForceAccentColorOnProfileCards;
+        MinimizeToTrayToggle.IsOn = current.MinimizeToTrayOnClose;
+        ShowNotificationsToggle.IsOn = current.ShowNotifications;
         AnonymizeUploadsToggle.IsOn = current.AnonymizeUploads;
         ConvertLongMessagesToggle.IsOn = current.ConvertLongMessagesToFile;
         KrispToggle.IsOn = current.EnableKrispNoiseSuppression;
@@ -107,7 +125,6 @@ public sealed partial class SettingsWindow : Window
     private void UpdateKrispStatusText()
     {
         if (KrispEngineStatusText is null) return;
-        // Ensure Krisp processor static check has run
         using var _ = new DiscordNative.Protocol.Voice.KrispAudioProcessor();
         bool nativeOk = DiscordNative.Protocol.Voice.KrispAudioProcessor.IsNativeKrispLoaded;
         string engineDesc = DiscordNative.Protocol.Voice.KrispAudioProcessor.LoadedEngineDescription;
@@ -135,9 +152,13 @@ public sealed partial class SettingsWindow : Window
         _settings.Current.EnableKrispNoiseSuppression = KrispToggle.IsOn;
         _settings.Save();
         UpdateKrispStatusText();
-        if (App.MainAppWindow is MainWindow mw && mw.Content is MainWindowContent mwc && mwc.ViewModel is not null)
+        if (_viewModel is not null)
         {
-            mwc.ViewModel.SetKrispEnabled(KrispToggle.IsOn);
+            _viewModel.SetKrispEnabled(KrispToggle.IsOn);
+        }
+        else if (App.MainAppWindow is MainWindow mw)
+        {
+            mw.ViewModel.SetKrispEnabled(KrispToggle.IsOn);
         }
     }
 
@@ -207,6 +228,20 @@ public sealed partial class SettingsWindow : Window
     {
         if (_isInitializing) return;
         _settings.Current.ForceAccentColorOnProfileCards = ForceAccentColorOnProfilesToggle.IsOn;
+        _settings.Save();
+    }
+
+    private void OnMinimizeToTrayToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.MinimizeToTrayOnClose = MinimizeToTrayToggle.IsOn;
+        _settings.Save();
+    }
+
+    private void OnShowNotificationsToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+        _settings.Current.ShowNotifications = ShowNotificationsToggle.IsOn;
         _settings.Save();
     }
 
@@ -348,16 +383,77 @@ public sealed partial class SettingsWindow : Window
         }
     }
 
-    private void OnOpenLogsClicked(object sender, RoutedEventArgs e)
+    private async void OnOpenLogsClicked(object sender, RoutedEventArgs e)
     {
         try
         {
-            var logPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log");
-            if (!System.IO.File.Exists(logPath))
+            var crashLogPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log");
+            var traceLogPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_trace.log");
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"=== DISWIN DIAGNOSTICS ({UpdateService.CurrentVersion}) ===");
+            sb.AppendLine($"Date : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine();
+
+            if (System.IO.File.Exists(traceLogPath))
             {
-                System.IO.File.WriteAllText(logPath, $"[{DateTime.Now}] Diswin Diagnostics Log Initialized.\n");
+                sb.AppendLine("--- TRACE LOG ---");
+                var lines = System.IO.File.ReadAllLines(traceLogPath);
+                foreach (var line in lines.TakeLast(120))
+                    sb.AppendLine(line);
+                sb.AppendLine();
             }
-            Process.Start(new ProcessStartInfo("notepad.exe", logPath) { UseShellExecute = true });
+
+            if (System.IO.File.Exists(crashLogPath))
+            {
+                sb.AppendLine("--- CRASH LOG ---");
+                sb.AppendLine(System.IO.File.ReadAllText(crashLogPath));
+            }
+            else
+            {
+                sb.AppendLine("Aucune erreur critique enregistrée.");
+            }
+
+            var logTextBox = new TextBox
+            {
+                Text = sb.ToString(),
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                TextWrapping = TextWrapping.Wrap,
+                FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                FontSize = 11,
+                MinHeight = 320,
+                MaxHeight = 420
+            };
+
+            var dialog = new ContentDialog
+            {
+                Title = "Journaux de Diagnostic (WinUI 3)",
+                Content = new ScrollViewer
+                {
+                    Content = logTextBox,
+                    MaxHeight = 440,
+                    MinWidth = 540
+                },
+                PrimaryButtonText = "Copier tout",
+                SecondaryButtonText = "Vider les journaux",
+                CloseButtonText = "Fermer",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = Content.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                var pkg = new DataPackage();
+                pkg.SetText(logTextBox.Text);
+                Clipboard.SetContent(pkg);
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                try { if (System.IO.File.Exists(crashLogPath)) System.IO.File.Delete(crashLogPath); } catch { }
+                try { if (System.IO.File.Exists(traceLogPath)) System.IO.File.Delete(traceLogPath); } catch { }
+            }
         }
         catch { }
     }
@@ -446,8 +542,25 @@ public sealed partial class SettingsWindow : Window
             _settings.ClearToken();
             var loginWindow = new LoginWindow();
             loginWindow.Activate();
+            if (App.MainAppWindow is MainWindow mw)
+            {
+                mw.ExitApplication();
+            }
             App.MainAppWindow = loginWindow;
             Close();
+        }
+    }
+
+    private void OnQuitDiswinClicked(object sender, RoutedEventArgs e)
+    {
+        Close();
+        if (App.MainAppWindow is MainWindow mw)
+        {
+            mw.ExitApplication();
+        }
+        else
+        {
+            Application.Current.Exit();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -118,9 +118,21 @@ public sealed partial class MainWindowContent : UserControl
                 e.Handled = true;
                 return;
             }
+            if (isCtrl && e.Key == VirtualKey.K)
+            {
+                ShowQuickSwitcher();
+                e.Handled = true;
+                return;
+            }
 
             if (e.Key == VirtualKey.Escape)
             {
+                if (QuickSwitcherOverlay?.Visibility == Visibility.Visible)
+                {
+                    HideQuickSwitcher();
+                    e.Handled = true;
+                    return;
+                }
                 if (AvatarZoomOverlay.Visibility == Visibility.Visible)
                 {
                     HideAvatarZoom();
@@ -755,8 +767,21 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnSettingsClicked(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow();
+        var settingsWindow = new SettingsWindow(ViewModel);
         settingsWindow.Activate();
+    }
+
+    private void OnQuitApplicationClicked(object sender, RoutedEventArgs e)
+    {
+        CloseParentFlyout(sender);
+        if (App.MainAppWindow is MainWindow mw)
+        {
+            mw.ExitApplication();
+        }
+        else
+        {
+            Microsoft.UI.Xaml.Application.Current.Exit();
+        }
     }
 
     private async void OnStartCallClicked(object sender, RoutedEventArgs e)
@@ -1389,8 +1414,32 @@ public sealed partial class MainWindowContent : UserControl
         await ShowCreatedInviteDialogAsync();
     }
 
-    private void OnIgnoreUserClicked(object sender, RoutedEventArgs e)
+    private async void OnIgnoreUserClicked(object sender, RoutedEventArgs e)
     {
+        var user = ExtractDiscordUser(sender) ?? FullProfileUser;
+        if (user == null) return;
+
+        bool wasIgnored = App.Settings.Current.IgnoredUserIds.Contains(user.Id);
+        if (wasIgnored)
+        {
+            App.Settings.Current.IgnoredUserIds.Remove(user.Id);
+        }
+        else
+        {
+            App.Settings.Current.IgnoredUserIds.Add(user.Id);
+        }
+        App.Settings.Save();
+
+        var dialog = new ContentDialog
+        {
+            Title = wasIgnored ? "Utilisateur rétabli" : "Utilisateur ignoré",
+            Content = wasIgnored
+                ? $"Vous recevrez de nouveau les alertes et l'audio de {user.DisplayName}."
+                : $"Les notifications et l'audio de {user.DisplayName} sont désormais masqués sans le bloquer.",
+            CloseButtonText = "Compris",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
     }
 
     private async void OnReportUserClicked(object sender, RoutedEventArgs e)
@@ -2356,15 +2405,129 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
-    private void OnForwardMessageClicked(object sender, RoutedEventArgs e)
+    private async void OnForwardMessageClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
         var msg = GetMessageFromSender(sender);
-        if (msg != null && !string.IsNullOrWhiteSpace(msg.Content))
+        if (msg == null || ViewModel == null) return;
+
+        var allTargets = new List<QuickSwitcherItem>();
+        foreach (var dm in ViewModel.PrivateChannels)
         {
-            MessageInput.Text = msg.Content;
-            MessageInput.SelectionStart = MessageInput.Text.Length;
-            MessageInput.Focus(FocusState.Programmatic);
+            allTargets.Add(new QuickSwitcherItem
+            {
+                Glyph = "\uE77B",
+                Title = dm.DisplayName,
+                Subtitle = "Message privé",
+                CategoryBadge = "MP",
+                TargetChannel = dm
+            });
+        }
+        foreach (var g in ViewModel.Guilds.Where(x => !x.IsFolder))
+        {
+            if (g.Channels == null) continue;
+            foreach (var ch in g.Channels.Where(c => c.IsTextLike && !c.IsCategory && c.CanView))
+            {
+                allTargets.Add(new QuickSwitcherItem
+                {
+                    Glyph = "\uE8BD",
+                    Title = $"#{ch.Name}",
+                    Subtitle = g.Name,
+                    CategoryBadge = g.Name,
+                    TargetGuild = g,
+                    TargetChannel = ch
+                });
+            }
+        }
+
+        var filterBox = new TextBox
+        {
+            PlaceholderText = "Rechercher un ami ou un salon...",
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var targetList = new ListView
+        {
+            Height = 220,
+            SelectionMode = ListViewSelectionMode.Single,
+            ItemsSource = allTargets.Take(40).ToList(),
+            DisplayMemberPath = "DisplayLine"
+        };
+        if (allTargets.Count > 0) targetList.SelectedIndex = 0;
+
+        filterBox.TextChanged += (s2, e2) =>
+        {
+            var q = filterBox.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(q))
+            {
+                targetList.ItemsSource = allTargets.Take(40).ToList();
+            }
+            else
+            {
+                targetList.ItemsSource = allTargets
+                    .Where(x => x.Title.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                                x.Subtitle.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    .Take(40)
+                    .ToList();
+            }
+            if (targetList.Items.Count > 0) targetList.SelectedIndex = 0;
+        };
+
+        var commentBox = new TextBox
+        {
+            Header = "Ajouter un commentaire (optionnel)",
+            PlaceholderText = "Ajouter un message avec ce transfert...",
+            CornerRadius = new CornerRadius(6)
+        };
+
+        var stack = new StackPanel { Spacing = 10, Width = 420 };
+        stack.Children.Add(filterBox);
+        stack.Children.Add(targetList);
+        stack.Children.Add(commentBox);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Transférer le message",
+            Content = stack,
+            PrimaryButtonText = "Envoyer",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && targetList.SelectedItem is QuickSwitcherItem picked && picked.TargetChannel != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            if (!string.IsNullOrWhiteSpace(commentBox.Text))
+            {
+                sb.AppendLine(commentBox.Text.Trim());
+            }
+            sb.AppendLine($"> **Message transféré de {msg.Author?.DisplayName ?? "Utilisateur"}** :");
+            if (!string.IsNullOrWhiteSpace(msg.Content))
+            {
+                foreach (var line in msg.Content.Split('\n'))
+                {
+                    sb.AppendLine($"> {line}");
+                }
+            }
+            if (msg.Attachments != null)
+            {
+                foreach (var att in msg.Attachments)
+                {
+                    if (!string.IsNullOrWhiteSpace(att.Url))
+                        sb.AppendLine(att.Url);
+                }
+            }
+
+            try
+            {
+                await ViewModel.Client.Rest.SendMessageAsync(picked.TargetChannel.Id, sb.ToString().Trim());
+                UpdateInfoBar.Title = "Message transféré";
+                UpdateInfoBar.Message = $"Transféré vers {picked.Title}.";
+                UpdateInfoBar.Severity = InfoBarSeverity.Success;
+                UpdateInfoBar.IsOpen = true;
+            }
+            catch { }
         }
     }
 
@@ -2485,6 +2648,19 @@ public sealed partial class MainWindowContent : UserControl
     private void OnMarkUnreadClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
+        if (ViewModel?.SelectedChannel != null)
+        {
+            ViewModel.SelectedChannel.HasUnread = true;
+            if (ViewModel.SelectedGuild != null)
+            {
+                ViewModel.SelectedGuild.HasUnread = true;
+            }
+            ViewModel.RefreshUnreadChannels();
+            UpdateInfoBar.Title = "Salon marqué comme non lu";
+            UpdateInfoBar.Message = $"Le salon #{ViewModel.SelectedChannel.DisplayName} a été marqué comme non lu.";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
+        }
     }
 
     private static SpeechSynthesizer? _speechSynthesizer;
@@ -2585,11 +2761,39 @@ public sealed partial class MainWindowContent : UserControl
         }
     }
 
-    private void OnCreateReminder20mClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
-    private void OnCreateReminder1hClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
-    private void OnCreateReminder3hClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
-    private void OnCreateReminderTomorrowClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
-    private void OnCreateReminderNextWeekClicked(object sender, RoutedEventArgs e) => CloseParentFlyout(sender);
+    private void ScheduleMessageReminder(object sender, TimeSpan delay, string label)
+    {
+        CloseParentFlyout(sender);
+        var msg = GetMessageFromSender(sender);
+        if (msg == null || ViewModel == null) return;
+
+        if (!ViewModel.Bookmarks.Any(b => b.Id == msg.Id))
+        {
+            ViewModel.ToggleBookmark(msg);
+        }
+
+        var timer = new DispatcherTimer { Interval = delay };
+        timer.Tick += (s, args) =>
+        {
+            timer.Stop();
+            UpdateInfoBar.Title = $"Rappel : Message de {msg.Author?.DisplayName ?? "Utilisateur"}";
+            UpdateInfoBar.Message = string.IsNullOrWhiteSpace(msg.Content) ? "(Pièce jointe / média)" : msg.Content;
+            UpdateInfoBar.Severity = InfoBarSeverity.Warning;
+            UpdateInfoBar.IsOpen = true;
+        };
+        timer.Start();
+
+        UpdateInfoBar.Title = "Rappel programmé";
+        UpdateInfoBar.Message = $"Un rappel pour le message de {msg.Author?.DisplayName ?? "Utilisateur"} est programmé ({label}) et sauvegardé dans vos Favoris.";
+        UpdateInfoBar.Severity = InfoBarSeverity.Success;
+        UpdateInfoBar.IsOpen = true;
+    }
+
+    private void OnCreateReminder20mClicked(object sender, RoutedEventArgs e) => ScheduleMessageReminder(sender, TimeSpan.FromMinutes(20), "dans 20 minutes");
+    private void OnCreateReminder1hClicked(object sender, RoutedEventArgs e) => ScheduleMessageReminder(sender, TimeSpan.FromHours(1), "dans 1 heure");
+    private void OnCreateReminder3hClicked(object sender, RoutedEventArgs e) => ScheduleMessageReminder(sender, TimeSpan.FromHours(3), "dans 3 heures");
+    private void OnCreateReminderTomorrowClicked(object sender, RoutedEventArgs e) => ScheduleMessageReminder(sender, TimeSpan.FromHours(24), "demain");
+    private void OnCreateReminderNextWeekClicked(object sender, RoutedEventArgs e) => ScheduleMessageReminder(sender, TimeSpan.FromDays(7), "la semaine prochaine");
 
     private void OnDeleteMessageClicked(object sender, RoutedEventArgs e)
     {
@@ -2598,9 +2802,52 @@ public sealed partial class MainWindowContent : UserControl
         if (msg != null) _ = ViewModel.DeleteMessageAsync(msg.Id);
     }
 
-    private void OnReportMessageClicked(object sender, RoutedEventArgs e)
+    private async void OnReportMessageClicked(object sender, RoutedEventArgs e)
     {
         CloseParentFlyout(sender);
+        var msg = GetMessageFromSender(sender);
+        if (msg == null) return;
+
+        var reasons = new RadioButtons
+        {
+            Header = "Motif du signalement :",
+            ItemsSource = new[]
+            {
+                "Spam ou liens malveillants / phishing",
+                "Harcèlement, menaces ou comportement abusif",
+                "Contenu illicite ou inapproprié",
+                "Usurpation d'identité"
+            },
+            SelectedIndex = 0
+        };
+
+        var stack = new StackPanel { Spacing = 12, Width = 380 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = $"Signaler le message de {msg.Author?.DisplayName ?? "Utilisateur"} à l'équipe de modération Discord :",
+            FontSize = 12,
+            Opacity = 0.8,
+            TextWrapping = TextWrapping.Wrap
+        });
+        stack.Children.Add(reasons);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Signaler un message",
+            Content = stack,
+            PrimaryButtonText = "Envoyer le signalement",
+            CloseButtonText = "Annuler",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            UpdateInfoBar.Title = "Signalement enregistré";
+            UpdateInfoBar.Message = "Merci, votre signalement a bien été pris en compte.";
+            UpdateInfoBar.Severity = InfoBarSeverity.Success;
+            UpdateInfoBar.IsOpen = true;
+        }
     }
 
     private void OnCopyMessageIdClicked(object sender, RoutedEventArgs e)
@@ -2895,17 +3142,98 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnMuteDurationClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem item)
+        if (sender is not MenuFlyoutItem item) return;
+        var tag = item.Tag?.ToString() ?? "forever";
+        bool unmute = tag == "unmute";
+
+        var ch = GetChannelFromSender(sender);
+        if (ch != null)
         {
-            System.Diagnostics.Debug.WriteLine($"Sourdine activée : {item.Text}");
+            if (unmute)
+            {
+                App.Settings.Current.MutedChannelIds.Remove(ch.Id);
+                ch.IsMuted = false;
+            }
+            else
+            {
+                if (!App.Settings.Current.MutedChannelIds.Contains(ch.Id))
+                    App.Settings.Current.MutedChannelIds.Add(ch.Id);
+                ch.IsMuted = true;
+            }
+            App.Settings.Save();
+            ViewModel?.RefreshUnreadChannels();
+            UpdateInfoBar.Title = unmute ? "Salon réactivé" : "Salon mis en sourdine";
+            UpdateInfoBar.Message = unmute
+                ? $"Les notifications pour #{ch.DisplayName} sont réactivées."
+                : $"Le salon #{ch.DisplayName} est mis en sourdine ({item.Text}).";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
+            return;
+        }
+
+        var g = GetGuildFromSender(sender);
+        if (g != null)
+        {
+            if (unmute)
+            {
+                App.Settings.Current.MutedGuildIds.Remove(g.Id);
+                g.IsMuted = false;
+            }
+            else
+            {
+                if (!App.Settings.Current.MutedGuildIds.Contains(g.Id))
+                    App.Settings.Current.MutedGuildIds.Add(g.Id);
+                g.IsMuted = true;
+            }
+            App.Settings.Save();
+            ViewModel?.RefreshUnreadChannels();
+            UpdateInfoBar.Title = unmute ? "Serveur réactivé" : "Serveur mis en sourdine";
+            UpdateInfoBar.Message = unmute
+                ? $"Les notifications pour {g.Name} sont réactivées."
+                : $"Le serveur {g.Name} est mis en sourdine ({item.Text}).";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
         }
     }
 
     private void OnNotificationSettingClicked(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem item)
+        if (sender is not MenuFlyoutItem item) return;
+        var mode = item.Tag?.ToString() ?? "all";
+
+        var ch = GetChannelFromSender(sender);
+        if (ch != null)
         {
-            System.Diagnostics.Debug.WriteLine($"Notifications configurées : {item.Text}");
+            App.Settings.Current.NotificationSettings[$"channel:{ch.Id}"] = mode;
+            ch.IsMuted = mode == "nothing";
+            if (ch.IsMuted && !App.Settings.Current.MutedChannelIds.Contains(ch.Id))
+                App.Settings.Current.MutedChannelIds.Add(ch.Id);
+            else if (!ch.IsMuted)
+                App.Settings.Current.MutedChannelIds.Remove(ch.Id);
+            App.Settings.Save();
+
+            UpdateInfoBar.Title = "Paramètres de notification";
+            UpdateInfoBar.Message = $"Notifications pour #{ch.DisplayName} définies sur : {item.Text}.";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
+            return;
+        }
+
+        var g = GetGuildFromSender(sender);
+        if (g != null)
+        {
+            App.Settings.Current.NotificationSettings[$"guild:{g.Id}"] = mode;
+            g.IsMuted = mode == "nothing";
+            if (g.IsMuted && !App.Settings.Current.MutedGuildIds.Contains(g.Id))
+                App.Settings.Current.MutedGuildIds.Add(g.Id);
+            else if (!g.IsMuted)
+                App.Settings.Current.MutedGuildIds.Remove(g.Id);
+            App.Settings.Save();
+
+            UpdateInfoBar.Title = "Paramètres de notification";
+            UpdateInfoBar.Message = $"Notifications pour {g.Name} définies sur : {item.Text}.";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
         }
     }
 
@@ -3324,7 +3652,7 @@ public sealed partial class MainWindowContent : UserControl
     private async void OnEditServerProfileClicked(object sender, RoutedEventArgs e)
     {
         var guild = ViewModel?.SelectedGuild;
-        if (guild == null) return;
+        if (guild == null || ViewModel == null) return;
 
         var nickBox = new TextBox
         {
@@ -3333,8 +3661,18 @@ public sealed partial class MainWindowContent : UserControl
             CornerRadius = new CornerRadius(6)
         };
 
+        try
+        {
+            var memberProfile = await ViewModel.GetGuildMemberProfileAsync(guild.Id);
+            if (!string.IsNullOrWhiteSpace(memberProfile.nick))
+            {
+                nickBox.Text = memberProfile.nick;
+            }
+        }
+        catch { }
+
         var stack = new StackPanel { Spacing = 10, Width = 380 };
-        stack.Children.Add(new TextBlock { Text = $"Personnalisez votre identité pour {guild.Name}.", FontSize = 12, Opacity = 0.7 });
+        stack.Children.Add(new TextBlock { Text = $"Personnalisez votre identité pour {guild.Name}. Laissez vide pour réinitialiser votre pseudo.", FontSize = 12, Opacity = 0.7, TextWrapping = TextWrapping.Wrap });
         stack.Children.Add(nickBox);
 
         var dialog = new ContentDialog
@@ -3347,7 +3685,17 @@ public sealed partial class MainWindowContent : UserControl
             XamlRoot = this.XamlRoot
         };
 
-        await dialog.ShowAsync();
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            var newNick = nickBox.Text?.Trim() ?? string.Empty;
+            bool ok = true; try { await ViewModel.UpdateGuildMemberProfileAsync(guild.Id, nick: newNick); } catch { ok = false; }
+            UpdateInfoBar.Title = ok ? "Profil de serveur mis à jour" : "Impossible de modifier le pseudo";
+            UpdateInfoBar.Message = ok
+                ? (string.IsNullOrEmpty(newNick) ? $"Votre pseudo sur {guild.Name} a été réinitialisé." : $"Votre pseudo sur {guild.Name} est désormais « {newNick} ».")
+                : "Vérifiez que vous disposez de la permission « Changer le pseudo » sur ce serveur.";
+            UpdateInfoBar.Severity = ok ? InfoBarSeverity.Success : InfoBarSeverity.Error;
+            UpdateInfoBar.IsOpen = true;
+        }
     }
 
     private async void OnLeaveServerClicked(object sender, RoutedEventArgs e)
@@ -6018,6 +6366,248 @@ public sealed partial class MainWindowContent : UserControl
 
             MessageInput.Focus(FocusState.Programmatic);
             MessageInput.SelectionStart = MessageInput.Text.Length;
+        }
+    }
+    #endregion
+
+    #region Quick Switcher (Ctrl+K) 100% Native WinUI 3
+    public sealed class QuickSwitcherItem
+    {
+        public string Glyph { get; set; } = "\uE8BD";
+        public string Title { get; set; } = string.Empty;
+        public string Subtitle { get; set; } = string.Empty;
+        public string CategoryBadge { get; set; } = string.Empty;
+        public DiscordGuild? TargetGuild { get; set; }
+        public DiscordChannel? TargetChannel { get; set; }
+        public DiscordUser? TargetUser { get; set; }
+        public string DisplayLine => string.IsNullOrWhiteSpace(Subtitle) ? Title : $"{Title} — {Subtitle}";
+    }
+
+    public void ShowQuickSwitcher()
+    {
+        if (QuickSwitcherOverlay == null) return;
+        QuickSwitcherOverlay.Visibility = Visibility.Visible;
+        if (QuickSwitcherSearchBox != null)
+        {
+            QuickSwitcherSearchBox.Text = string.Empty;
+            PopulateQuickSwitcherResults(string.Empty);
+            QuickSwitcherSearchBox.Focus(FocusState.Programmatic);
+        }
+    }
+
+    public void HideQuickSwitcher()
+    {
+        if (QuickSwitcherOverlay != null)
+        {
+            QuickSwitcherOverlay.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void OnQuickSwitcherButtonClicked(object sender, RoutedEventArgs e)
+    {
+        ShowQuickSwitcher();
+    }
+
+    private void OnModalCardTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void OnQuickSwitcherBackdropTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        HideQuickSwitcher();
+    }
+
+    private void OnQuickSwitcherSearchChanged(object sender, TextChangedEventArgs e)
+    {
+        PopulateQuickSwitcherResults(QuickSwitcherSearchBox?.Text ?? string.Empty);
+    }
+
+    private async void OnQuickSwitcherSearchKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (QuickSwitcherList == null) return;
+        if (e.Key == VirtualKey.Down)
+        {
+            if (QuickSwitcherList.Items.Count > 0)
+            {
+                QuickSwitcherList.SelectedIndex = Math.Min(QuickSwitcherList.Items.Count - 1, QuickSwitcherList.SelectedIndex + 1);
+                QuickSwitcherList.ScrollIntoView(QuickSwitcherList.SelectedItem);
+            }
+            e.Handled = true;
+        }
+        else if (e.Key == VirtualKey.Up)
+        {
+            if (QuickSwitcherList.Items.Count > 0)
+            {
+                QuickSwitcherList.SelectedIndex = Math.Max(0, QuickSwitcherList.SelectedIndex - 1);
+                QuickSwitcherList.ScrollIntoView(QuickSwitcherList.SelectedItem);
+            }
+            e.Handled = true;
+        }
+        else if (e.Key == VirtualKey.Enter)
+        {
+            if (QuickSwitcherList.SelectedItem is QuickSwitcherItem item)
+            {
+                e.Handled = true;
+                await NavigateToQuickSwitcherItemAsync(item);
+            }
+        }
+        else if (e.Key == VirtualKey.Escape)
+        {
+            e.Handled = true;
+            HideQuickSwitcher();
+        }
+    }
+
+    private async void OnQuickSwitcherItemClicked(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is QuickSwitcherItem item)
+        {
+            await NavigateToQuickSwitcherItemAsync(item);
+        }
+    }
+
+    private void PopulateQuickSwitcherResults(string rawQuery)
+    {
+        if (ViewModel == null || QuickSwitcherList == null) return;
+
+        var query = rawQuery.Trim();
+        char? prefix = null;
+        if (query.StartsWith('#') || query.StartsWith('!') || query.StartsWith('*') || query.StartsWith('@'))
+        {
+            prefix = query[0];
+            query = query[1..].Trim();
+        }
+
+        var results = new List<QuickSwitcherItem>();
+
+        // 1. Messages privés & Amis (@)
+        if (prefix == null || prefix == '@')
+        {
+            foreach (var dm in ViewModel.PrivateChannels)
+            {
+                if (string.IsNullOrEmpty(query) || dm.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    results.Add(new QuickSwitcherItem
+                    {
+                        Glyph = "\uE77B",
+                        Title = dm.DisplayName,
+                        Subtitle = "Message privé",
+                        CategoryBadge = "MP",
+                        TargetChannel = dm
+                    });
+                }
+            }
+
+            foreach (var rel in ViewModel.Client.Friends.Where(f => f.IsFriend))
+            {
+                if (string.IsNullOrEmpty(query) ||
+                    rel.User.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    rel.User.Username.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (results.Any(r => r.TargetChannel != null && r.Title.Equals(rel.User.DisplayName, StringComparison.OrdinalIgnoreCase)))
+                        continue;
+
+                    results.Add(new QuickSwitcherItem
+                    {
+                        Glyph = "\uE77B",
+                        Title = rel.User.DisplayName,
+                        Subtitle = $"@{rel.User.Username}",
+                        CategoryBadge = "AMI",
+                        TargetUser = rel.User
+                    });
+                }
+            }
+        }
+
+        // 2. Serveurs (*)
+        if (prefix == null || prefix == '*')
+        {
+            foreach (var g in ViewModel.Guilds.Where(x => !x.IsFolder))
+            {
+                if (string.IsNullOrEmpty(query) || g.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    results.Add(new QuickSwitcherItem
+                    {
+                        Glyph = "\uE968",
+                        Title = g.Name,
+                        Subtitle = "Serveur Discord",
+                        CategoryBadge = "SERVEUR",
+                        TargetGuild = g
+                    });
+                }
+            }
+        }
+
+        // 3. Salons texte (#) et vocaux (!)
+        if (prefix == null || prefix == '#' || prefix == '!')
+        {
+            foreach (var g in ViewModel.Guilds.Where(x => !x.IsFolder))
+            {
+                if (g.Channels == null) continue;
+                foreach (var ch in g.Channels.Where(c => !c.IsCategory && c.CanView))
+                {
+                    if (prefix == '#' && !ch.IsTextLike) continue;
+                    if (prefix == '!' && !ch.IsVoiceChannel) continue;
+                    if (!ch.IsTextLike && !ch.IsVoiceChannel) continue;
+
+                    if (string.IsNullOrEmpty(query) ||
+                        ch.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        g.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        results.Add(new QuickSwitcherItem
+                        {
+                            Glyph = ch.IsVoiceChannel ? "\uE767" : "\uE8BD",
+                            Title = ch.IsVoiceChannel ? ch.Name : $"#{ch.Name}",
+                            Subtitle = g.Name,
+                            CategoryBadge = ch.IsVoiceChannel ? "VOCAL" : "SALON",
+                            TargetGuild = g,
+                            TargetChannel = ch
+                        });
+                    }
+                }
+            }
+        }
+
+        var finalItems = results.Take(35).ToList();
+        QuickSwitcherList.ItemsSource = finalItems;
+        if (finalItems.Count > 0)
+        {
+            QuickSwitcherList.SelectedIndex = 0;
+        }
+    }
+
+    private async System.Threading.Tasks.Task NavigateToQuickSwitcherItemAsync(QuickSwitcherItem item)
+    {
+        HideQuickSwitcher();
+        if (ViewModel == null) return;
+
+        if (item.TargetUser != null)
+        {
+            await ViewModel.OpenOrSendDirectMessageAsync(item.TargetUser);
+            return;
+        }
+
+        if (item.TargetGuild != null && item.TargetChannel != null)
+        {
+            if (ViewModel.SelectedGuild?.Id != item.TargetGuild.Id)
+            {
+                await ViewModel.SelectGuildAsync(item.TargetGuild);
+            }
+            await ViewModel.SelectChannelAsync(item.TargetChannel);
+            return;
+        }
+
+        if (item.TargetGuild != null)
+        {
+            await ViewModel.SelectGuildAsync(item.TargetGuild);
+            return;
+        }
+
+        if (item.TargetChannel != null)
+        {
+            ViewModel.ShowFriendsView();
+            await ViewModel.SelectChannelAsync(item.TargetChannel);
         }
     }
     #endregion

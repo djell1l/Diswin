@@ -17,6 +17,7 @@ public sealed partial class MainWindow : Window
     private WNDPROC? _newWndProc;
     private IntPtr _oldWndProc = IntPtr.Zero;
     private bool _isRealExit = false;
+    private TrayPopupWindow? _trayPopupWindow;
 
     public MainWindow(string token)
     {
@@ -61,8 +62,15 @@ public sealed partial class MainWindow : Window
             {
                 if (!_isRealExit)
                 {
-                    e.Cancel = true;
-                    _appWindow.Hide();
+                    if (App.Settings.Current.MinimizeToTrayOnClose)
+                    {
+                        e.Cancel = true;
+                        _appWindow.Hide();
+                    }
+                    else
+                    {
+                        ExitApplication();
+                    }
                 }
             };
         }
@@ -76,17 +84,36 @@ public sealed partial class MainWindow : Window
     {
         if (msg == TrayIconService.WM_TRAYICON)
         {
-            int action = (int)lParam;
-            if (action == TrayIconService.WM_LBUTTONUP)
+            int action = (int)lParam & 0xFFFF;
+            if (action == TrayIconService.WM_LBUTTONUP || action == 0x0203 /* WM_LBUTTONDBLCLK */)
             {
-                ShowAndActivate();
+                DispatcherQueue.TryEnqueue(ShowAndActivate);
             }
-            else if (action == TrayIconService.WM_RBUTTONUP)
+            else if (action == TrayIconService.WM_RBUTTONUP || action == 0x007B /* WM_CONTEXTMENU */)
             {
-                ShowAndActivate();
+                DispatcherQueue.TryEnqueue(ShowTrayContextMenu);
             }
         }
         return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+    }
+
+    private void ShowTrayContextMenu()
+    {
+        try
+        {
+            _trayPopupWindow ??= new TrayPopupWindow(this);
+            _trayPopupWindow.ShowAtCursor();
+        }
+        catch (Exception ex)
+        {
+            App.Trace($"ShowTrayContextMenu error: {ex.Message}");
+            ShowAndActivate();
+        }
+    }
+
+    public void OpenQuickSwitcher()
+    {
+        RootContent.ShowQuickSwitcher();
     }
 
     public void ShowAndActivate()
@@ -103,6 +130,7 @@ public sealed partial class MainWindow : Window
     public void ExitApplication()
     {
         _isRealExit = true;
+        try { _trayPopupWindow?.Close(); } catch { }
         TrayIconService.Remove();
         Close();
     }
@@ -164,6 +192,7 @@ public sealed partial class MainWindow : Window
         Activated -= OnWindowActivatedFirstTime;
         Closed += (_, _) =>
         {
+            try { _trayPopupWindow?.Close(); } catch { }
             TrayIconService.Remove();
             App.Trace("MainWindow fermée");
         };

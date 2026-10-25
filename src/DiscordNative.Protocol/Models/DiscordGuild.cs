@@ -159,7 +159,7 @@ public sealed class DiscordGuild : INotifyPropertyChanged
     [JsonIgnore]
     public bool HasUnread
     {
-        get => _hasUnread;
+        get => _hasUnread && !_isMuted;
         set
         {
             if (_hasUnread != value)
@@ -171,6 +171,28 @@ public sealed class DiscordGuild : INotifyPropertyChanged
             }
         }
     }
+
+    private bool _isMuted;
+    [JsonIgnore]
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set
+        {
+            if (_isMuted != value)
+            {
+                _isMuted = value;
+                OnPropertyChanged(nameof(IsMuted));
+                OnPropertyChanged(nameof(HasUnread));
+                OnPropertyChanged(nameof(IndicatorHeight));
+                OnPropertyChanged(nameof(HasUnreadOrSelected));
+                OnPropertyChanged(nameof(GuildItemOpacity));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public double GuildItemOpacity => _isMuted ? 0.55 : 1.0;
 
     private bool _isSelected;
     [JsonIgnore]

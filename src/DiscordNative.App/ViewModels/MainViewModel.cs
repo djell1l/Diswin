@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DiscordNative.Protocol;
@@ -844,6 +844,14 @@ public sealed partial class MainViewModel : ObservableObject
         {
             foreach (var ca in _client.CurrentUser.ConnectedAccounts) CurrentUserConnectedAccounts.Add(ca);
         }
+        foreach (var g in Guilds)
+        {
+            g.IsMuted = App.Settings.Current.MutedGuildIds.Contains(g.Id);
+        }
+        foreach (var dm in PrivateChannels)
+        {
+            dm.IsMuted = App.Settings.Current.MutedChannelIds.Contains(dm.Id);
+        }
         OnPropertyChanged(nameof(CurrentUser));
         OnPropertyChanged(nameof(CurrentUserAvatarUrl));
         OnPropertyChanged(nameof(CurrentUserBannerUrl));
@@ -1277,9 +1285,11 @@ public sealed partial class MainViewModel : ObservableObject
             .OrderBy(c => c.IsVoiceChannel ? 1 : 0)
             .ThenBy(c => c.Position)
             .ToList();
+        guild.IsMuted = App.Settings.Current.MutedGuildIds.Contains(guild.Id);
         void AddChannelWithUnreadCheck(DiscordChannel ch)
         {
             ch.GuildId ??= guild.Id;
+            ch.IsMuted = App.Settings.Current.MutedChannelIds.Contains(ch.Id);
             if (!string.IsNullOrEmpty(ch.LastMessageId) && _client.ReadLastMessages.TryGetValue(ch.Id, out var rMid))
             {
                 if (ulong.TryParse(ch.LastMessageId, out var cMid) &&
@@ -1332,6 +1342,7 @@ public sealed partial class MainViewModel : ObservableObject
         Protocol.App.RunOnUiThread(() =>
         {
             var allGuilds = _client.Guilds.ToList();
+            foreach (var g in allGuilds) g.IsMuted = App.Settings.Current.MutedGuildIds.Contains(g.Id);
             var folders = _client.GuildFolders;
             var assignedGuildIds = new HashSet<string>();
             var existingStates = new Dictionary<string, bool>();
