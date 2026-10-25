@@ -70,7 +70,7 @@ cd Diswin
 ---
 
 ## Contributors & Credits
-AI is the future — why whisper about it on GitHub like it's a dirty secret? While everyone else pretends they hand-carved 50,000 lines of boilerplate by candlelight, we own it: pairing human ambition with cutting-edge AI pair programming to build what multi-billion-dollar companies were too lazy to ship.
+AI is the future — why whisper about it on GitHub like it's a dirty secret? This project is 100% vibe-coded and we fully own it: pairing human ambition with cutting-edge AI pair programming to build what multi-billion-dollar companies were too lazy to ship.
 
 <p align="left">
   <a href="https://github.com/djell1l">
