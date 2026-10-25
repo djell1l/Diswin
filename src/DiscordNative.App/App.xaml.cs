@@ -24,32 +24,25 @@ public partial class App : Application
 
     public App()
     {
-        bool isFirstInstance = false;
         try
         {
-            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out isFirstInstance);
-        }
-        catch
-        {
-            isFirstInstance = true;
-        }
-
-        if (!isFirstInstance)
-        {
-            try
+            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool isFirstInstance);
+            if (!isFirstInstance)
             {
-                using var pipeClient = new NamedPipeClientStream(".", SingleInstancePipeName, PipeDirection.Out);
-                pipeClient.Connect(800);
-                pipeClient.WriteByte(1);
-                pipeClient.Flush();
+                try
+                {
+                    using var pipeClient = new NamedPipeClientStream(".", SingleInstancePipeName, PipeDirection.Out);
+                    pipeClient.Connect(500);
+                    pipeClient.WriteByte(1);
+                    pipeClient.Flush();
+                }
+                catch { }
+                Environment.Exit(0);
+                return;
             }
-            catch { }
-
-            Environment.Exit(0);
-            return;
+            StartSingleInstancePipeServer();
         }
-
-        StartSingleInstancePipeServer();
+        catch { }
 
         var theme = Settings.Current.ThemeMode;
         if (theme == "Light") RequestedTheme = ApplicationTheme.Light;
