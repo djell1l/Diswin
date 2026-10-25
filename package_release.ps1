@@ -165,3 +165,16 @@ if (Test-Path $localInstallDir) {
     Copy-Item -Recurse -Force "$appReleaseDir\*" "$localInstallDir\"
     Write-Host "Installation locale mise à jour avec succès !" -ForegroundColor Green
 }
+# Copie systématique sur le Bureau de l'utilisateur
+$desktopDir = [System.Environment]::GetFolderPath('Desktop')
+$desktopSetupsDir = Join-Path $desktopDir "Diswin Setups"
+if (-not (Test-Path $desktopSetupsDir)) {
+    New-Item -ItemType Directory -Path $desktopSetupsDir -Force | Out-Null
+}
+
+$setupExePath = "dist\Diswin-Setup-v$version-win-x64.exe"
+if (Test-Path $setupExePath) {
+    Copy-Item -Force $setupExePath (Join-Path $desktopDir "Diswin-Setup-Latest.exe")
+    Copy-Item -Force $setupExePath (Join-Path $desktopSetupsDir "Diswin-Setup-v$version-win-x64.exe")
+    Write-Host "Installeur copié avec succès sur le Bureau et dans '$desktopSetupsDir' !" -ForegroundColor Green
+}

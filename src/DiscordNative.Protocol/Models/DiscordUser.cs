@@ -620,7 +620,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public bool HasGameActivity => PrimaryActivity is not null && (PrimaryActivity.Type == 0 || PrimaryActivity.Type == 1);
     public bool HasNonGameActivitySummary => !HasGameActivity && HasActivityOrCustomStatus;
     public string? CurrentGameName => PrimaryActivity?.Name;
-    public string? CurrentGameIconUrl => PrimaryActivity?.SmallImageUrl ?? PrimaryActivity?.LargeImageUrl;
+    public string? CurrentGameIconUrl => PrimaryActivity?.EffectiveIconUrl ?? PrimaryActivity?.SmallImageUrl ?? PrimaryActivity?.LargeImageUrl;
     public bool HasCurrentGameIcon => !string.IsNullOrEmpty(CurrentGameIconUrl);
     public string GameTooltipText => PrimaryActivity != null
         ? (PrimaryActivity.Type == 1 ? $"En stream : {PrimaryActivity.Name}" : $"Joue à {PrimaryActivity.Name}")

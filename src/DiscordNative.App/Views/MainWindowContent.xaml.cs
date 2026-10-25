@@ -1059,6 +1059,14 @@ public sealed partial class MainWindowContent : UserControl
         JumpToMessage(msg);
     }
 
+    private void OnReplyHookClicked(object sender, RoutedEventArgs e)
+    {
+        var msg = GetMessageFromSender(sender);
+        if (msg?.ReferencedMessage != null)
+        {
+            JumpToMessage(msg.ReferencedMessage);
+        }
+    }
     private void JumpToMessage(DiscordMessage? msg)
     {
         if (msg == null) return;
@@ -3726,6 +3734,14 @@ public sealed partial class MainWindowContent : UserControl
         ViewModel.FriendsSearchQuery = (sender as TextBox)?.Text ?? string.Empty;
     }
 
+    private void OnFriendCardTapped(object sender, TappedRoutedEventArgs e)
+    {
+        var rel = GetFriendFromSender(sender);
+        if (rel != null)
+        {
+            _ = ViewModel.OpenOrSendDirectMessageAsync(rel.User);
+        }
+    }
     private void OnFriendMessageClicked(object sender, RoutedEventArgs e)
     {
         var rel = GetFriendFromSender(sender);

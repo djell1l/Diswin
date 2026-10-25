@@ -2068,7 +2068,28 @@
                                     <DataTemplate x:DataType="models:DiscordRelationship">
                                         <Border Height="62" CornerRadius="8" Background="Transparent"
                                                 BorderBrush="#1F2023" BorderThickness="0,1,0,0" Padding="10,0"
-                                                PointerEntered="OnFriendCardPointerEntered" PointerExited="OnFriendCardPointerExited">
+                                                PointerEntered="OnFriendCardPointerEntered" PointerExited="OnFriendCardPointerExited"
+                                                Tapped="OnFriendCardTapped">
+                                            <Border.ContextFlyout>
+                                                <MenuFlyout>
+                                                    <MenuFlyoutItem Text="Message privé" Tag="{x:Bind}" Click="OnFriendMessageClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8BD;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Appeler" Tag="{x:Bind}" Click="OnFriendCallClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE717;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Profil" Tag="{x:Bind User}" Click="OnUserMenuProfileClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE77B;" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Retirer des amis" Foreground="#FF453A" Tag="{x:Bind}" Click="OnRemoveFriendClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE74D;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="Bloquer" Foreground="#FF453A" Tag="{x:Bind}" Click="OnBlockFriendClicked">
+                                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE894;" Foreground="#FF453A" /></MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                </MenuFlyout>
+                                            </Border.ContextFlyout>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
@@ -2251,7 +2272,7 @@
                                 </ListView.ItemContainerStyle>
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="models:DiscordRelationship">
-                                        <Border Background="#2B2D31" BorderBrush="#1E1F22" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <Border Background="#2B2D31" BorderBrush="#1E1F22" BorderThickness="1" CornerRadius="8" Padding="12" Tapped="OnFriendCardTapped">
                                             <StackPanel Spacing="8">
                                                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <Grid Width="32" Height="32">
@@ -2912,17 +2933,25 @@
                                     </StackPanel.ContextFlyout>
 
                                     <!-- En-tête de réponse (ReferencedMessage) façon Discord / SakuraCord -->
-                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="20,8,0,0"
-                                                Visibility="{x:Bind IsReply, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <FontIcon Glyph="&#xE97A;" FontSize="11" Opacity="0.6" />
-                                        <Ellipse Width="16" Height="16">
-                                            <Ellipse.Fill>
-                                                <ImageBrush ImageSource="{x:Bind ReplyAuthorAvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                            </Ellipse.Fill>
-                                        </Ellipse>
-                                        <TextBlock Text="{x:Bind ReplyAuthorName}" FontSize="12" FontWeight="SemiBold" Opacity="0.85" />
-                                        <TextBlock Text="{x:Bind ReplyPreview}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis" MaxWidth="420" />
-                                    </StackPanel>
+                                    <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="4"
+                                            Visibility="{x:Bind HasReplyOrInteraction, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Click="OnReplyHookClicked"
+                                            ToolTipService.ToolTip="Aller au message d'origine"
+                                            HorizontalAlignment="Left" Margin="20,4,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <!-- Curved hook line icon -->
+                                            <FontIcon Glyph="&#xE97A;" FontSize="11" Opacity="0.6" Foreground="#B5BAC1" VerticalAlignment="Center" />
+                                            <Ellipse Width="16" Height="16" VerticalAlignment="Center">
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{x:Bind ReplyAuthorAvatarUrl, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <TextBlock Text="{x:Bind ReplyAuthorName}" FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{x:Bind ReplyAuthorRoleColor}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind ReplyPreview}" FontSize="12" Opacity="0.7"
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="480" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
 
                                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,4"
                                                 Visibility="{x:Bind ShowNormalHeader, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -3415,6 +3444,15 @@
                                                         </MenuFlyout>
                                                     </TextBlock.ContextFlyout>
                                                 </TextBlock>
+                                                <!-- Badge BOT / APP Discord officiel -->
+                                                <Border Background="#5865F2" CornerRadius="3" Padding="4,1" Margin="2,0,0,0" VerticalAlignment="Center"
+                                                        Visibility="{x:Bind Author.Bot, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                        ToolTipService.ToolTip="Application vérifiée">
+                                                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                                        <FontIcon Glyph="&#xE73E;" FontSize="8" Foreground="White" VerticalAlignment="Center" Margin="0,0,1,0" />
+                                                        <TextBlock Text="APP" FontSize="9" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Border>
                                                 <!-- Pill Tag de Clan à côté du pseudo dans les messages -->
                                                 <Button Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="5"
                                                         Visibility="{x:Bind Author.HasClan, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -3444,7 +3482,7 @@
                                     </StackPanel>
 
                                     <!-- Texte du message -->
-                                    <TextBlock Text="{x:Bind Content}" TextWrapping="Wrap" Margin="50,0,0,0"
+                                    <TextBlock Text="{x:Bind FormattedContent}" TextWrapping="Wrap" Margin="50,0,0,0"
                                                IsTextSelectionEnabled="True"
                                                Visibility="{x:Bind HasContent, Converter={StaticResource BoolToVisibilityConverter}}" />
 

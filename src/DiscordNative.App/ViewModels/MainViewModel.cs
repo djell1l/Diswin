@@ -5,9 +5,7 @@ using DiscordNative.Protocol;
 using DiscordNative.Protocol.Models;
 using DiscordNative.Protocol.Utils;
 using DiscordNative.App.Services;
-
 namespace DiscordNative.App.ViewModels;
-
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly DiscordClient _client;
@@ -16,7 +14,6 @@ public sealed partial class MainViewModel : ObservableObject
     public DiscordGuild? SelectedGuild => _selectedGuild;
     private DiscordChannel? _selectedChannel;
     public DiscordChannel? SelectedChannel => _selectedChannel;
-
     public void ClearActiveChannel()
     {
         CloseSplitViewThread();
@@ -37,10 +34,8 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(TextViewVisibility));
         OnPropertyChanged(nameof(MemberListVisibility));
     }
-
     private bool _showingFriends;
     private string _friendsFilter = "All";
-
     public ObservableCollection<DiscordGuild> Guilds => _client.Guilds;
     public ObservableCollection<DiscordGuild> DisplayGuilds { get; } = new();
     public ObservableCollection<DiscordChannel> Channels { get; } = new();
@@ -51,31 +46,23 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<DiscordMessage> PinnedMessages { get; } = new();
     public bool HasPinnedMessages => PinnedMessages.Count > 0;
     public string PinnedMessagesCountText => $"Messages épinglés ({PinnedMessages.Count})";
-
     public ObservableCollection<DiscordMessage> ChannelSearchResults { get; } = new();
-
     [ObservableProperty]
     private bool isSearchingChannel;
-
     public bool HasChannelSearchResults => ChannelSearchResults.Count > 0;
     public string ChannelSearchResultsCountText => $"{ChannelSearchResults.Count} résultat{(ChannelSearchResults.Count > 1 ? "s" : "")}";
-
     [ObservableProperty]
     private bool isSplitThreadOpen;
-
     partial void OnIsSplitThreadOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(SplitThreadPanelVisibility));
     }
-
     [ObservableProperty]
     private DiscordChannel? activeSplitThread;
-
     partial void OnActiveSplitThreadChanged(DiscordChannel? value)
     {
         OnPropertyChanged(nameof(SplitThreadPanelVisibility));
     }
-
     public ObservableCollection<DiscordMessage> ActiveThreadMessages { get; } = new();
     public ObservableCollection<DiscordChannel> ChannelActiveThreads { get; } = new();
     public bool HasChannelActiveThreads => ChannelActiveThreads.Count > 0;
@@ -83,49 +70,38 @@ public sealed partial class MainViewModel : ObservableObject
     public Microsoft.UI.Xaml.Visibility SplitThreadPanelVisibility => IsSplitThreadOpen && ActiveSplitThread != null
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     [ObservableProperty]
     private bool isForumChannelSelected;
-
     partial void OnIsForumChannelSelectedChanged(bool value)
     {
         OnPropertyChanged(nameof(ForumViewVisibility));
         OnPropertyChanged(nameof(TextViewVisibility));
         OnPropertyChanged(nameof(MemberListVisibility));
     }
-
     [ObservableProperty]
     private bool isCreatingForumPost;
-
     [ObservableProperty]
     private string forumSearchQuery = string.Empty;
-
     partial void OnForumSearchQueryChanged(string value)
     {
         ApplyForumFilter();
     }
-
     [ObservableProperty]
     private DiscordForumTag? selectedForumFilterTag;
-
     partial void OnSelectedForumFilterTagChanged(DiscordForumTag? value)
     {
         ApplyForumFilter();
     }
-
     public ObservableCollection<DiscordChannel> ForumPosts { get; } = new();
     public ObservableCollection<DiscordChannel> FilteredForumPosts { get; } = new();
     public ObservableCollection<DiscordForumTag> ForumAvailableTags { get; } = new();
     public bool HasFilteredForumPosts => FilteredForumPosts.Count > 0;
     public string ForumPostsCountText => $"{FilteredForumPosts.Count} post{(FilteredForumPosts.Count > 1 ? "s" : "")}";
-
     public Microsoft.UI.Xaml.Visibility ForumViewVisibility => IsForumChannelSelected && !IsVoiceChannelSelected
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     [ObservableProperty]
     private bool isDiscoveryOpen;
-
     partial void OnIsDiscoveryOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(DiscoveryViewVisibility));
@@ -133,15 +109,12 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(DiscoveryCompassBackground));
         OnPropertyChanged(nameof(DiscoveryCompassForeground));
     }
-
     public Microsoft.UI.Xaml.Visibility DiscoveryViewVisibility => IsDiscoveryOpen
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public Microsoft.UI.Xaml.Visibility DiscoveryPillVisibility => IsDiscoveryOpen
         ? Microsoft.UI.Xaml.Visibility.Visible
         : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DiscoveryActiveCompassBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90)); // #23A55A
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DiscoveryInactiveCompassBrush = new(Windows.UI.Color.FromArgb(255, 43, 45, 49)); // #2B2D31
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush WhiteBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
@@ -149,24 +122,18 @@ public sealed partial class MainViewModel : ObservableObject
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush InactivePillBrush = new(Windows.UI.Color.FromArgb(255, 43, 45, 49)); // #2B2D31
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush ActivePillTextBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush InactivePillTextBrush = new(Windows.UI.Color.FromArgb(255, 219, 222, 225)); // #DBDEE1
-
     public Microsoft.UI.Xaml.Media.Brush DiscoveryCompassBackground => IsDiscoveryOpen ? DiscoveryActiveCompassBrush : DiscoveryInactiveCompassBrush;
     public Microsoft.UI.Xaml.Media.Brush DiscoveryCompassForeground => IsDiscoveryOpen ? WhiteBrush : DiscoveryActiveCompassBrush;
-
     public ObservableCollection<DiscordDiscoverableGuild> DiscoverableGuilds { get; } = new();
     public ObservableCollection<DiscordDiscoverableGuild> FilteredDiscoverableGuilds { get; } = new();
-
     [ObservableProperty]
     private string discoverySearchQuery = string.Empty;
-
     partial void OnDiscoverySearchQueryChanged(string value)
     {
         ApplyDiscoveryFilter();
     }
-
     [ObservableProperty]
     private string selectedDiscoveryCategory = "Tous";
-
     partial void OnSelectedDiscoveryCategoryChanged(string value)
     {
         ApplyDiscoveryFilter();
@@ -181,34 +148,27 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CategoryTechTextBrush));
         OnPropertyChanged(nameof(CategoryEducationTextBrush));
     }
-
     public Microsoft.UI.Xaml.Media.Brush CategoryTousBrush => SelectedDiscoveryCategory == "Tous" ? ActivePillBrush : InactivePillBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryGamingBrush => SelectedDiscoveryCategory == "Gaming" ? ActivePillBrush : InactivePillBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryMusiqueBrush => SelectedDiscoveryCategory == "Musique" ? ActivePillBrush : InactivePillBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryTechBrush => SelectedDiscoveryCategory == "Tech" ? ActivePillBrush : InactivePillBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryEducationBrush => SelectedDiscoveryCategory == "Éducation" ? ActivePillBrush : InactivePillBrush;
-
     public Microsoft.UI.Xaml.Media.Brush CategoryTousTextBrush => SelectedDiscoveryCategory == "Tous" ? ActivePillTextBrush : InactivePillTextBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryGamingTextBrush => SelectedDiscoveryCategory == "Gaming" ? ActivePillTextBrush : InactivePillTextBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryMusiqueTextBrush => SelectedDiscoveryCategory == "Musique" ? ActivePillTextBrush : InactivePillTextBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryTechTextBrush => SelectedDiscoveryCategory == "Tech" ? ActivePillTextBrush : InactivePillTextBrush;
     public Microsoft.UI.Xaml.Media.Brush CategoryEducationTextBrush => SelectedDiscoveryCategory == "Éducation" ? ActivePillTextBrush : InactivePillTextBrush;
-
     [ObservableProperty]
     private bool isLoadingDiscovery;
-
     public string DiscoveryResultsCountText => $"{FilteredDiscoverableGuilds.Count} communauté{(FilteredDiscoverableGuilds.Count > 1 ? "s" : "")} trouvée{(FilteredDiscoverableGuilds.Count > 1 ? "s" : "")}";
     public bool HasFilteredDiscoverableGuilds => FilteredDiscoverableGuilds.Count > 0;
-
     public ObservableCollection<DiscordMessage> RecentMentions { get; } = new();
     public ObservableCollection<DiscordChannel> UnreadChannels { get; } = new();
     public bool HasUnreadChannels => UnreadChannels.Count > 0;
     public string UnreadChannelsCountText => UnreadChannels.Count.ToString();
-
     public ObservableCollection<DiscordMessage> Bookmarks { get; } = new();
     public bool HasBookmarks => Bookmarks.Count > 0;
     public string BookmarksCountText => Bookmarks.Count.ToString();
-
     private int _selectedInboxTabIndex = 0; // 0 = Non lus, 1 = Mentions, 2 = Favoris
     public int SelectedInboxTabIndex
     {
@@ -231,21 +191,17 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public bool IsInboxUnreadsSelected => SelectedInboxTabIndex == 0;
     public bool IsInboxMentionsSelected => SelectedInboxTabIndex == 1;
     public bool IsInboxBookmarksSelected => SelectedInboxTabIndex == 2;
     public string InboxTabUnreadsBackground => IsInboxUnreadsSelected ? "#2B2D31" : "Transparent";
     public string InboxTabMentionsBackground => IsInboxMentionsSelected ? "#2B2D31" : "Transparent";
     public string InboxTabBookmarksBackground => IsInboxBookmarksSelected ? "#2B2D31" : "Transparent";
-
     public bool HasMentionsInInbox => RecentMentions.Count > 0;
     public bool HasNoMentionsInInbox => RecentMentions.Count == 0;
-
     public Microsoft.UI.Xaml.Visibility InboxUnreadsVisibility => IsInboxUnreadsSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility InboxMentionsVisibility => IsInboxMentionsSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility InboxBookmarksVisibility => IsInboxBookmarksSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public ObservableCollection<DiscordUser> ChannelMembers { get; } = new();
     public ObservableCollection<MemberActivityCardViewModel> RecentMemberActivities { get; } = new();
     public bool HasRecentMemberActivities => RecentMemberActivities.Count > 0;
@@ -256,85 +212,58 @@ public sealed partial class MainViewModel : ObservableObject
     public bool HasOfflineMembers => OfflineMembers.Count > 0;
     public ObservableCollection<DiscordMemberGroup> MemberGroups { get; } = new();
     public bool HasMemberGroups => MemberGroups.Count > 0;
-
     public ObservableCollection<DiscordSoundboardGroup> SoundboardGroups { get; } = new();
     public ObservableCollection<DiscordSoundboardGroup> FilteredSoundboardGroups { get; } = new();
     public bool HasSoundboardGroups => FilteredSoundboardGroups.Count > 0;
-
     public ObservableCollection<AutocompleteItemViewModel> AutocompleteSuggestions { get; } = new();
-
     [ObservableProperty]
     private bool isAutocompleteOpen;
-
     [ObservableProperty]
     private string autocompleteCategoryTitle = "MEMBRES DU SERVEUR";
-
     [ObservableProperty]
     private int autocompleteSelectedIndex = -1;
-
     public ObservableCollection<DiscordGifItem> GifResults { get; } = new();
-
     [ObservableProperty]
     private bool isLoadingGifs;
-
-
     public bool HasSelectedGuild => _selectedGuild != null;
     public bool HasSelectedGuildBanner => _selectedGuild?.HasBanner == true;
     public string? SelectedGuildBannerUrl => _selectedGuild?.BannerUrl;
     public string SelectedGuildBoostBadge => _selectedGuild?.BoostBadgeText ?? string.Empty;
     public bool HasSelectedGuildBoosts => _selectedGuild?.HasBoosts == true;
-
     [ObservableProperty]
     private string selectedGuildName = "Sélectionnez un serveur";
-
     [ObservableProperty]
     private string selectedChannelName = "Sélectionnez un salon";
-
     [ObservableProperty]
     private string selectedChannelTopic = string.Empty;
-
     [ObservableProperty]
     private string currentUserName = "...";
-
     [ObservableProperty]
     private bool isVoiceConnected;
-
     [ObservableProperty]
     private string connectedVoiceChannelName = string.Empty;
-
     [ObservableProperty]
     private bool isVoiceChannelSelected;
-
     [ObservableProperty]
     private bool isMuted;
-
     [ObservableProperty]
     private bool isDeafened;
-
     [ObservableProperty]
     private bool isKrispEnabled = true;
-
     [ObservableProperty]
     private bool isScreenSharing;
-
     [ObservableProperty]
     private bool isCameraEnabled;
-
     [ObservableProperty]
     private string screenShareTitle = string.Empty;
-
     [ObservableProperty]
     private string screenShareQualityBadge = "1080p • 60 FPS";
-
     [ObservableProperty]
     private string currentStatus = "online";
-
     [ObservableProperty]
     private string searchFilterText = string.Empty;
-
     [ObservableProperty]
     private bool isMemberListOpen = true;
-
     private DiscordMessage? _replyingToMessage;
     public DiscordMessage? ReplyingToMessage
     {
@@ -348,7 +277,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     private DiscordMessage? _editingMessage;
     public DiscordMessage? EditingMessage
     {
@@ -362,32 +290,37 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public bool HasComposerBanner => ReplyingToMessage is not null || EditingMessage is not null;
     public Microsoft.UI.Xaml.Visibility ComposerBannerVisibility => HasComposerBanner ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public string ComposerBannerText => EditingMessage is not null
         ? $"Modification du message : {EditingMessage.Content}"
         : ReplyingToMessage is not null
             ? $"Réponse à @{ReplyingToMessage.Author.DisplayName} : {ReplyingToMessage.ReplyPreview}"
             : string.Empty;
-
     private void NotifyComposerBannerChanged()
     {
         OnPropertyChanged(nameof(HasComposerBanner));
         OnPropertyChanged(nameof(ComposerBannerVisibility));
         OnPropertyChanged(nameof(ComposerBannerText));
     }
-
     public void CancelComposerAction()
     {
         ReplyingToMessage = null;
         EditingMessage = null;
     }
-
     public ObservableCollection<DiscordChannel> FilteredChannels { get; } = new();
     public ObservableCollection<DiscordUser> VoiceParticipants { get; } = new();
-
+    public double VoiceTileWidth => VoiceParticipants.Count <= 1 ? 640 : (VoiceParticipants.Count <= 4 ? 420 : 280);
+    public double VoiceTileHeight => VoiceParticipants.Count <= 1 ? 400 : (VoiceParticipants.Count <= 4 ? 260 : 190);
+    public double VoiceTileAvatarSize => VoiceParticipants.Count <= 1 ? 128 : (VoiceParticipants.Count <= 4 ? 96 : 72);
+    public double VoiceTileSpeakingRingSize => VoiceParticipants.Count <= 1 ? 140 : (VoiceParticipants.Count <= 4 ? 106 : 80);
+    public void NotifyVoiceLayoutChanged()
+    {
+        OnPropertyChanged(nameof(VoiceTileWidth));
+        OnPropertyChanged(nameof(VoiceTileHeight));
+        OnPropertyChanged(nameof(VoiceTileAvatarSize));
+        OnPropertyChanged(nameof(VoiceTileSpeakingRingSize));
+    }
     public Microsoft.UI.Xaml.Media.SolidColorBrush StatusDotBrush => new(CurrentStatus switch
     {
         "online" => Windows.UI.Color.FromArgb(255, 0x23, 0xA5, 0x5A),
@@ -395,7 +328,6 @@ public sealed partial class MainViewModel : ObservableObject
         "dnd" => Windows.UI.Color.FromArgb(255, 0xF2, 0x3F, 0x43),
         _ => Windows.UI.Color.FromArgb(255, 0x80, 0x84, 0x8E)
     });
-
     public string CurrentStatusDisplayName => CurrentStatus switch
     {
         "online" => "En ligne",
@@ -404,11 +336,9 @@ public sealed partial class MainViewModel : ObservableObject
         "invisible" => "Invisible",
         _ => CurrentStatus
     };
-
     public string CurrentUserSubStatusText => !string.IsNullOrWhiteSpace(_client.CurrentUser?.ActivitySummaryText)
         ? _client.CurrentUser.ActivitySummaryText
         : CurrentStatusDisplayName;
-
     public string CurrentUserCustomStatusText => _client.CurrentUser?.CustomStatusText ?? string.Empty;
     public string CurrentUserCustomStatusEmoji => _client.CurrentUser?.CustomStatusEmoji ?? string.Empty;
     public bool HasCustomStatus => !string.IsNullOrWhiteSpace(CurrentUserCustomStatusText) || !string.IsNullOrWhiteSpace(CurrentUserCustomStatusEmoji);
@@ -416,10 +346,7 @@ public sealed partial class MainViewModel : ObservableObject
         ? (!string.IsNullOrWhiteSpace(CurrentUserCustomStatusEmoji) ? $"{CurrentUserCustomStatusEmoji} {CurrentUserCustomStatusText}".Trim() : CurrentUserCustomStatusText)
         : "Définir un statut personnalisé";
     public string CurrentUserCustomStatusSubtitle => HasCustomStatus ? "Modifier le statut" : string.Empty;
-
     public bool CurrentUserIsInVoice => _client.CurrentUser?.IsInVoice ?? false;
-
-
     public DiscordActivity? CurrentUserRichPresence => _client.CurrentUser?.PrimaryActivity;
     public Microsoft.UI.Xaml.Visibility CurrentUserRichPresenceVisibility => CurrentUserRichPresence is not null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public string CurrentUserRpcHeader => CurrentUserRichPresence?.HeaderLabel ?? "EN TRAIN DE JOUER";
@@ -434,7 +361,6 @@ public sealed partial class MainViewModel : ObservableObject
     public Microsoft.UI.Xaml.Visibility CurrentUserRpcLargeImageVisibility => (CurrentUserRichPresence?.HasLargeImage == true) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public string? CurrentUserRpcSmallImageUrl => CurrentUserRichPresence?.SmallImageUrl;
     public Microsoft.UI.Xaml.Visibility CurrentUserRpcSmallImageVisibility => (CurrentUserRichPresence?.HasSmallImage == true) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public double MuteOpacity => IsMuted ? 0.4 : 1.0;
     public double DeafenOpacity => IsDeafened ? 0.4 : 1.0;
     public double KrispOpacity => IsKrispEnabled ? 1.0 : 0.4;
@@ -445,7 +371,6 @@ public sealed partial class MainViewModel : ObservableObject
         ? "Suppression de bruit Krisp : Activée (100% Gratuit • Cliquez pour désactiver)"
         : "Suppression de bruit Krisp : Désactivée (Cliquez pour activer)";
     public double CurrentUserSpeakingRingOpacity => (_client.CurrentUser?.IsSpeaking == true) ? 1.0 : 0.0;
-
     public Microsoft.UI.Xaml.Visibility ScreenShareStageVisibility => IsScreenSharing ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public double ScreenShareOpacity => IsScreenSharing ? 1.0 : 0.75;
     public Microsoft.UI.Xaml.Media.SolidColorBrush ScreenShareIconBrush => new(IsScreenSharing
@@ -454,7 +379,6 @@ public sealed partial class MainViewModel : ObservableObject
     public string ScreenShareTooltipText => IsScreenSharing
         ? $"Partage d'écran en cours ({ScreenShareTitle}) — Cliquez pour modifier ou arrêter"
         : "Partager votre écran (Go Live 720p/1080p 60 FPS + Audio système)";
-
     public double CameraOpacity => IsCameraEnabled ? 1.0 : 0.75;
     public Microsoft.UI.Xaml.Media.SolidColorBrush CameraIconBrush => new(IsCameraEnabled
         ? Windows.UI.Color.FromArgb(255, 0x23, 0xA5, 0x5A)
@@ -462,14 +386,12 @@ public sealed partial class MainViewModel : ObservableObject
     public string CameraTooltipText => IsCameraEnabled
         ? "Caméra activée — Cliquez pour désactiver"
         : "Activer la caméra vidéo";
-
     public bool ShowingFriendsMainStage => _showingFriends && _selectedChannel == null && !IsDiscoveryOpen;
     public Microsoft.UI.Xaml.Visibility FriendsMainStageVisibility => ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility VoiceViewVisibility => IsVoiceChannelSelected ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility TextViewVisibility => IsVoiceChannelSelected || IsForumChannelSelected || ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
     public Microsoft.UI.Xaml.Visibility MemberListVisibility => IsMemberListOpen && !IsVoiceChannelSelected && !IsForumChannelSelected && !ShowingFriendsMainStage ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility TopicVisibility => string.IsNullOrWhiteSpace(SelectedChannelTopic) ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
-
     public DiscordUser? CurrentUser => _client.CurrentUser;
     public string? CurrentUserAvatarUrl => _client.CurrentUser?.AvatarUrl;
     public string? CurrentUserBannerUrl => _client.CurrentUser?.BannerUrl;
@@ -478,46 +400,35 @@ public sealed partial class MainViewModel : ObservableObject
     public string CurrentUserBio => string.IsNullOrWhiteSpace(_client.CurrentUser?.Bio) ? "Aucune bio définie." : _client.CurrentUser.Bio;
     public string CurrentUserPronouns => _client.CurrentUser?.Pronouns ?? string.Empty;
     public Microsoft.UI.Xaml.Visibility CurrentUserPronounsVisibility => string.IsNullOrWhiteSpace(_client.CurrentUser?.Pronouns) ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
-
     public string CurrentUserClanTag => _client.CurrentUser?.ClanTag ?? string.Empty;
     public string? CurrentUserClanBadgeUrl => _client.CurrentUser?.ClanBadgeUrl;
     public Microsoft.UI.Xaml.Visibility CurrentUserClanVisibility => (_client.CurrentUser?.HasClan == true) ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public ObservableCollection<DiscordBadge> CurrentUserBadges { get; } = new();
     public Microsoft.UI.Xaml.Visibility CurrentUserBadgesVisibility => CurrentUserBadges.Count > 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public ObservableCollection<DiscordWidgetGame> CurrentUserGameWidgets { get; } = new();
     public Microsoft.UI.Xaml.Visibility CurrentUserGameWidgetsVisibility => CurrentUserGameWidgets.Count > 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public ObservableCollection<DiscordConnectedAccount> CurrentUserConnectedAccounts { get; } = new();
     public Microsoft.UI.Xaml.Visibility CurrentUserConnectedAccountsVisibility => CurrentUserConnectedAccounts.Count > 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public DiscordWidgetGame? CurrentUserFavoriteGame => CurrentUserGameWidgets.FirstOrDefault(g => g.IsFavorite);
     public Microsoft.UI.Xaml.Visibility CurrentUserFavoriteGameVisibility => CurrentUserFavoriteGame is not null ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public void RefreshCurrentUserGameWidgets()
     {
         OnPropertyChanged(nameof(CurrentUserFavoriteGame));
         OnPropertyChanged(nameof(CurrentUserFavoriteGameVisibility));
         OnPropertyChanged(nameof(CurrentUserGameWidgetsVisibility));
     }
-
     public Microsoft.UI.Xaml.Visibility ShowingGuildChannels => _showingFriends ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
     public Microsoft.UI.Xaml.Visibility ShowingFriendsView => _showingFriends ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     public int TotalDmMentionCount => _client.PrivateChannels.Sum(c => c.MentionCount);
     public bool HasDmMentions => TotalDmMentionCount > 0;
     public string DmMentionCountText => TotalDmMentionCount > 99 ? "99+" : TotalDmMentionCount.ToString();
-
     public void NotifyDmMentionsChanged()
     {
         OnPropertyChanged(nameof(TotalDmMentionCount));
         OnPropertyChanged(nameof(HasDmMentions));
         OnPropertyChanged(nameof(DmMentionCountText));
     }
-
     private readonly Microsoft.UI.Xaml.DispatcherTimer _rpcTickerTimer = new();
-
     public MainViewModel(DiscordClient client)
     {
         _client = client;
@@ -536,7 +447,6 @@ public sealed partial class MainViewModel : ObservableObject
         _client.GuildFoldersUpdated += RefreshDisplayGuilds;
         _client.Guilds.CollectionChanged += (_, _) => RefreshDisplayGuilds();
         RefreshDisplayGuilds();
-
         _rpcTickerTimer.Interval = TimeSpan.FromSeconds(1);
         _rpcTickerTimer.Tick += (_, _) =>
         {
@@ -550,7 +460,6 @@ public sealed partial class MainViewModel : ObservableObject
         _rpcTickerTimer.Start();
         LoadBookmarks();
     }
-
     private void OnVoiceSpeakingChanged(string userId, bool isSpeaking)
     {
         if (userId == _client.CurrentUser?.Id)
@@ -562,7 +471,6 @@ public sealed partial class MainViewModel : ObservableObject
             vp.IsSpeaking = isSpeaking;
         }
     }
-
     private void OnPresenceUpdated(string userId)
     {
         if (userId == _client.CurrentUser?.Id)
@@ -576,7 +484,6 @@ public sealed partial class MainViewModel : ObservableObject
         SyncOnlineOfflineMembers();
         RefreshRecentMemberActivities();
     }
-
     private void OnGuildMembersUpdated(string guildId)
     {
         if (_selectedGuild?.Id == guildId)
@@ -600,7 +507,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public void SyncOnlineOfflineMembers()
     {
         Protocol.App.RunOnUiThread(() =>
@@ -622,7 +528,6 @@ public sealed partial class MainViewModel : ObservableObject
                 }
             }
             var allMembers = memberDict.Values.ToList();
-
             foreach (var m in allMembers)
             {
                 _client.ApplyCachedPresenceToUser(m);
@@ -633,17 +538,13 @@ public sealed partial class MainViewModel : ObservableObject
                     m.UpdateDisplayRoles(_selectedGuild.Roles);
                 }
             }
-
             var online = allMembers.Where(m => m.Status != "offline").OrderBy(m => m.DisplayName).ToList();
             var offline = allMembers.Where(m => m.Status == "offline").OrderBy(m => m.DisplayName).ToList();
-
             CollectionDiffHelper.SyncUsers(OnlineMembers, online);
             CollectionDiffHelper.SyncUsers(OfflineMembers, offline);
-
             OnPropertyChanged(nameof(OnlineMembersCount));
             OnPropertyChanged(nameof(OfflineMembersCount));
             OnPropertyChanged(nameof(HasOfflineMembers));
-
             var freshGroups = new List<DiscordMemberGroup>();
             if (_selectedGuild != null && _selectedGuild.Roles != null && _selectedGuild.Roles.Count > 0)
             {
@@ -651,16 +552,13 @@ public sealed partial class MainViewModel : ObservableObject
                     .Where(r => r.Hoist)
                     .OrderByDescending(r => r.Position)
                     .ToList();
-
                 var groupedUserIds = new HashSet<string>();
-
                 foreach (var role in hoistRoles)
                 {
                     var groupMembers = online
                         .Where(u => u.TopHoistRole?.Id == role.Id)
                         .OrderBy(u => u.DisplayName)
                         .ToList();
-
                     if (groupMembers.Count > 0)
                     {
                         var group = new DiscordMemberGroup
@@ -678,7 +576,6 @@ public sealed partial class MainViewModel : ObservableObject
                         freshGroups.Add(group);
                     }
                 }
-
                 var remainingOnline = online.Where(u => !groupedUserIds.Contains(u.Id)).ToList();
                 if (remainingOnline.Count > 0)
                 {
@@ -692,7 +589,6 @@ public sealed partial class MainViewModel : ObservableObject
                     onlineGroup.NotifyMembersChanged();
                     freshGroups.Add(onlineGroup);
                 }
-
                 if (offline.Count > 0)
                 {
                     var offlineGroup = new DiscordMemberGroup
@@ -737,7 +633,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(HasMemberGroups));
         });
     }
-
     public void RefreshRecentMemberActivities()
     {
         Protocol.App.RunOnUiThread(() =>
@@ -759,15 +654,12 @@ public sealed partial class MainViewModel : ObservableObject
                 }
             }
             var allMembers = memberDict.Values.ToList();
-
             var cards = new List<MemberActivityCardViewModel>();
             var seenCards = new HashSet<string>();
-
             foreach (var user in allMembers)
             {
                 var (_, vcName) = _client.GetUserVoiceChannel(user.Id);
                 user.CurrentVoiceChannelName = vcName;
-
                 if (user.Activities != null && user.Activities.Count > 0)
                 {
                     foreach (var act in user.Activities.Where(a => a.Type != 4 && a.Type != 6))
@@ -794,13 +686,11 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             }
-
             var sorted = cards
                 .OrderByDescending(c => !string.IsNullOrEmpty(c.VoiceChannelName))
                 .ThenByDescending(c => c.HasLargeImage)
                 .ThenBy(c => c.UserName)
                 .ToList();
-
             RecentMemberActivities.Clear();
             foreach (var card in sorted)
             {
@@ -809,7 +699,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(HasRecentMemberActivities));
         });
     }
-
     public async Task BlockUserAsync(DiscordUser user)
     {
         if (user is null || string.IsNullOrWhiteSpace(user.Id)) return;
@@ -819,7 +708,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public void SetUserVoiceVolume(string userId, float volume)
     {
         _client.SetUserVoiceVolume(userId, volume);
@@ -833,7 +721,6 @@ public sealed partial class MainViewModel : ObservableObject
             target.IsLocalMuted = volume <= 0.001f;
         }
     }
-
     public void ToggleUserVoiceMute(string userId)
     {
         var target = ChannelMembers.FirstOrDefault(u => u.Id == userId)
@@ -852,7 +739,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     private void NotifyCurrentUserRichPresenceChanged()
     {
         OnPropertyChanged(nameof(CurrentStatusDisplayName));
@@ -873,11 +759,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentUserRpcSmallImageUrl));
         OnPropertyChanged(nameof(CurrentUserRpcSmallImageVisibility));
     }
-
     public void OnUserLoaded()
     {
         CurrentUserName = _client.CurrentUser?.DisplayName ?? "Utilisateur inconnu";
-
         CurrentUserBadges.Clear();
         if (_client.CurrentUser?.Badges is not null)
         {
@@ -893,7 +777,6 @@ public sealed partial class MainViewModel : ObservableObject
                 Link = "https://github.com/djellil/diswin"
             });
         }
-
         CurrentUserGameWidgets.Clear();
         if (_client.CurrentUser?.GameWidgets is not null && _client.CurrentUser.GameWidgets.Count > 0)
         {
@@ -916,13 +799,11 @@ public sealed partial class MainViewModel : ObservableObject
             App.Settings.Save();
             foreach (var gw in defaultGames) CurrentUserGameWidgets.Add(gw);
         }
-
         CurrentUserConnectedAccounts.Clear();
         if (_client.CurrentUser?.ConnectedAccounts is not null)
         {
             foreach (var ca in _client.CurrentUser.ConnectedAccounts) CurrentUserConnectedAccounts.Add(ca);
         }
-
         OnPropertyChanged(nameof(CurrentUser));
         OnPropertyChanged(nameof(CurrentUserAvatarUrl));
         OnPropertyChanged(nameof(CurrentUserBannerUrl));
@@ -942,7 +823,6 @@ public sealed partial class MainViewModel : ObservableObject
         NotifyCurrentUserRichPresenceChanged();
         RefreshFilteredFriends();
     }
-
     public async Task EnsureUserProfileEnrichedAsync(DiscordUser user)
     {
         if (user is null || string.IsNullOrWhiteSpace(user.Id)) return;
@@ -956,7 +836,6 @@ public sealed partial class MainViewModel : ObservableObject
                 user.FriendsSinceText = DateTimeOffset.FromUnixTimeMilliseconds(rTime).ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
             }
         }
-
         // Récupérer les activités récentes du cache RPC
         var hist = _client.GetUserActivityHistory(user.Id);
         var acts = new List<DiscordActivity>();
@@ -966,11 +845,9 @@ public sealed partial class MainViewModel : ObservableObject
             if (acts.All(a => a.Name != h.Name)) acts.Add(h);
         }
         user.RecentActivities = acts;
-
         if (!user.HasProfileEnriched)
         {
             await _client.Rest.EnrichUserProfileAsync(user);
-
             // Re-fusionner avec l'historique d'activités réelles
             var updatedHist = _client.GetUserActivityHistory(user.Id);
             foreach (var h in updatedHist)
@@ -978,7 +855,6 @@ public sealed partial class MainViewModel : ObservableObject
                 if (acts.All(a => a.Name != h.Name)) acts.Add(h);
             }
             user.RecentActivities = acts;
-
             // Résoudre les noms et icônes réels des serveurs en commun
             if (user.MutualGuilds != null && user.MutualGuilds.Count > 0)
             {
@@ -995,7 +871,6 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             }
-
             // Charger les amis en commun si disponibles
             if (user.MutualFriendsCount > 0 && user.MutualFriends.Count == 0)
             {
@@ -1021,14 +896,11 @@ public sealed partial class MainViewModel : ObservableObject
                     user.MutualFriends = mf;
                 }
             }
-
             user.NotifyProfileEnriched();
         }
     }
-
     [ObservableProperty]
     private string friendsTab = "Online";
-
     partial void OnFriendsTabChanged(string value)
     {
         _friendsFilter = value;
@@ -1038,91 +910,71 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFriendsTabPending));
         OnPropertyChanged(nameof(IsFriendsTabBlocked));
         OnPropertyChanged(nameof(IsFriendsTabAddFriend));
-
         OnPropertyChanged(nameof(FriendsTabOnlineBackground));
         OnPropertyChanged(nameof(FriendsTabAllBackground));
         OnPropertyChanged(nameof(FriendsTabPendingBackground));
         OnPropertyChanged(nameof(FriendsTabBlockedBackground));
         OnPropertyChanged(nameof(FriendsTabAddFriendBackground));
-
         OnPropertyChanged(nameof(FriendsTabOnlineForeground));
         OnPropertyChanged(nameof(FriendsTabAllForeground));
         OnPropertyChanged(nameof(FriendsTabPendingForeground));
         OnPropertyChanged(nameof(FriendsTabBlockedForeground));
         OnPropertyChanged(nameof(FriendsTabAddFriendForeground));
-
         OnPropertyChanged(nameof(FriendsListVisibility));
         OnPropertyChanged(nameof(AddFriendStageVisibility));
         OnPropertyChanged(nameof(FriendsSectionTitleText));
     }
-
     public bool IsFriendsTabOnline => FriendsTab == "Online";
     public bool IsFriendsTabAll => FriendsTab == "All";
     public bool IsFriendsTabPending => FriendsTab == "Pending";
     public bool IsFriendsTabBlocked => FriendsTab == "Blocked";
     public bool IsFriendsTabAddFriend => FriendsTab == "AddFriend";
-
     public Microsoft.UI.Xaml.Visibility FriendsListVisibility => FriendsTab != "AddFriend" ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     public Microsoft.UI.Xaml.Visibility AddFriendStageVisibility => FriendsTab == "AddFriend" ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabActiveBgBrush = new(Windows.UI.Color.FromArgb(255, 53, 55, 60)); // #35373C
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabTransparentBgBrush = new(Windows.UI.Color.FromArgb(0, 0, 0, 0));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabActiveFgBrush = new(Windows.UI.Color.FromArgb(255, 255, 255, 255));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TabInactiveFgBrush = new(Windows.UI.Color.FromArgb(255, 148, 155, 164)); // #949BA4
-
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush AddFriendActiveBgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90)); // #23A55A
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush AddFriendInactiveFgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90));
-
     public Microsoft.UI.Xaml.Media.Brush FriendsTabOnlineBackground => IsFriendsTabOnline ? TabActiveBgBrush : TabTransparentBgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabAllBackground => IsFriendsTabAll ? TabActiveBgBrush : TabTransparentBgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabPendingBackground => IsFriendsTabPending ? TabActiveBgBrush : TabTransparentBgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabBlockedBackground => IsFriendsTabBlocked ? TabActiveBgBrush : TabTransparentBgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabAddFriendBackground => IsFriendsTabAddFriend ? AddFriendActiveBgBrush : TabTransparentBgBrush;
-
     public Microsoft.UI.Xaml.Media.Brush FriendsTabOnlineForeground => IsFriendsTabOnline ? TabActiveFgBrush : TabInactiveFgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabAllForeground => IsFriendsTabAll ? TabActiveFgBrush : TabInactiveFgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabPendingForeground => IsFriendsTabPending ? TabActiveFgBrush : TabInactiveFgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabBlockedForeground => IsFriendsTabBlocked ? TabActiveFgBrush : TabInactiveFgBrush;
     public Microsoft.UI.Xaml.Media.Brush FriendsTabAddFriendForeground => IsFriendsTabAddFriend ? TabActiveFgBrush : AddFriendInactiveFgBrush;
-
     [ObservableProperty]
     private string friendsSearchQuery = string.Empty;
-
     partial void OnFriendsSearchQueryChanged(string value)
     {
         RefreshFilteredFriends();
     }
-
     [ObservableProperty]
     private string addFriendInput = string.Empty;
-
     [ObservableProperty]
     private string addFriendFeedbackMessage = string.Empty;
-
     [ObservableProperty]
     private bool hasAddFriendFeedback;
-
     [ObservableProperty]
     private bool isAddFriendSuccess;
-
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackSuccessBgBrush = new(Windows.UI.Color.FromArgb(255, 20, 50, 30));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackErrorBgBrush = new(Windows.UI.Color.FromArgb(255, 50, 20, 20));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackSuccessFgBrush = new(Windows.UI.Color.FromArgb(255, 35, 165, 90));
     private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FeedbackErrorFgBrush = new(Windows.UI.Color.FromArgb(255, 242, 63, 67));
-
     public Microsoft.UI.Xaml.Media.Brush AddFriendFeedbackBackground => IsAddFriendSuccess ? FeedbackSuccessBgBrush : FeedbackErrorBgBrush;
     public Microsoft.UI.Xaml.Media.Brush AddFriendFeedbackForeground => IsAddFriendSuccess ? FeedbackSuccessFgBrush : FeedbackErrorFgBrush;
-
     public ObservableCollection<DiscordRelationship> ActiveNowFriends { get; } = new();
     public bool HasActiveNowFriends => ActiveNowFriends.Count > 0;
-
     public int OnlineFriendsCount => _client.Friends.Count(r => r.IsOnline);
     public int AllFriendsCount => _client.Friends.Count(r => r.IsFriend);
     public int PendingFriendsCount => _client.Friends.Count(r => r.IsPending);
     public int BlockedFriendsCount => _client.Friends.Count(r => r.IsBlocked);
     public bool HasPendingFriends => PendingFriendsCount > 0;
     public string PendingBadgeText => PendingFriendsCount.ToString();
-
     public string FriendsSectionTitleText => FriendsTab switch
     {
         "Online" => $"EN LIGNE — {FilteredFriends.Count}",
@@ -1132,28 +984,23 @@ public sealed partial class MainViewModel : ObservableObject
         "AddFriend" => "AJOUTER UN AMI",
         _ => $"AMIS — {FilteredFriends.Count}"
     };
-
     public void SetFriendsFilter(string filter)
     {
         _friendsFilter = filter;
         if (FriendsTab != filter) FriendsTab = filter;
         RefreshFilteredFriends();
     }
-
     public void RefreshFilteredFriends()
     {
         FilteredFriends.Clear();
         ActiveNowFriends.Clear();
-
         IEnumerable<DiscordRelationship> query = _client.Friends;
-
         // Populate ActiveNowFriends
         foreach (var r in query.Where(r => r.IsOnline && (r.User.HasActivityOrCustomStatus || r.User.HasGameActivity)))
         {
             ActiveNowFriends.Add(r);
         }
         OnPropertyChanged(nameof(HasActiveNowFriends));
-
         var filter = FriendsTab;
         query = filter switch
         {
@@ -1162,7 +1009,6 @@ public sealed partial class MainViewModel : ObservableObject
             "Blocked" => query.Where(r => r.IsBlocked),
             _ => query.Where(r => r.IsFriend),
         };
-
         if (!string.IsNullOrWhiteSpace(FriendsSearchQuery))
         {
             var q = FriendsSearchQuery.Trim();
@@ -1171,12 +1017,10 @@ public sealed partial class MainViewModel : ObservableObject
                 r.User.Username.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 r.User.UserTag.Contains(q, StringComparison.OrdinalIgnoreCase));
         }
-
         foreach (var rel in query)
         {
             FilteredFriends.Add(rel);
         }
-
         OnPropertyChanged(nameof(OnlineFriendsCount));
         OnPropertyChanged(nameof(AllFriendsCount));
         OnPropertyChanged(nameof(PendingFriendsCount));
@@ -1185,11 +1029,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(PendingBadgeText));
         OnPropertyChanged(nameof(FriendsSectionTitleText));
     }
-
     public async Task SubmitAddFriendAsync()
     {
         if (string.IsNullOrWhiteSpace(AddFriendInput)) return;
-
         try
         {
             await SendFriendRequestAsync(AddFriendInput.Trim());
@@ -1209,13 +1051,11 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(AddFriendFeedbackForeground));
         }
     }
-
     public void ToggleMemberList()
     {
         IsMemberListOpen = !IsMemberListOpen;
         OnPropertyChanged(nameof(MemberListVisibility));
     }
-
     public async Task UpdateProfileAsync(
         string? newDisplayName = null,
         string? newBio = null,
@@ -1240,7 +1080,6 @@ public sealed partial class MainViewModel : ObservableObject
                     CurrentStatus = customStatusText;
                 }
             }
-
             var updated = await _client.Rest.ModifyCurrentUserAsync(
                 globalName: newDisplayName,
                 username: newUsername,
@@ -1253,7 +1092,6 @@ public sealed partial class MainViewModel : ObservableObject
                 bannerDataUri: bannerDataUri,
                 removeBanner: removeBanner,
                 accentColor: accentColor);
-
             _client.CurrentUser = updated;
             OnUserLoaded();
         }
@@ -1265,13 +1103,11 @@ public sealed partial class MainViewModel : ObservableObject
             throw;
         }
     }
-
     public async Task<(string? nick, string? bio, string? pronouns, string? avatarHash, string? bannerHash)> GetGuildMemberProfileAsync(string guildId)
     {
         if (_client.CurrentUser is null || string.IsNullOrWhiteSpace(guildId)) return (null, null, null, null, null);
         return await _client.Rest.GetGuildMemberProfileAsync(guildId, _client.CurrentUser.Id);
     }
-
     public async Task UpdateGuildMemberProfileAsync(
         string guildId,
         string? nick = null,
@@ -1295,7 +1131,6 @@ public sealed partial class MainViewModel : ObservableObject
             removeBanner: removeBanner,
             accentColor: accentColor);
     }
-
     public void ShowFriendsView()
     {
         IsDiscoveryOpen = false;
@@ -1324,7 +1159,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelectedGuildBoosts));
         RefreshFilteredFriends();
     }
-
     public async Task SelectGuildAsync(DiscordGuild guild)
     {
         IsDiscoveryOpen = false;
@@ -1350,10 +1184,8 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedGuildBoostBadge));
         OnPropertyChanged(nameof(HasSelectedGuildBoosts));
         Channels.Clear();
-
         // Demander à la Gateway de s'abonner au serveur (Opcode 14) pour recevoir les mises à jour vocales et les membres en temps réel
         _ = _client.SubscribeGuildAsync(guild.Id);
-
         List<DiscordChannel> rawChannels;
         if (guild.Channels.Count > 0)
         {
@@ -1375,17 +1207,14 @@ public sealed partial class MainViewModel : ObservableObject
                 rawChannels = new List<DiscordChannel>();
             }
         }
-
         foreach (var ch in rawChannels.Where(c => c.IsVoiceChannel))
         {
             _client.RegisterGuildVoiceChannel(guild.Id, ch.Id);
         }
         _client.UpdateGuildVoiceAndStreamStatus(guild.Id);
-
         // Calculer les permissions de chaque salon (visibilité et connexion)
         var userRoles = _client.GetCurrentUserGuildRoles(guild.Id);
         var channelDict = rawChannels.ToDictionary(c => c.Id);
-
         foreach (var ch in rawChannels)
         {
             var (canView, canConnect) = DiscordPermissionEvaluator.EvaluateChannelPermissions(
@@ -1394,25 +1223,20 @@ public sealed partial class MainViewModel : ObservableObject
                 _client.CurrentUser?.Id,
                 userRoles,
                 channelDict);
-
             ch.CanView = canView;
             ch.CanConnect = canConnect;
         }
-
         bool showHidden = App.Settings.Current.ShowHiddenChannels;
-
         // Groupement hiérarchique par catégories (Discord 1:1)
         var categoryChannels = rawChannels
             .Where(c => c.Type == DiscordChannelType.GuildCategory)
             .OrderBy(c => c.Position)
             .ToList();
-
         var uncategorized = rawChannels
             .Where(c => (c.IsTextLike || c.IsVoiceChannel) && string.IsNullOrEmpty(c.ParentId) && (c.CanView || showHidden))
             .OrderBy(c => c.IsVoiceChannel ? 1 : 0)
             .ThenBy(c => c.Position)
             .ToList();
-
         void AddChannelWithUnreadCheck(DiscordChannel ch)
         {
             ch.GuildId ??= guild.Id;
@@ -1427,30 +1251,25 @@ public sealed partial class MainViewModel : ObservableObject
             }
             Channels.Add(ch);
         }
-
         // 1. Canaux non catégorisés d'abord
         foreach (var ch in uncategorized)
         {
             AddChannelWithUnreadCheck(ch);
         }
-
         // 2. Chaque catégorie avec ses salons enfants
         foreach (var cat in categoryChannels)
         {
             cat.GuildId ??= guild.Id;
             Channels.Add(cat);
-
             var children = rawChannels
                 .Where(c => (c.IsTextLike || c.IsVoiceChannel) && c.ParentId == cat.Id && (c.CanView || showHidden))
                 .OrderBy(c => c.IsVoiceChannel ? 1 : 0)
                 .ThenBy(c => c.Position);
-
             foreach (var child in children)
             {
                 AddChannelWithUnreadCheck(child);
             }
         }
-
         // S'il n'y avait aucune catégorie sur le serveur, s'assurer que tous les salons sont ajoutés
         if (categoryChannels.Count == 0 && uncategorized.Count == 0)
         {
@@ -1459,19 +1278,15 @@ public sealed partial class MainViewModel : ObservableObject
                 AddChannelWithUnreadCheck(ch);
             }
         }
-
         foreach (var ch in Channels.Where(c => c.IsVoiceChannel))
         {
             SyncChannelVoiceMembers(ch);
         }
-
         FilteredChannels.Clear();
         foreach (var ch in Channels) FilteredChannels.Add(ch);
-
         SyncOnlineOfflineMembers();
         RefreshRecentMemberActivities();
     }
-
     public void RefreshDisplayGuilds()
     {
         Protocol.App.RunOnUiThread(() =>
@@ -1479,24 +1294,19 @@ public sealed partial class MainViewModel : ObservableObject
             var allGuilds = _client.Guilds.ToList();
             var folders = _client.GuildFolders;
             var assignedGuildIds = new HashSet<string>();
-
             var existingStates = new Dictionary<string, bool>();
             foreach (var item in DisplayGuilds.Where(g => g.IsFolder))
             {
                 existingStates[item.Id] = item.IsFolderCollapsed;
             }
-
             DisplayGuilds.Clear();
-
             if (folders != null && folders.Count > 0)
             {
                 foreach (var folderData in folders)
                 {
                     var folderGuilds = allGuilds.Where(g => folderData.GuildIds.Contains(g.Id)).ToList();
                     if (folderGuilds.Count == 0) continue;
-
                     foreach (var g in folderGuilds) assignedGuildIds.Add(g.Id);
-
                     if (folderData.IsFolder)
                     {
                         var folderId = $"folder_{folderData.IdString ?? Guid.NewGuid().ToString("N")}";
@@ -1505,7 +1315,6 @@ public sealed partial class MainViewModel : ObservableObject
                         {
                             isCollapsed = prevCollapsed;
                         }
-
                         var folderItem = new DiscordGuild
                         {
                             Id = folderId,
@@ -1522,7 +1331,6 @@ public sealed partial class MainViewModel : ObservableObject
                         }
                         folderItem.NotifyFolderChanged();
                         DisplayGuilds.Add(folderItem);
-
                         if (!isCollapsed)
                         {
                             foreach (var g in folderGuilds)
@@ -1541,7 +1349,6 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             }
-
             foreach (var g in allGuilds)
             {
                 if (!assignedGuildIds.Contains(g.Id))
@@ -1552,14 +1359,12 @@ public sealed partial class MainViewModel : ObservableObject
             }
         });
     }
-
     public void ToggleFolderCollapse(DiscordGuild folder)
     {
         if (!folder.IsFolder) return;
         folder.IsFolderCollapsed = !folder.IsFolderCollapsed;
         int folderIndex = DisplayGuilds.IndexOf(folder);
         if (folderIndex < 0) return;
-
         if (folder.IsFolderCollapsed)
         {
             foreach (var child in folder.FolderChildren)
@@ -1575,7 +1380,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public void MarkFolderRead(DiscordGuild folder)
     {
         if (!folder.IsFolder) return;
@@ -1586,7 +1390,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         folder.NotifyFolderChanged();
     }
-
     public void CreateLocalServerFolder(string folderName, DiscordGuild firstGuild)
     {
         if (firstGuild == null) return;
@@ -1600,7 +1403,6 @@ public sealed partial class MainViewModel : ObservableObject
         firstGuild.FolderId = folderItem.Id;
         folderItem.FolderChildren.Add(firstGuild);
         folderItem.NotifyFolderChanged();
-
         int idx = DisplayGuilds.IndexOf(firstGuild);
         if (idx >= 0)
         {
@@ -1612,13 +1414,11 @@ public sealed partial class MainViewModel : ObservableObject
             DisplayGuilds.Add(firstGuild);
         }
     }
-
     public void DissolveFolder(DiscordGuild folder)
     {
         if (!folder.IsFolder) return;
         int idx = DisplayGuilds.IndexOf(folder);
         if (idx < 0) return;
-
         DisplayGuilds.RemoveAt(idx);
         if (folder.IsFolderCollapsed)
         {
@@ -1636,7 +1436,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public void ToggleCategoryCollapse(DiscordChannel category)
     {
         if (!category.IsCategory) return;
@@ -1647,7 +1446,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             ch.IsCategoryVisible = !isCollapsed;
         }
-
         if (string.IsNullOrWhiteSpace(SearchFilterText))
         {
             if (isCollapsed)
@@ -1670,7 +1468,6 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public async Task SelectChannelAsync(DiscordChannel channel)
     {
         if (channel.IsCategory)
@@ -1678,17 +1475,14 @@ public sealed partial class MainViewModel : ObservableObject
             ToggleCategoryCollapse(channel);
             return;
         }
-
         if (channel.IsVoiceChannel && channel.IsLocked)
         {
             return;
         }
-
         _selectedChannel = channel;
         _client.ActiveChannelId = channel.Id;
         channel.MentionCount = 0;
         channel.HasUnread = false;
-
         if (_selectedGuild != null && _selectedGuild.MentionCount > 0)
         {
             _selectedGuild.MentionCount = Math.Max(0, _selectedGuild.MentionCount - 1);
@@ -1699,26 +1493,22 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(FriendsMainStageVisibility));
         OnPropertyChanged(nameof(TextViewVisibility));
         OnPropertyChanged(nameof(MemberListVisibility));
-
         SelectedChannelName = channel.DisplayName;
         SelectedChannelTopic = channel.Topic ?? string.Empty;
         OnPropertyChanged(nameof(TopicVisibility));
         CancelComposerAction();
         Messages.Clear();
         ChannelMembers.Clear();
-
         if (ActiveSplitThread != null && ActiveSplitThread.ParentId != channel.Id)
         {
             CloseSplitViewThread();
         }
         _ = LoadActiveChannelThreadsAsync();
-
         var guildIdForSub = channel.GuildId ?? _selectedGuild?.Id;
         if (!string.IsNullOrEmpty(guildIdForSub))
         {
             _ = _client.SubscribeGuildAsync(guildIdForSub, channel.Id);
         }
-
         if (channel.Type == DiscordChannelType.GuildVoice)
         {
             IsVoiceChannelSelected = true;
@@ -1727,7 +1517,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(TextViewVisibility));
             OnPropertyChanged(nameof(ForumViewVisibility));
             OnPropertyChanged(nameof(MemberListVisibility));
-
             var targetGuildId = channel.GuildId ?? _selectedGuild?.Id;
             if (targetGuildId != null)
             {
@@ -1741,7 +1530,6 @@ public sealed partial class MainViewModel : ObservableObject
                     AudioSfxService.Play(DiscordSfx.Join);
                 }
             }
-
             RefreshVoiceParticipants(channel.Id);
         }
         else if (channel.Type == DiscordChannelType.GuildForum)
@@ -1752,7 +1540,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(TextViewVisibility));
             OnPropertyChanged(nameof(ForumViewVisibility));
             OnPropertyChanged(nameof(MemberListVisibility));
-
             _ = LoadForumPostsAsync(channel.Id);
         }
         else
@@ -1763,11 +1550,9 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(TextViewVisibility));
             OnPropertyChanged(nameof(ForumViewVisibility));
             OnPropertyChanged(nameof(MemberListVisibility));
-
             try
             {
                 var history = await _client.Rest.GetMessagesAsync(channel.Id, limit: 50);
-
                 DiscordMessage? prev = null;
                 var seenUsers = new HashSet<string>();
                 if (_client.CurrentUser is not null && seenUsers.Add(_client.CurrentUser.Id))
@@ -1782,7 +1567,6 @@ public sealed partial class MainViewModel : ObservableObject
                         if (seenUsers.Add(r.Id)) ChannelMembers.Add(r);
                     }
                 }
-
                 foreach (var message in history.OrderBy(m => m.Timestamp))
                 {
                     _client.ApplyCachedPresenceToUser(message.Author);
@@ -1799,28 +1583,23 @@ public sealed partial class MainViewModel : ObservableObject
             {
             }
         }
-
         SyncOnlineOfflineMembers();
         RefreshRecentMemberActivities();
     }
-
     private bool _isLoadingOlderMessages;
     public async Task<int> LoadOlderMessagesAsync()
     {
         if (_selectedChannel is null || _isLoadingOlderMessages) return 0;
         var oldest = Messages.FirstOrDefault();
         if (oldest is null) return 0;
-
         _isLoadingOlderMessages = true;
         try
         {
             var older = await _client.Rest.GetMessagesAsync(_selectedChannel.Id, limit: 50, beforeId: oldest.Id);
             if (older.Count == 0) return 0;
-
             var ordered = older.OrderBy(m => m.Timestamp).ToList();
             DiscordMessage? prev = null;
             var seenUsers = new HashSet<string>(ChannelMembers.Select(u => u.Id));
-
             // Insérer au début de la collection
             for (int i = 0; i < ordered.Count; i++)
             {
@@ -1833,13 +1612,11 @@ public sealed partial class MainViewModel : ObservableObject
                 }
                 prev = msg;
             }
-
             // Mettre à jour l'en-tête du message qui était précédemment le premier
             if (Messages.Count > ordered.Count)
             {
                 ProcessMessageForGrouping(Messages[ordered.Count], prev);
             }
-
             return older.Count;
         }
         catch (Exception ex)
@@ -1854,14 +1631,12 @@ public sealed partial class MainViewModel : ObservableObject
             _isLoadingOlderMessages = false;
         }
     }
-
     public async Task OpenThreadInSplitViewAsync(DiscordChannel thread)
     {
         ActiveSplitThread = thread;
         IsSplitThreadOpen = true;
         OnPropertyChanged(nameof(SplitThreadPanelVisibility));
         ActiveThreadMessages.Clear();
-
         try
         {
             var history = await _client.Rest.GetMessagesAsync(thread.Id, limit: 50);
@@ -1876,7 +1651,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public void CloseSplitViewThread()
     {
         IsSplitThreadOpen = false;
@@ -1884,7 +1658,6 @@ public sealed partial class MainViewModel : ObservableObject
         ActiveThreadMessages.Clear();
         OnPropertyChanged(nameof(SplitThreadPanelVisibility));
     }
-
     public async Task LoadActiveChannelThreadsAsync()
     {
         if (_selectedChannel == null) return;
@@ -1904,7 +1677,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public async Task<bool> SendThreadMessageAsync(string content)
     {
         if (ActiveSplitThread == null || string.IsNullOrWhiteSpace(content)) return false;
@@ -1925,7 +1697,6 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
         return false;
     }
-
     public async Task<DiscordChannel?> CreateThreadFromMessageAsync(DiscordMessage message, string threadName)
     {
         try
@@ -1951,7 +1722,6 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
         return null;
     }
-
     public async Task<DiscordChannel?> CreateChannelThreadAsync(string threadName)
     {
         if (_selectedChannel == null) return null;
@@ -1973,7 +1743,6 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
         return null;
     }
-
     public async Task LoadForumPostsAsync(string channelId)
     {
         try
@@ -1991,7 +1760,6 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             });
-
             var active = await _client.Rest.GetActiveThreadsAsync(channelId);
             var archived = await _client.Rest.GetArchivedThreadsAsync(channelId);
             var all = active.Concat(archived)
@@ -1999,7 +1767,6 @@ public sealed partial class MainViewModel : ObservableObject
                             .Select(g => g.First())
                             .OrderByDescending(t => t.ThreadMetadata?.ArchiveTimestamp ?? DateTimeOffset.MinValue)
                             .ToList();
-
             Protocol.App.RunOnUiThread(() =>
             {
                 ForumPosts.Clear();
@@ -2021,32 +1788,26 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public void ApplyForumFilter()
     {
         FilteredForumPosts.Clear();
         var query = ForumSearchQuery?.Trim();
         var tagId = SelectedForumFilterTag?.Id;
-
         foreach (var post in ForumPosts)
         {
             if (!string.IsNullOrEmpty(query) && !post.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
-
             if (!string.IsNullOrEmpty(tagId) && (post.AppliedTags == null || !post.AppliedTags.Contains(tagId)))
             {
                 continue;
             }
-
             FilteredForumPosts.Add(post);
         }
-
         OnPropertyChanged(nameof(HasFilteredForumPosts));
         OnPropertyChanged(nameof(ForumPostsCountText));
     }
-
     public async Task<DiscordChannel?> CreateForumPostAsync(string title, string content, List<string>? tags = null)
     {
         if (_selectedChannel == null || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(content)) return null;
@@ -2077,7 +1838,6 @@ public sealed partial class MainViewModel : ObservableObject
         catch { }
         return null;
     }
-
     public async Task OpenDiscoveryViewAsync()
     {
         if (_selectedGuild != null)
@@ -2090,17 +1850,14 @@ public sealed partial class MainViewModel : ObservableObject
         _showingFriends = false;
         OnPropertyChanged(nameof(ShowingGuildChannels));
         OnPropertyChanged(nameof(ShowingFriendsView));
-
         IsDiscoveryOpen = true;
         await LoadDiscoverableGuildsAsync();
     }
-
     public void CloseDiscoveryView()
     {
         IsDiscoveryOpen = false;
         ShowFriendsView();
     }
-
     public async Task LoadDiscoverableGuildsAsync(string? query = null, int category = 0)
     {
         IsLoadingDiscovery = true;
@@ -2129,20 +1886,17 @@ public sealed partial class MainViewModel : ObservableObject
             });
         }
     }
-
     public void ApplyDiscoveryFilter()
     {
         FilteredDiscoverableGuilds.Clear();
         var category = SelectedDiscoveryCategory;
         var query = DiscoverySearchQuery?.Trim();
-
         foreach (var g in DiscoverableGuilds)
         {
             if (!string.IsNullOrEmpty(category) && category != "Tous" && !string.Equals(g.Category, category, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
-
             if (!string.IsNullOrEmpty(query))
             {
                 var matchesName = g.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
@@ -2153,14 +1907,11 @@ public sealed partial class MainViewModel : ObservableObject
                     continue;
                 }
             }
-
             FilteredDiscoverableGuilds.Add(g);
         }
-
         OnPropertyChanged(nameof(HasFilteredDiscoverableGuilds));
         OnPropertyChanged(nameof(DiscoveryResultsCountText));
     }
-
     public async Task JoinDiscoverableGuildAsync(DiscordDiscoverableGuild guild)
     {
         var localGuild = Guilds.FirstOrDefault(g => g.Id == guild.Id);
@@ -2170,7 +1921,6 @@ public sealed partial class MainViewModel : ObservableObject
             await SelectGuildAsync(localGuild);
             return;
         }
-
         var inviteCode = !string.IsNullOrWhiteSpace(guild.VanityUrlCode) ? guild.VanityUrlCode : guild.Id;
         try
         {
@@ -2182,7 +1932,6 @@ public sealed partial class MainViewModel : ObservableObject
             System.Diagnostics.Debug.WriteLine($"[JoinDiscoverableGuildAsync] Error: {ex.Message}");
         }
     }
-
     public async Task SendMessageAsync(string content)
     {
         if (_selectedChannel is null || string.IsNullOrWhiteSpace(content)) return;
@@ -2196,7 +1945,6 @@ public sealed partial class MainViewModel : ObservableObject
                 OnMessageUpdated(updated);
                 return;
             }
-
             // Auto-conversion en message.txt si > 4000 caractères (fonctionnalité SakuraCord)
             if (App.Settings.Current.ConvertLongMessagesToFile && content.Length > 4000)
             {
@@ -2205,7 +1953,6 @@ public sealed partial class MainViewModel : ObservableObject
                 await _client.Rest.SendBytesAsync(_selectedChannel.Id, bytes, "message.txt", "Message long envoyé sous forme de fichier :");
                 return;
             }
-
             var replyId = ReplyingToMessage?.Id;
             CancelComposerAction();
             await _client.Rest.SendMessageAsync(_selectedChannel.Id, content, replyToMessageId: replyId);
@@ -2217,7 +1964,6 @@ public sealed partial class MainViewModel : ObservableObject
                 $"[{DateTime.Now}] SendMessageAsync failed: {ex}\n\n");
         }
     }
-
     public async Task SendStickerAsync(string stickerId)
     {
         if (_selectedChannel is null || string.IsNullOrWhiteSpace(stickerId)) return;
@@ -2239,7 +1985,6 @@ public sealed partial class MainViewModel : ObservableObject
                 $"[{DateTime.Now}] SendStickerAsync failed: {ex}\n\n");
         }
     }
-
     public async Task SendFileAsync(string filePath)
     {
         if (_selectedChannel is null || string.IsNullOrWhiteSpace(filePath)) return;
@@ -2254,7 +1999,6 @@ public sealed partial class MainViewModel : ObservableObject
                 $"[{DateTime.Now}] SendFileAsync failed: {ex}\n\n");
         }
     }
-
     public async Task SendBytesAsync(byte[] bytes, string fileName, string? caption = null)
     {
         if (_selectedChannel is null || bytes.Length == 0) return;
@@ -2272,7 +2016,6 @@ public sealed partial class MainViewModel : ObservableObject
                 $"[{DateTime.Now}] SendBytesAsync failed: {ex}\n\n");
         }
     }
-
     public async Task LoadPinnedMessagesAsync()
     {
         if (_selectedChannel is null) return;
@@ -2291,7 +2034,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(PinnedMessagesCountText));
         }
     }
-
     public async Task TogglePinMessageAsync(DiscordMessage message)
     {
         if (_selectedChannel is null) return;
@@ -2315,24 +2057,20 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     private System.Threading.CancellationTokenSource? _searchCts;
     public async Task SearchCurrentChannelAsync(string query)
     {
         _searchCts?.Cancel();
         _searchCts = new System.Threading.CancellationTokenSource();
         var ct = _searchCts.Token;
-
         ChannelSearchResults.Clear();
         OnPropertyChanged(nameof(HasChannelSearchResults));
         OnPropertyChanged(nameof(ChannelSearchResultsCountText));
-
         if (string.IsNullOrWhiteSpace(query))
         {
             IsSearchingChannel = false;
             return;
         }
-
         IsSearchingChannel = true;
         try
         {
@@ -2341,13 +2079,11 @@ public sealed partial class MainViewModel : ObservableObject
                 .Where(m => (!string.IsNullOrEmpty(m.Content) && m.Content.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
                             (m.Author?.DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
-
             foreach (var msg in localMatches)
             {
                 if (!ChannelSearchResults.Any(r => r.Id == msg.Id))
                     ChannelSearchResults.Add(msg);
             }
-
             // 2. Query REST search endpoint if channel is selected
             if (_selectedChannel != null)
             {
@@ -2371,7 +2107,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(ChannelSearchResultsCountText));
         }
     }
-
     public async Task LoadMentionsAsync()
     {
         RecentMentions.Clear();
@@ -2411,7 +2146,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNoMentionsInInbox));
         }
     }
-
     public void RefreshUnreadChannels()
     {
         UnreadChannels.Clear();
@@ -2440,7 +2174,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasUnreadChannels));
         OnPropertyChanged(nameof(UnreadChannelsCountText));
     }
-
     public void MarkAllAsRead()
     {
         foreach (var g in Guilds)
@@ -2464,7 +2197,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(UnreadChannelsCountText));
         OnPropertyChanged(nameof(TotalDmMentionCount));
     }
-
     public void ToggleBookmark(DiscordMessage msg)
     {
         var existing = Bookmarks.FirstOrDefault(b => b.Id == msg.Id);
@@ -2480,7 +2212,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasBookmarks));
         OnPropertyChanged(nameof(BookmarksCountText));
     }
-
     public void RemoveBookmark(DiscordMessage msg)
     {
         var existing = Bookmarks.FirstOrDefault(b => b.Id == msg.Id);
@@ -2492,7 +2223,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(BookmarksCountText));
         }
     }
-
     private void SaveBookmarks()
     {
         try
@@ -2505,7 +2235,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public void LoadBookmarks()
     {
         try
@@ -2526,7 +2255,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public async Task AckMessageAsync(string messageId, string channelId)
     {
         try
@@ -2535,7 +2263,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public async Task<DiscordGuild> CreateGuildAsync(
         string name,
         string? iconBase64 = null,
@@ -2546,10 +2273,8 @@ public sealed partial class MainViewModel : ObservableObject
             ["name"] = c.Name,
             ["type"] = (int)c.Type
         }).ToList();
-
         var guild = await _client.CreateGuildAsync(name, iconBase64, channelsPayload);
         await SelectGuildAsync(guild);
-
         // Ensure template channels are created if guild only has default channels
         if (templateChannels != null && templateChannels.Count > 0)
         {
@@ -2564,10 +2289,8 @@ public sealed partial class MainViewModel : ObservableObject
                 catch { }
             }
         }
-
         return guild;
     }
-
     public async Task<DiscordGuild?> JoinServerByInviteAsync(string inviteCodeOrUrl)
     {
         var joinedGuild = await _client.JoinInviteAsync(inviteCodeOrUrl);
@@ -2592,7 +2315,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         return joinedGuild;
     }
-
     public async Task LeaveGuildAsync(DiscordGuild guild)
     {
         await _client.Rest.LeaveGuildAsync(guild.Id);
@@ -2602,20 +2324,17 @@ public sealed partial class MainViewModel : ObservableObject
             ShowFriendsView();
         }
     }
-
     public async Task LeaveSelectedGuildAsync()
     {
         if (_selectedGuild == null) return;
         await LeaveGuildAsync(_selectedGuild);
     }
-
     public async Task CreateChannelAsync(string name, DiscordChannelType type = DiscordChannelType.GuildText, string? topic = null, string? parentId = null)
     {
         if (_selectedGuild == null) return;
         var newChannel = await _client.Rest.CreateGuildChannelAsync(_selectedGuild.Id, name, type, topic, parentId);
         newChannel.GuildId = _selectedGuild.Id;
         newChannel.ParentId = parentId;
-
         if (type == DiscordChannelType.GuildCategory)
         {
             Channels.Add(newChannel);
@@ -2663,13 +2382,11 @@ public sealed partial class MainViewModel : ObservableObject
                 FilteredChannels.Add(newChannel);
             }
         }
-
         if (type != DiscordChannelType.GuildCategory)
         {
             await SelectChannelAsync(newChannel);
         }
     }
-
     public async Task ModifyChannelAsync(string channelId, string newName, string? newTopic)
     {
         var updated = await _client.Rest.ModifyChannelAsync(channelId, newName, newTopic);
@@ -2686,7 +2403,6 @@ public sealed partial class MainViewModel : ObservableObject
             SelectedChannelTopic = updated.Topic ?? string.Empty;
         }
     }
-
     public async Task DeleteChannelAsync(string channelId)
     {
         var ok = await _client.Rest.DeleteChannelAsync(channelId);
@@ -2712,13 +2428,11 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     public async Task<string> CreateInviteForCurrentChannelAsync()
     {
         if (_selectedChannel is null) return string.Empty;
         return await _client.Rest.CreateChannelInviteAsync(_selectedChannel.Id);
     }
-
     public async Task SendFriendRequestAsync(string username)
     {
         await _client.Rest.SendFriendRequestAsync(username);
@@ -2727,14 +2441,12 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var r in updated) _client.Friends.Add(r);
         RefreshFilteredFriends();
     }
-
     public async Task AcceptFriendRequestAsync(DiscordRelationship rel)
     {
         await _client.Rest.PutRelationshipAsync(rel.User.Id, 1);
         rel.Type = DiscordRelationshipType.Friend;
         RefreshFilteredFriends();
     }
-
     public async Task RemoveOrBlockRelationshipAsync(DiscordRelationship rel, bool block = false)
     {
         if (block)
@@ -2749,7 +2461,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         RefreshFilteredFriends();
     }
-
     public async Task OpenOrSendDirectMessageAsync(DiscordUser targetUser, string? initialMessage = null)
     {
         try
@@ -2774,7 +2485,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch { }
     }
-
     public async Task AddReactionAsync(string messageId, string emoji)
     {
         if (_selectedChannel is null) return;
@@ -2784,7 +2494,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception) { }
     }
-
     public async Task RemoveReactionAsync(string messageId, string emoji)
     {
         if (_selectedChannel is null) return;
@@ -2794,7 +2503,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception) { }
     }
-
     public async Task ToggleReactionAsync(string messageId, DiscordReaction reaction)
     {
         if (_selectedChannel is null) return;
@@ -2812,7 +2520,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception) { }
     }
-
     public async Task DeleteMessageAsync(string messageId)
     {
         if (_selectedChannel is null) return;
@@ -2822,7 +2529,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         catch (Exception) { }
     }
-
     private void OnMessageReceived(DiscordMessage message)
     {
         if (ActiveSplitThread != null && message.ChannelId == ActiveSplitThread.Id)
@@ -2834,7 +2540,6 @@ public sealed partial class MainViewModel : ObservableObject
                 ActiveThreadMessages.Add(message);
             });
         }
-
         if (message.ChannelId == _selectedChannel?.Id)
         {
             Protocol.App.RunOnUiThread(() =>
@@ -2849,7 +2554,6 @@ public sealed partial class MainViewModel : ObservableObject
             });
         }
     }
-
     private void OnMessageUpdated(DiscordMessage message)
     {
         if (ActiveSplitThread != null && message.ChannelId == ActiveSplitThread.Id)
@@ -2866,7 +2570,6 @@ public sealed partial class MainViewModel : ObservableObject
                 }
             });
         }
-
         if (message.ChannelId == _selectedChannel?.Id)
         {
             Protocol.App.RunOnUiThread(() =>
@@ -2882,7 +2585,6 @@ public sealed partial class MainViewModel : ObservableObject
             });
         }
     }
-
     private void OnMessageDeleted(string channelId, string messageId)
     {
         if (ActiveSplitThread != null && channelId == ActiveSplitThread.Id)
@@ -2893,7 +2595,6 @@ public sealed partial class MainViewModel : ObservableObject
                 if (existing != null) ActiveThreadMessages.Remove(existing);
             });
         }
-
         if (channelId == _selectedChannel?.Id)
         {
             Protocol.App.RunOnUiThread(() =>
@@ -2903,7 +2604,6 @@ public sealed partial class MainViewModel : ObservableObject
             });
         }
     }
-
     private void OnReactionAdded(string channelId, string messageId, DiscordEmoji emoji)
     {
         if (ActiveSplitThread != null && channelId == ActiveSplitThread.Id)
@@ -2927,7 +2627,6 @@ public sealed partial class MainViewModel : ObservableObject
                 }
             });
         }
-
         if (channelId == _selectedChannel?.Id)
         {
             Protocol.App.RunOnUiThread(() =>
@@ -2950,7 +2649,6 @@ public sealed partial class MainViewModel : ObservableObject
             });
         }
     }
-
     private void ProcessMessageForGrouping(DiscordMessage current, DiscordMessage? previous)
     {
         current.IsOwnMessage = _client.CurrentUser != null && current.Author.Id == _client.CurrentUser.Id;
@@ -2962,14 +2660,12 @@ public sealed partial class MainViewModel : ObservableObject
         if (!current.IsNormal || !previous.IsNormal) return;
         if (current.IsReply) return; // Toujours afficher l'en-tête pour une réponse
         if (current.Author.Id != previous.Author.Id) return;
-
         var timeDiff = current.Timestamp - previous.Timestamp;
         if (timeDiff.TotalMinutes < 7)
         {
             current.ShowHeader = false;
         }
     }
-
     private void OnVoiceParticipantsChanged(string channelId)
     {
         Protocol.App.RunOnUiThread(() =>
@@ -2978,18 +2674,15 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 RefreshVoiceParticipants(channelId);
             }
-
             var ch = Channels.FirstOrDefault(c => c.Id == channelId);
             if (ch != null)
             {
                 SyncChannelVoiceMembers(ch);
             }
-
             SyncOnlineOfflineMembers();
             RefreshRecentMemberActivities();
         });
     }
-
     private void SyncChannelVoiceMembers(DiscordChannel channel)
     {
         var members = _client.GetVoiceChannelParticipants(channel.Id);
@@ -3008,7 +2701,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         channel.NotifyVoiceMembersChanged();
     }
-
     private void RefreshVoiceParticipants(string channelId)
     {
         VoiceParticipants.Clear();
@@ -3024,13 +2716,12 @@ public sealed partial class MainViewModel : ObservableObject
                 VoiceParticipants.Add(user);
             }
         }
-
         if (IsVoiceConnected && _selectedChannel?.Id == channelId && _client.CurrentUser is not null && seen.Add(_client.CurrentUser.Id))
         {
             VoiceParticipants.Insert(0, _client.CurrentUser);
         }
+        NotifyVoiceLayoutChanged();
     }
-
     public void DisconnectVoice()
     {
         bool wasConnected = IsVoiceConnected;
@@ -3041,6 +2732,7 @@ public sealed partial class MainViewModel : ObservableObject
         ScreenShareTitle = string.Empty;
         ConnectedVoiceChannelName = string.Empty;
         VoiceParticipants.Clear();
+        NotifyVoiceLayoutChanged();
         NotifyScreenShareAndCameraChanged();
         if (wasConnected)
         {
@@ -3054,7 +2746,6 @@ public sealed partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(MemberListVisibility));
         }
     }
-
     public async Task StartOrJoinVoiceCallInCurrentChannelAsync()
     {
         if (_selectedChannel is null) return;
@@ -3063,10 +2754,8 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(VoiceViewVisibility));
         OnPropertyChanged(nameof(TextViewVisibility));
         OnPropertyChanged(nameof(MemberListVisibility));
-
         var targetGuildId = _selectedChannel.GuildId ?? _selectedGuild?.Id;
         _selectedChannel.GuildId ??= targetGuildId;
-
         await _client.JoinVoiceChannelAsync(targetGuildId, _selectedChannel.Id, IsMuted, IsDeafened, IsCameraEnabled, IsScreenSharing);
         IsVoiceConnected = true;
         ConnectedVoiceChannelName = _selectedChannel.DisplayName;
@@ -3076,7 +2765,6 @@ public sealed partial class MainViewModel : ObservableObject
             AudioSfxService.Play(DiscordSfx.Join);
         }
     }
-
     public async Task StartScreenShareAsync(string title, string qualityBadge, bool shareSystemAudio)
     {
         if (!IsVoiceConnected && _selectedChannel is not null)
@@ -3084,14 +2772,12 @@ public sealed partial class MainViewModel : ObservableObject
             await StartOrJoinVoiceCallInCurrentChannelAsync();
         }
         if (!IsVoiceConnected) return;
-
         IsScreenSharing = true;
         ScreenShareTitle = title;
         ScreenShareQualityBadge = qualityBadge;
         await _client.StartScreenShareAsync(shareSystemAudio);
         NotifyScreenShareAndCameraChanged();
     }
-
     public async Task StopScreenShareAsync()
     {
         if (!IsScreenSharing) return;
@@ -3100,7 +2786,6 @@ public sealed partial class MainViewModel : ObservableObject
         await _client.StopScreenShareAsync();
         NotifyScreenShareAndCameraChanged();
     }
-
     public async Task ToggleCameraAsync()
     {
         if (!IsVoiceConnected && _selectedChannel is not null)
@@ -3108,12 +2793,10 @@ public sealed partial class MainViewModel : ObservableObject
             await StartOrJoinVoiceCallInCurrentChannelAsync();
         }
         if (!IsVoiceConnected) return;
-
         IsCameraEnabled = !IsCameraEnabled;
         await _client.ToggleVideoAsync(IsCameraEnabled);
         NotifyScreenShareAndCameraChanged();
     }
-
     private void NotifyScreenShareAndCameraChanged()
     {
         OnPropertyChanged(nameof(ScreenShareStageVisibility));
@@ -3124,7 +2807,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CameraIconBrush));
         OnPropertyChanged(nameof(CameraTooltipText));
     }
-
     private void OnVoiceChannelEffectReceived(DiscordSoundboardEffect effect)
     {
         if (effect != null && !string.IsNullOrEmpty(effect.SoundId))
@@ -3136,15 +2818,12 @@ public sealed partial class MainViewModel : ObservableObject
             }
         }
     }
-
     private string _soundboardSearchQuery = string.Empty;
-
     public async Task LoadSoundboardSoundsAsync()
     {
         try
         {
             SoundboardGroups.Clear();
-
             // 1. Sons personnalisés du serveur actuel (si dans un serveur)
             if (_selectedGuild != null && !string.IsNullOrEmpty(_selectedGuild.Id))
             {
@@ -3164,7 +2843,6 @@ public sealed partial class MainViewModel : ObservableObject
                     SoundboardGroups.Add(guildGroup);
                 }
             }
-
             // 2. Sons officiels par défaut de Discord
             var defaultSounds = await _client.Rest.GetDefaultSoundboardSoundsAsync();
             var discordGroup = new DiscordSoundboardGroup
@@ -3178,17 +2856,14 @@ public sealed partial class MainViewModel : ObservableObject
             }
             discordGroup.NotifyChanged();
             SoundboardGroups.Add(discordGroup);
-
             FilterSoundboardSounds(_soundboardSearchQuery);
         }
         catch { }
     }
-
     public void FilterSoundboardSounds(string query)
     {
         _soundboardSearchQuery = query?.Trim() ?? string.Empty;
         FilteredSoundboardGroups.Clear();
-
         if (string.IsNullOrEmpty(_soundboardSearchQuery))
         {
             foreach (var g in SoundboardGroups) FilteredSoundboardGroups.Add(g);
@@ -3201,7 +2876,6 @@ public sealed partial class MainViewModel : ObservableObject
                     .Where(s => s.Name.Contains(_soundboardSearchQuery, StringComparison.OrdinalIgnoreCase) ||
                                 (s.EmojiName != null && s.EmojiName.Contains(_soundboardSearchQuery, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
-
                 if (matchedSounds.Count > 0)
                 {
                     var filteredGroup = new DiscordSoundboardGroup
@@ -3217,7 +2891,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(HasSoundboardGroups));
     }
-
     public async Task PlaySoundboardSoundAsync(DiscordSoundboardSound sound, bool previewOnly = false)
     {
         if (sound == null) return;
@@ -3225,7 +2898,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             sound.IsPlaying = true;
             _ = SoundboardPlayerService.PlaySoundAsync(sound.SoundId, sound.Volume);
-
             var voiceChannelId = _client.CurrentVoiceChannelId;
             if (!previewOnly && !string.IsNullOrEmpty(voiceChannelId))
             {
@@ -3243,17 +2915,13 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 Protocol.App.RunOnUiThread(() => sound.IsPlaying = false);
             });
-
         }
     }
-
     public async Task CreatePollInCurrentChannelAsync(string question, List<string> answers, int durationHours, bool allowMultiselect)
-
     {
         if (_selectedChannel is null) return;
         await _client.Rest.CreatePollMessageAsync(_selectedChannel.Id, question, answers, durationHours, allowMultiselect);
     }
-
     private DateTimeOffset _lastTypingSent = DateTimeOffset.MinValue;
     public void NotifyTypingInCurrentChannel()
     {
@@ -3263,7 +2931,6 @@ public sealed partial class MainViewModel : ObservableObject
         _lastTypingSent = now;
         _ = _client.Rest.TriggerTypingAsync(_selectedChannel.Id);
     }
-
     public void ToggleMute()
     {
         IsMuted = !IsMuted;
@@ -3275,7 +2942,6 @@ public sealed partial class MainViewModel : ObservableObject
             _ = _client.JoinVoiceChannelAsync(targetGuildId, _selectedChannel.Id, IsMuted, IsDeafened, IsCameraEnabled, IsScreenSharing);
         }
     }
-
     public void ToggleDeafen()
     {
         IsDeafened = !IsDeafened;
@@ -3289,12 +2955,10 @@ public sealed partial class MainViewModel : ObservableObject
             _ = _client.JoinVoiceChannelAsync(targetGuildId, _selectedChannel.Id, IsMuted, IsDeafened, IsCameraEnabled, IsScreenSharing);
         }
     }
-
     public void ToggleKrisp()
     {
         SetKrispEnabled(!IsKrispEnabled);
     }
-
     public void SetKrispEnabled(bool enabled)
     {
         IsKrispEnabled = enabled;
@@ -3305,7 +2969,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(KrispIconBrush));
         OnPropertyChanged(nameof(KrispTooltipText));
     }
-
     public void SetStatus(string status)
     {
         CurrentStatus = status;
@@ -3315,7 +2978,6 @@ public sealed partial class MainViewModel : ObservableObject
         _ = _client.Rest.UpdateCustomStatusAsync(customStatusText: null, status: status);
         _ = _client.BroadcastCurrentPresenceAsync(status);
     }
-
     public async Task SetCustomStatusAsync(string? text, string? emojiName = null, string? expiryOption = "today", string? status = null)
     {
         DateTimeOffset? expiresAt = null;
@@ -3330,15 +2992,12 @@ public sealed partial class MainViewModel : ObservableObject
                 _ => null
             };
         }
-
         string effectiveStatus = !string.IsNullOrWhiteSpace(status) ? status : CurrentStatus;
-
         await _client.Rest.UpdateCustomStatusAsync(
             customStatusText: text,
             status: effectiveStatus,
             emojiName: emojiName,
             expiresAt: expiresAt);
-
         if (_client.CurrentUser != null)
         {
             _client.CurrentUser.Activities.RemoveAll(a => a.Type == 4);
@@ -3355,14 +3014,11 @@ public sealed partial class MainViewModel : ObservableObject
             }
             _client.CurrentUser.NotifyActivityTimesChanged();
         }
-
         if (!string.IsNullOrWhiteSpace(status))
         {
             CurrentStatus = status;
         }
-
         await _client.BroadcastCurrentPresenceAsync(effectiveStatus);
-
         OnPropertyChanged(nameof(StatusDotBrush));
         OnPropertyChanged(nameof(CurrentStatusDisplayName));
         OnPropertyChanged(nameof(CurrentUserSubStatusText));
@@ -3372,19 +3028,15 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CustomStatusButtonText));
         OnPropertyChanged(nameof(CurrentUserCustomStatusSubtitle));
     }
-
     public async Task ClearCustomStatusAsync()
     {
         await SetCustomStatusAsync(null, null, "never");
     }
-
     public async Task SetCustomRichPresenceAsync(DiscordActivity? customActivity)
     {
         await _client.SetCustomRichPresenceAsync(customActivity, CurrentStatus);
         NotifyCurrentUserRichPresenceChanged();
     }
-
-
     public void ApplySearchFilter(string query)
     {
         SearchFilterText = query;
@@ -3394,14 +3046,12 @@ public sealed partial class MainViewModel : ObservableObject
             foreach (var ch in Channels) FilteredChannels.Add(ch);
             return;
         }
-
         var lower = query.ToLowerInvariant();
         foreach (var ch in Channels.Where(c => c.DisplayName.ToLowerInvariant().Contains(lower)))
         {
             FilteredChannels.Add(ch);
         }
     }
-
     private DiscordClanCardViewModel? _activeClanCard;
     public DiscordClanCardViewModel? ActiveClanCard
     {
@@ -3417,7 +3067,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
     public bool HasActiveClanCard => ActiveClanCard != null;
-
     public async Task<DiscordClanCardViewModel> LoadClanCardAsync(DiscordClan clan)
     {
         var card = new DiscordClanCardViewModel
@@ -3430,7 +3079,6 @@ public sealed partial class MainViewModel : ObservableObject
         };
         card.EstablishedText = DiscordClanCardViewModel.ComputeEstablishedText(card.GuildId);
         ActiveClanCard = card;
-
         // 1. Vérifier si la guilde est déjà dans les guildes locales
         var localGuild = Guilds.FirstOrDefault(g => g.Id == card.GuildId);
         if (localGuild != null)
@@ -3438,7 +3086,6 @@ public sealed partial class MainViewModel : ObservableObject
             card.UpdateFromGuild(localGuild, clan.Tag, clan.BadgeUrl);
             card.IsLoading = false;
         }
-
         // 2. Tenter de charger les données complètes (preview / profil / stats / jeux) depuis l'API
         if (!string.IsNullOrWhiteSpace(card.GuildId))
         {
@@ -3453,11 +3100,9 @@ public sealed partial class MainViewModel : ObservableObject
             }
             catch { }
         }
-
         card.IsLoading = false;
         return card;
     }
-
     public async Task JoinOrAccessClanGuildAsync(DiscordClanCardViewModel card)
     {
         if (card.IsAlreadyJoined)
@@ -3477,7 +3122,6 @@ public sealed partial class MainViewModel : ObservableObject
             catch { }
         }
     }
-
     public void UpdateAutocomplete(string text, int cursor)
     {
         if (string.IsNullOrEmpty(text) || cursor <= 0 || cursor > text.Length)
@@ -3485,7 +3129,6 @@ public sealed partial class MainViewModel : ObservableObject
             CloseAutocomplete();
             return;
         }
-
         // Find the word being typed backwards from cursor
         int start = cursor - 1;
         while (start >= 0 && !char.IsWhiteSpace(text[start]))
@@ -3493,20 +3136,16 @@ public sealed partial class MainViewModel : ObservableObject
             start--;
         }
         start++; // start of the word
-
         if (start >= cursor)
         {
             CloseAutocomplete();
             return;
         }
-
         string word = text.Substring(start, cursor - start);
-
         if (word.StartsWith("@"))
         {
             string query = word.Substring(1).Trim().ToLowerInvariant();
             var matches = new List<AutocompleteItemViewModel>();
-
             // 1. @everyone and @here if query matches
             if ("everyone".StartsWith(query, StringComparison.OrdinalIgnoreCase))
             {
@@ -3530,7 +3169,6 @@ public sealed partial class MainViewModel : ObservableObject
                     TextToInsert = "@here"
                 });
             }
-
             // 2. Roles in current guild
             if (_selectedGuild?.Roles != null)
             {
@@ -3551,7 +3189,6 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             }
-
             // 3. Members in current guild / channel
             var memberSource = new List<DiscordUser>(ChannelMembers);
             if (_selectedGuild != null)
@@ -3563,13 +3200,11 @@ public sealed partial class MainViewModel : ObservableObject
                     if (seen.Add(m.Id)) memberSource.Add(m);
                 }
             }
-
             var filteredMembers = memberSource.Where(m =>
                 (m.DisplayName != null && m.DisplayName.ToLowerInvariant().Contains(query)) ||
                 (m.Username != null && m.Username.ToLowerInvariant().Contains(query)) ||
                 (m.GlobalName != null && m.GlobalName.ToLowerInvariant().Contains(query))
             ).Take(15).ToList();
-
             foreach (var m in filteredMembers)
             {
                 matches.Add(new AutocompleteItemViewModel
@@ -3582,7 +3217,6 @@ public sealed partial class MainViewModel : ObservableObject
                     TextToInsert = $"<@{m.Id}>"
                 });
             }
-
             if (matches.Count > 0)
             {
                 AutocompleteSuggestions.Clear();
@@ -3597,7 +3231,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             string query = word.Substring(1).Trim().ToLowerInvariant();
             var matches = new List<AutocompleteItemViewModel>();
-
             // 1. Search in current guild emojis
             if (_selectedGuild?.Emojis != null)
             {
@@ -3619,7 +3252,6 @@ public sealed partial class MainViewModel : ObservableObject
                     }
                 }
             }
-
             // 2. Search in all guilds emojis
             if (matches.Count < 12)
             {
@@ -3646,7 +3278,6 @@ public sealed partial class MainViewModel : ObservableObject
                     if (matches.Count >= 12) break;
                 }
             }
-
             // 3. Search in standard unicode emojis
             var emojiCatalog = EmojiService.Instance.BuildPickerCatalog(Guilds, _selectedGuild?.Id, query);
             if (emojiCatalog.Count > 0 && emojiCatalog[0].Emojis != null)
@@ -3665,7 +3296,6 @@ public sealed partial class MainViewModel : ObservableObject
                     if (matches.Count >= 16) break;
                 }
             }
-
             if (matches.Count > 0)
             {
                 AutocompleteSuggestions.Clear();
@@ -3676,17 +3306,14 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
         }
-
         CloseAutocomplete();
     }
-
     public void SelectNextAutocomplete()
     {
         if (AutocompleteSuggestions.Count == 0) return;
         int next = (AutocompleteSelectedIndex + 1) % AutocompleteSuggestions.Count;
         SetAutocompleteIndex(next);
     }
-
     public void SelectPreviousAutocomplete()
     {
         if (AutocompleteSuggestions.Count == 0) return;
@@ -3694,7 +3321,6 @@ public sealed partial class MainViewModel : ObservableObject
         if (prev < 0) prev = AutocompleteSuggestions.Count - 1;
         SetAutocompleteIndex(prev);
     }
-
     private void SetAutocompleteIndex(int index)
     {
         if (index < 0 || index >= AutocompleteSuggestions.Count) return;
@@ -3704,7 +3330,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         AutocompleteSelectedIndex = index;
     }
-
     public AutocompleteItemViewModel? GetSelectedAutocompleteItem()
     {
         if (AutocompleteSelectedIndex >= 0 && AutocompleteSelectedIndex < AutocompleteSuggestions.Count)
@@ -3713,14 +3338,12 @@ public sealed partial class MainViewModel : ObservableObject
         }
         return AutocompleteSuggestions.FirstOrDefault();
     }
-
     public void CloseAutocomplete()
     {
         IsAutocompleteOpen = false;
         AutocompleteSelectedIndex = -1;
         AutocompleteSuggestions.Clear();
     }
-
     public async Task LoadTrendingGifsAsync()
     {
         IsLoadingGifs = true;
@@ -3736,7 +3359,6 @@ public sealed partial class MainViewModel : ObservableObject
             IsLoadingGifs = false;
         }
     }
-
     public async Task SearchGifsAsync(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -3744,7 +3366,6 @@ public sealed partial class MainViewModel : ObservableObject
             await LoadTrendingGifsAsync();
             return;
         }
-
         IsLoadingGifs = true;
         try
         {
@@ -3759,5 +3380,3 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 }
-
-
