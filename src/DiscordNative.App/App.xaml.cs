@@ -12,7 +12,7 @@ namespace DiscordNative.App;
 
 public partial class App : Application
 {
-    private const string SingleInstanceMutexName = "Global\\DiscordNative_Diswin_SingleInstance_Mutex";
+    private const string SingleInstanceMutexName = "Local\\DiscordNative_Diswin_SingleInstance_Mutex";
     private const string SingleInstancePipeName = "DiscordNative_Diswin_SingleInstance_Pipe";
     private static Mutex? _singleInstanceMutex;
     private static CancellationTokenSource? _pipeCts;
