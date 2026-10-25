@@ -64,6 +64,10 @@ jobs:
               $ver = "0.5.4"
           }
 
+          if ($channel -eq "Edge" -and $ver -notmatch "edge") {
+              $ver = "$ver-edge.${{ github.run_number }}"
+          }
+
           Write-Host "Resolved Channel: $channel"
           Write-Host "Resolved Version: $ver"
           "channel=$channel" >> $env:GITHUB_OUTPUT
@@ -89,14 +93,16 @@ jobs:
           $channel = "${{ steps.meta.outputs.channel }}"
           $ver = "${{ steps.meta.outputs.version }}"
           $tag = "v$ver"
-          $prereleaseFlag = if ($channel -eq "Edge") { "--prerelease" } else { "" }
           Write-Host "Creating/Updating GitHub Release for $tag ($channel)..."
           $files = Get-ChildItem "dist\Diswin-Setup-*.exe", "dist\Diswin-*-portable.zip" | Select-Object -ExpandProperty FullName
           if ($files) {
-              gh release delete $tag -y 2>$null
-              if ($prereleaseFlag) {
-                  gh release create $tag $files --title "Diswin $tag" --notes "Diswin $tag ($channel build)" --prerelease
-              } else {
-                  gh release create $tag $files --title "Diswin $tag" --notes "Diswin $tag ($channel build)"
+              try {
+                  & gh release delete $tag -y 2>&1 | Out-Null
+              } catch { }
+
+              $cmd = @("release", "create", $tag) + $files + @("--title", "Diswin $tag", "--notes", "Diswin $tag ($channel build)")
+              if ($channel -eq "Edge") {
+                  $cmd += "--prerelease"
               }
+              & gh $cmd
           }
