@@ -154,3 +154,12 @@ Remove-Item -Force "dist\Diswin-Setup-v$version-win-x64.zip" -ErrorAction Silent
 
 Write-Host "Done! Artifacts in dist\:"
 Get-ChildItem "dist\Diswin*v$version*" | Select-Object Name, @{Name="SizeMB";Expression={[math]::Round($_.Length/1MB, 2)}}, LastWriteTime
+# Remplacement / mise à jour automatique de l'installation locale de l'utilisateur
+$localInstallDir = "$env:LOCALAPPDATA\Programs\Diswin"
+if (Test-Path $localInstallDir) {
+    Write-Host "Mise à jour automatique de l'installation locale ($localInstallDir)..." -ForegroundColor Cyan
+    Get-Process -Name DiscordNative.App -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+    Copy-Item -Recurse -Force "$appReleaseDir\*" "$localInstallDir\"
+    Write-Host "Installation locale mise à jour avec succès !" -ForegroundColor Green
+}
