@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -575,30 +575,106 @@ public sealed class DiscordRestClient : IDisposable
     {
         try
         {
-            // Sur Discord, trending-gifs retourne directement la liste d'objets GIF animés
-            var result = await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/trending-gifs?media_format=gif&locale=fr-FR", ct);
-            if (result != null && result.Count > 0) return result;
+            var res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/trending-gifs?media_format=gif&locale=fr-FR", ct);
+            if (res.Count > 0) return res;
 
-            // Fallback sur gifs/trending avec extraction du dictionnaire gifs/categories
-            using var doc = await _http.GetFromJsonAsync<System.Text.Json.JsonDocument>($"{ApiBase}/gifs/trending?media_format=gif&locale=fr-FR", ct);
-            if (doc != null && doc.RootElement.TryGetProperty("gifs", out var gifsEl) && gifsEl.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                return System.Text.Json.JsonSerializer.Deserialize<List<DiscordGifItem>>(gifsEl.GetRawText(), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-            }
-            return new();
+            res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/trending-gifs?locale=fr-FR", ct);
+            if (res.Count > 0) return res;
+
+            res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/trending?media_format=gif&locale=fr-FR", ct);
+            if (res.Count > 0) return res;
+
+            res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/trending", ct);
+            if (res.Count > 0) return res;
         }
         catch
         {
-            return new();
         }
+
+        return GetFallbackTrendingGifs();
     }
 
     public async Task<List<DiscordGifItem>> SearchGifsAsync(string query, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(query) || query.Equals("trending", StringComparison.OrdinalIgnoreCase))
+        {
+            return await GetTrendingGifsAsync(ct);
+        }
+
         try
         {
             var encoded = Uri.EscapeDataString(query);
-            return await _http.GetFromJsonAsync<List<DiscordGifItem>>($"{ApiBase}/gifs/search?q={encoded}&media_format=gif&locale=fr-FR", ct) ?? new();
+            var res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/search?q={encoded}&media_format=gif&locale=fr-FR", ct);
+            if (res.Count > 0) return res;
+
+            res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/search?q={encoded}&locale=fr-FR", ct);
+            if (res.Count > 0) return res;
+
+            res = await FetchGifsFromUrlAsync($"{ApiBase}/gifs/search?q={encoded}", ct);
+            if (res.Count > 0) return res;
+        }
+        catch
+        {
+        }
+
+        var fallbacks = GetFallbackTrendingGifs();
+        var matches = fallbacks.FindAll(g => g.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || g.Id.Contains(query, StringComparison.OrdinalIgnoreCase));
+        return matches.Count > 0 ? matches : fallbacks;
+    }
+
+    private async Task<List<DiscordGifItem>> FetchGifsFromUrlAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            using var resp = await _http.GetAsync(url, ct);
+            if (!resp.IsSuccessStatusCode) return new();
+
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            if (string.IsNullOrWhiteSpace(json)) return new();
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var list = new List<DiscordGifItem>();
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in root.EnumerateArray())
+                {
+                    try
+                    {
+                        var item = JsonSerializer.Deserialize<DiscordGifItem>(el.GetRawText(), jsonOptions);
+                        if (item != null && !string.IsNullOrEmpty(item.PreviewUrl)) list.Add(item);
+                    }
+                    catch { }
+                }
+            }
+            else if (root.ValueKind == JsonValueKind.Object)
+            {
+                JsonElement arrayEl = default;
+                if (root.TryGetProperty("results", out var resEl) && resEl.ValueKind == JsonValueKind.Array)
+                    arrayEl = resEl;
+                else if (root.TryGetProperty("gifs", out var gifsEl) && gifsEl.ValueKind == JsonValueKind.Array)
+                    arrayEl = gifsEl;
+                else if (root.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
+                    arrayEl = dataEl;
+
+                if (arrayEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in arrayEl.EnumerateArray())
+                    {
+                        try
+                        {
+                            var item = JsonSerializer.Deserialize<DiscordGifItem>(el.GetRawText(), jsonOptions);
+                            if (item != null && !string.IsNullOrEmpty(item.PreviewUrl)) list.Add(item);
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            return list;
         }
         catch
         {
@@ -606,6 +682,24 @@ public sealed class DiscordRestClient : IDisposable
         }
     }
 
+    private static List<DiscordGifItem> GetFallbackTrendingGifs()
+    {
+        return new List<DiscordGifItem>
+        {
+            new() { Id = "cat-dance", Title = "Happy Dancing Cat", Url = "https://klipy.com/gifs/cat-cute-cat-42", Src = "https://static.klipy.com/ii/35ccce3d852f7995dd2da910f2abd795/87/20/yfyke2Vc.gif", Preview = "https://static.klipy.com/ii/35ccce3d852f7995dd2da910f2abd795/87/20/yfyke2Vc.gif" },
+            new() { Id = "bobacat-lazy", Title = "Bobacat Lazy Sunday", Url = "https://klipy.com/gifs/bobacat-psps", Src = "https://static.klipy.com/ii/35ccce3d852f7995dd2da910f2abd795/e7/a6/E1eZg4nu.gif", Preview = "https://static.klipy.com/ii/35ccce3d852f7995dd2da910f2abd795/e7/a6/E1eZg4nu.gif" },
+            new() { Id = "batman-approve", Title = "Batman Approves", Url = "https://klipy.com/gifs/batman-approves-approve", Src = "https://static.klipy.com/ii/c3a19a0b747a76e98651f2b9a3cca5ff/c2/53/NlKhuAlk.gif", Preview = "https://static.klipy.com/ii/c3a19a0b747a76e98651f2b9a3cca5ff/c2/53/NlKhuAlk.gif" },
+            new() { Id = "eevee-dance", Title = "Eevee Dance", Url = "https://klipy.com/gifs/eevee-dance-4", Src = "https://static.klipy.com/ii/39f2394ae36df6e199be9eb7c9fa1012/6a/0d/kWwW4YZN.gif", Preview = "https://static.klipy.com/ii/39f2394ae36df6e199be9eb7c9fa1012/6a/0d/kWwW4YZN.gif" },
+            new() { Id = "shocked-cat", Title = "Shocked Cat Reaction", Url = "https://klipy.com/gifs/shocked-cat-12", Src = "https://static.klipy.com/ii/8ce8357c78ea940b9c2015daf05ce1a5/06/f3/8ZhpQ7co.gif", Preview = "https://static.klipy.com/ii/8ce8357c78ea940b9c2015daf05ce1a5/06/f3/8ZhpQ7co.gif" },
+            new() { Id = "burrito-cat", Title = "Space Cat Burrito", Url = "https://klipy.com/gifs/burrito-27", Src = "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/ec/6c/S3Uf5nar.gif", Preview = "https://static.klipy.com/ii/935d7ab9d8c6202580a668421940ec81/ec/6c/S3Uf5nar.gif" },
+            new() { Id = "mrbeast-water", Title = "Mr Beast Water", Url = "https://klipy.com/gifs/mr-beast-water", Src = "https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/86/ac/WvE8QdYqN109iy3ji.gif", Preview = "https://static.klipy.com/ii/4e7bea9f7a3371424e6c16ebc93252fe/86/ac/WvE8QdYqN109iy3ji.gif" },
+            new() { Id = "dobby-snap", Title = "Dobby Magic Snap", Url = "https://klipy.com/gifs/snap-dobby-2e8", Src = "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/73/16/7eoa5u7A.gif", Preview = "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/73/16/7eoa5u7A.gif" },
+            new() { Id = "sukuna-fight", Title = "Ryomen Sukuna Fight", Url = "https://klipy.com/gifs/jogo-vs-sukuna-ryomen-sukuna", Src = "https://static.klipy.com/ii/c44064a00e4b7451969381d90dea1769/4f/c4/qb075Ez2.gif", Preview = "https://static.klipy.com/ii/c44064a00e4b7451969381d90dea1769/4f/c4/qb075Ez2.gif" },
+            new() { Id = "spongebob-thought", Title = "Spongebob Deep in Thought", Url = "https://klipy.com/gifs/spongebob-spongebob-squarepants-86", Src = "https://static.klipy.com/ii/da290b156d64898341638f3c299e7478/f7/2d/z3sJQiSz.gif", Preview = "https://static.klipy.com/ii/da290b156d64898341638f3c299e7478/f7/2d/z3sJQiSz.gif" },
+            new() { Id = "patrick-bateman", Title = "Patrick Bateman Walking Headphones", Url = "https://klipy.com/gifs/walking-headphones", Src = "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/a6/61/ONvqckXv.gif", Preview = "https://static.klipy.com/ii/d7aec6f6f171607374b2065c836f92f4/a6/61/ONvqckXv.gif" },
+            new() { Id = "stitch-rain", Title = "Stitch In The Rain", Url = "https://klipy.com/gifs/stitch-lilo-and-stitch-sY2", Src = "https://static.klipy.com/ii/8ce8357c78ea940b9c2015daf05ce1a5/61/ee/u6YcWIoT.gif", Preview = "https://static.klipy.com/ii/8ce8357c78ea940b9c2015daf05ce1a5/61/ee/u6YcWIoT.gif" }
+        };
+    }
 
     /// <summary>
     /// Récupère l'ordre officiel des serveurs et dossiers tel que défini dans les paramètres utilisateur Discord (guild_folders / guild_positions).

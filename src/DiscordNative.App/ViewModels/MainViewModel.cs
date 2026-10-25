@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DiscordNative.Protocol;
@@ -223,6 +223,11 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int autocompleteSelectedIndex = -1;
     public ObservableCollection<DiscordGifItem> GifResults { get; } = new();
+
+    // IntÃ©gration Ã©cosystÃ¨me Jay â€¢ SoundWin
+    public Services.SoundWinBridgeService SoundWinBridge { get; } = new();
+    public string SoundWinPlayIcon => SoundWinBridge.IsPlaying ? "\uE769" : "\uE768";
+    public string SoundWinPlayTooltip => SoundWinBridge.IsPlaying ? "Mettre en pause" : "Reprendre la lecture";
     [ObservableProperty]
     private bool isLoadingGifs;
     public bool HasSelectedGuild => _selectedGuild != null;
@@ -458,6 +463,14 @@ public sealed partial class MainViewModel : ObservableObject
             }
         };
         _rpcTickerTimer.Start();
+        SoundWinBridge.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(SoundWinBridge.IsPlaying))
+            {
+                OnPropertyChanged(nameof(SoundWinPlayIcon));
+                OnPropertyChanged(nameof(SoundWinPlayTooltip));
+            }
+        };
         LoadBookmarks();
     }
     private void OnVoiceSpeakingChanged(string userId, bool isSpeaking)

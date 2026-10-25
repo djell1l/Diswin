@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="DiscordNative.App.Views.MainWindowContent"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -963,6 +963,115 @@
                         </StackPanel>
 
                         <!-- Barre Profil Utilisateur & Contrôles Audio Mute/Deafen/Settings -->
+                        <!-- Jay Ecosystem â€¢ Lecteur SoundWin intÃ©grÃ© (ApparaÃ®t dÃ¨s que SoundWin est lancÃ©) -->
+                        <Border x:Name="SoundWinPlayerCard"
+                                CornerRadius="12" Margin="8,0,8,6" Padding="8"
+                                Background="#1F1510" BorderBrush="#66FF5500" BorderThickness="1"
+                                Visibility="{x:Bind ViewModel.SoundWinBridge.IsConnected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid RowSpacing="6">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!-- Header avec logo SoundWin / Jay Ecosystem et statut Live -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xEC4F;" FontSize="13" Foreground="#FF5500" VerticalAlignment="Center" />
+                                        <TextBlock Text="SOUNDWIN" FontWeight="Black" FontSize="10" Foreground="#FF5500" CharacterSpacing="60" VerticalAlignment="Center" />
+                                        <Border Width="6" Height="6" CornerRadius="3" Background="#23A55A" VerticalAlignment="Center" Margin="2,0,0,0" ToolTipService.ToolTip="Ã‰cosystÃ¨me Jay synchronisÃ©" />
+                                    </StackPanel>
+
+                                    <!-- Bouton Ouvrir SoundWin -->
+                                    <Button Grid.Column="1" Width="22" Height="22" Padding="0" CornerRadius="11"
+                                            Background="Transparent" BorderThickness="0"
+                                            Click="OnSoundWinFocusClicked"
+                                            ToolTipService.ToolTip="Basculer vers la fenÃªtre SoundWin">
+                                        <FontIcon Glyph="&#xE8A7;" FontSize="10" Foreground="#AAFFFFFF" />
+                                    </Button>
+                                </Grid>
+
+                                <!-- Piste en cours : Pochette + Titre + Artiste + Bouton Partager dans le salon -->
+                                <Grid Grid.Row="1" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="38" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Pochette album / track -->
+                                    <Border Grid.Column="0" Width="38" Height="38" CornerRadius="6" Background="#2A2A2A">
+                                        <Image Source="{x:Bind ViewModel.SoundWinBridge.ArtworkUrl, Mode=OneWay, Converter={StaticResource StringToImageSourceConverter}}"
+                                               Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <!-- Titre & Artiste -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock Text="{x:Bind ViewModel.SoundWinBridge.Title, Mode=OneWay}"
+                                                   FontWeight="SemiBold" FontSize="12" Foreground="White"
+                                                   TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                   ToolTipService.ToolTip="{x:Bind ViewModel.SoundWinBridge.Title, Mode=OneWay}" />
+                                        <TextBlock Text="{x:Bind ViewModel.SoundWinBridge.Artist, Mode=OneWay}"
+                                                   FontSize="11" Foreground="#AAAAAA"
+                                                   TextTrimming="CharacterEllipsis" MaxLines="1" />
+                                    </StackPanel>
+
+                                    <!-- Bouton Partager dans le salon actif -->
+                                    <Button Grid.Column="2" Width="30" Height="30" Padding="0" CornerRadius="15"
+                                            Background="#26FF5500" BorderBrush="#55FF5500" BorderThickness="1"
+                                            Click="OnSoundWinShareClicked"
+                                            ToolTipService.ToolTip="Partager ce morceau dans le salon actif">
+                                        <FontIcon Glyph="&#xE72D;" FontSize="12" Foreground="#FF5500" />
+                                    </Button>
+                                </Grid>
+
+                                <!-- Barre de progression + ContrÃ´les (PrÃ©cÃ©dent, Play/Pause, Suivant) -->
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.SoundWinBridge.PositionFormatted, Mode=OneWay}"
+                                               FontSize="9" Foreground="#88FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0" />
+
+                                    <!-- Slider / Ligne de progression SoundCloud orange -->
+                                    <ProgressBar Grid.Column="1" Value="{x:Bind ViewModel.SoundWinBridge.Progress, Mode=OneWay}"
+                                                 Minimum="0" Maximum="1" Height="3" Foreground="#FF5500" Background="#33FFFFFF"
+                                                 VerticalAlignment="Center" CornerRadius="1.5" />
+
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <Button Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                Background="Transparent" BorderThickness="0"
+                                                Click="OnSoundWinPreviousClicked"
+                                                ToolTipService.ToolTip="Morceau prÃ©cÃ©dent">
+                                            <FontIcon Glyph="&#xE892;" FontSize="10" Foreground="White" />
+                                        </Button>
+
+                                        <Button Width="26" Height="26" Padding="0" CornerRadius="13"
+                                                Background="#FF5500" BorderThickness="0"
+                                                Click="OnSoundWinTogglePlayClicked"
+                                                ToolTipService.ToolTip="{x:Bind ViewModel.SoundWinPlayTooltip, Mode=OneWay}">
+                                            <FontIcon Glyph="{x:Bind ViewModel.SoundWinPlayIcon, Mode=OneWay}" FontSize="11" Foreground="White" />
+                                        </Button>
+
+                                        <Button Width="24" Height="24" Padding="0" CornerRadius="12"
+                                                Background="Transparent" BorderThickness="0"
+                                                Click="OnSoundWinNextClicked"
+                                                ToolTipService.ToolTip="Morceau suivant">
+                                            <FontIcon Glyph="&#xE893;" FontSize="10" Foreground="White" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
                         <Grid Height="56" Padding="8,4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="8,0,8,8" CornerRadius="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />

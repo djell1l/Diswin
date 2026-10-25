@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -5983,6 +5983,44 @@ public sealed partial class MainWindowContent : UserControl
             CopyToClipboard(user.Id);
         }
     }
+    #region Jay Ecosystem â€¢ SoundWin Integration
+    private void OnSoundWinFocusClicked(object sender, RoutedEventArgs e)
+    {
+        _ = ViewModel?.SoundWinBridge?.FocusSoundWinAsync();
+    }
+
+    private void OnSoundWinPreviousClicked(object sender, RoutedEventArgs e)
+    {
+        _ = ViewModel?.SoundWinBridge?.PreviousAsync();
+    }
+
+    private void OnSoundWinTogglePlayClicked(object sender, RoutedEventArgs e)
+    {
+        _ = ViewModel?.SoundWinBridge?.TogglePlayPauseAsync();
+    }
+
+    private void OnSoundWinNextClicked(object sender, RoutedEventArgs e)
+    {
+        _ = ViewModel?.SoundWinBridge?.NextAsync();
+    }
+
+    private void OnSoundWinShareClicked(object sender, RoutedEventArgs e)
+    {
+        var link = ViewModel?.SoundWinBridge?.PermalinkUrl;
+        if (string.IsNullOrWhiteSpace(link)) return;
+
+        if (MessageInput != null)
+        {
+            if (string.IsNullOrWhiteSpace(MessageInput.Text))
+                MessageInput.Text = link;
+            else
+                MessageInput.Text = MessageInput.Text.TrimEnd() + " " + link;
+
+            MessageInput.Focus(FocusState.Programmatic);
+            MessageInput.SelectionStart = MessageInput.Text.Length;
+        }
+    }
+    #endregion
 }
 
 

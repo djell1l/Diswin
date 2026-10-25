@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -682,6 +682,7 @@ public sealed class DiscordUser : INotifyPropertyChanged
     }
 
     public string AvatarUrl => AnimatedAvatarUrl;
+    public bool HasAvatar => !string.IsNullOrEmpty(AvatarUrl);
 
     public string? StaticBannerUrl => Banner is null
         ? null

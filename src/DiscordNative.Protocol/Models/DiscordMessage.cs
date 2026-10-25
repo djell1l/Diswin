@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 namespace DiscordNative.Protocol.Models;
@@ -393,9 +393,22 @@ public sealed class DiscordEmbed
     public DiscordEmbedImage? Image { get; set; }
     [JsonPropertyName("video")]
     public DiscordEmbedImage? Video { get; set; }
-    /// <summary>Image principale : image, sinon miniature pour les embeds image/gifv.</summary>
-    public string? MainImageUrl => Image?.ProxyUrl ?? Image?.Url
-        ?? (Type is "image" or "gifv" ? Thumbnail?.ProxyUrl ?? Thumbnail?.Url : null);
+    /// <summary>Image principale : image, sinon miniature pour les embeds image/gifv. Priorise les URLs .gif directes pour l'animation.</summary>
+    public string? MainImageUrl
+    {
+        get
+        {
+            if (Image?.Url != null && Image.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Image.Url;
+            if (Image?.ProxyUrl != null && Image.ProxyUrl.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Image.ProxyUrl;
+            var raw = Image?.ProxyUrl ?? Image?.Url;
+            if (raw == null && (Type is "image" or "gifv"))
+            {
+                if (Thumbnail?.Url != null && Thumbnail.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Thumbnail.Url;
+                return Thumbnail?.ProxyUrl ?? Thumbnail?.Url;
+            }
+            return raw;
+        }
+    }
     public string? SideThumbnailUrl => Image is null && Type is not ("image" or "gifv") ? Thumbnail?.ProxyUrl ?? Thumbnail?.Url : null;
     public bool HasTitle => !string.IsNullOrEmpty(Title);
     public bool HasDescription => !string.IsNullOrEmpty(Description);
