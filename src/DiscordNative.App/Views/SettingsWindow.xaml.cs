@@ -253,6 +253,7 @@ public sealed partial class SettingsWindow : Window
         picker.FileTypeFilter.Add(".jpg");
         picker.FileTypeFilter.Add(".jpeg");
         picker.FileTypeFilter.Add(".webp");
+        picker.FileTypeFilter.Add(".gif");
 
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
@@ -428,7 +429,7 @@ public sealed partial class SettingsWindow : Window
 
             var dialog = new ContentDialog
             {
-                Title = "Journaux de Diagnostic (WinUI 3)",
+                Title = "Journaux de diagnostic",
                 Content = new ScrollViewer
                 {
                     Content = logTextBox,

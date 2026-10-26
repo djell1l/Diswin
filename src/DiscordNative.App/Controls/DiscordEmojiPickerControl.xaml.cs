@@ -68,6 +68,45 @@ public sealed partial class DiscordEmojiPickerControl : UserControl
         {
             Groups.Add(group);
         }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var allMatches = catalog.SelectMany(g => g.Emojis).ToList();
+            ActiveCategoryIconBorder.Visibility = Visibility.Collapsed;
+            ActiveCategoryGlyph.Visibility = Visibility.Visible;
+            ActiveCategoryGlyph.Glyph = "\uE721";
+            ActiveCategoryTitle.Text = $"RÉSULTATS ({allMatches.Count})";
+            EmojiGridView.ItemsSource = allMatches;
+        }
+        else
+        {
+            SelectGroup(Groups.FirstOrDefault());
+        }
+    }
+
+    private void SelectGroup(EmojiCategoryGroup? group)
+    {
+        if (group == null)
+        {
+            EmojiGridView.ItemsSource = null;
+            return;
+        }
+
+        ActiveCategoryTitle.Text = group.Title;
+        if (group.HasIconUrl && Uri.TryCreate(group.IconUrl, UriKind.Absolute, out var uri))
+        {
+            ActiveCategoryIconImage.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri) { DecodePixelWidth = 32 };
+            ActiveCategoryIconBorder.Visibility = Visibility.Visible;
+            ActiveCategoryGlyph.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            ActiveCategoryIconBorder.Visibility = Visibility.Collapsed;
+            ActiveCategoryGlyph.Visibility = Visibility.Visible;
+            ActiveCategoryGlyph.Glyph = string.IsNullOrEmpty(group.IconGlyph) ? "\uE76E" : group.IconGlyph;
+        }
+
+        EmojiGridView.ItemsSource = group.Emojis;
     }
 
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
@@ -88,7 +127,11 @@ public sealed partial class DiscordEmojiPickerControl : UserControl
     {
         if (sender is Button { Tag: string catTitle })
         {
-            // Category navigation
+            var group = Groups.FirstOrDefault(g => string.Equals(g.Title, catTitle, StringComparison.OrdinalIgnoreCase));
+            if (group != null)
+            {
+                SelectGroup(group);
+            }
         }
     }
 }

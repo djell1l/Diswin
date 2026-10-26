@@ -10,7 +10,18 @@ public sealed class DiscordUser : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    {
+        var handler = PropertyChanged;
+        if (handler is null) return;
+        try
+        {
+            DiscordNative.Protocol.App.RunOnUiThread(() =>
+            {
+                try { handler.Invoke(this, new PropertyChangedEventArgs(propertyName)); } catch { }
+            });
+        }
+        catch { }
+    }
 
     public void NotifyPresenceChanged()
     {
@@ -117,6 +128,8 @@ public sealed class DiscordUser : INotifyPropertyChanged
 
     [JsonPropertyName("bot")]
     public bool Bot { get; set; }
+    [JsonIgnore]
+    public bool IsHuman => !Bot;
 
     [JsonPropertyName("banner")]
     public string? Banner { get; set; }

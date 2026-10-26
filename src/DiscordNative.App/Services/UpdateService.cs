@@ -40,6 +40,7 @@ public sealed class UpdateInfo
 public static class UpdateService
 {
     public static string CurrentVersion { get; } = ResolveCurrentVersion();
+    public static bool IsRunningEdgeBuild => CurrentVersion.Contains("-edge", StringComparison.OrdinalIgnoreCase);
     private const string RepoOwner = "djell1l";
     private const string RepoName = "Diswin";
     private static readonly HttpClient Http = new();
@@ -67,7 +68,7 @@ public static class UpdateService
         }
         catch { }
 
-        return "v0.5.4-edge.1";
+        return "v0.5.4-edge.122";
     }
 
     public static async Task<UpdateInfo?> CheckForUpdatesAsync()
@@ -84,15 +85,18 @@ public static class UpdateService
             var releases = JsonSerializer.Deserialize<List<UpdateInfo>>(json);
             if (releases is null || releases.Count == 0) return null;
 
-            var isEdge = string.Equals(App.Settings.Current.UpdateChannel, "Edge", StringComparison.OrdinalIgnoreCase)
+            var isEdge = CurrentVersion.Contains("-edge", StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(App.Settings.Current.UpdateChannel, "Edge", StringComparison.OrdinalIgnoreCase)
                       || string.Equals(App.Settings.Current.UpdateChannel, "Experimental", StringComparison.OrdinalIgnoreCase);
 
             UpdateInfo? latest = null;
 
             if (isEdge)
             {
-                // Sur le canal Edge, on prend la version la plus récente (pré-release ou stable)
-                latest = releases.FirstOrDefault(r => IsNewerVersion(r.TagName, CurrentVersion));
+                // Sur le canal Edge, on ne propose QUE des releases du canal Edge (jamais la branche stable)
+                latest = releases.FirstOrDefault(r =>
+                    r.TagName != null && r.TagName.Contains("-edge", StringComparison.OrdinalIgnoreCase)
+                    && IsNewerVersion(r.TagName, CurrentVersion));
             }
             else
             {
@@ -140,9 +144,14 @@ public static class UpdateService
         bool rHasSuffix = rParts.Length > 1 && !string.IsNullOrWhiteSpace(rParts[1]);
         bool lHasSuffix = lParts.Length > 1 && !string.IsNullOrWhiteSpace(lParts[1]);
 
-        // Versions majeures.mineures.patch identiques (ex: 0.5.3 vs 0.5.3)
-        // Une release stable (sans suffixe) est plus récente qu'une pré-release/edge du même numéro
-        if (!rHasSuffix && lHasSuffix) return true;
+        // Versions majeures.mineures.patch identiques (ex: 0.5.4 vs 0.5.4-edge.121)
+        // Si la version locale est sur le canal Edge, une version Stable du même numéro n'est JAMAIS considérée plus récente
+        if (!rHasSuffix && lHasSuffix)
+        {
+            if (lParts[1].StartsWith("edge", StringComparison.OrdinalIgnoreCase))
+                return false;
+            return true;
+        }
         if (rHasSuffix && !lHasSuffix) return false;
 
         // Deux suffixes présents (ex: edge.2 vs edge.1)

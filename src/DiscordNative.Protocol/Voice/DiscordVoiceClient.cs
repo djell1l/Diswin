@@ -38,14 +38,16 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
     private ushort _rtpSeq;
     private uint _rtpTimestamp;
     private uint _nonceCounter;
+    private int _lastSeq = -1;
     private bool _isSpeaking;
     private DateTime _lastLocalVoiceActivityUtc = DateTime.MinValue;
 
+    private WaveInEvent? _waveIn;
     private WasapiCapture? _micCapture;
     private WasapiLoopbackCapture? _loopbackCapture;
     private readonly ConcurrentQueue<short> _loopbackPcmQueue = new();
     private BufferedWaveProvider? _playbackBuffer;
-    private WasapiOut? _speakerOut;
+    private IWavePlayer? _speakerOut;
     private readonly ConcurrentQueue<short> _micPcmQueue = new();
     private readonly object _encodeLock = new();
     private OpusEncoder? _opusEncoder;
@@ -127,7 +129,7 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
             _ws = new ClientWebSocket();
             _ws.Options.SetRequestHeader("Origin", "https://discord.com");
 
-            var uri = new Uri($"wss://{_endpoint}/?v=8");
+            var uri = new Uri($"wss://{_endpoint}/?v=4");
             await _ws.ConnectAsync(uri, _cts.Token);
 
             _ = Task.Run(() => GatewayReceiveLoopAsync(_cts.Token), _cts.Token);
@@ -160,6 +162,10 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
                 ms.Position = 0;
                 using var doc = await JsonDocument.ParseAsync(ms, cancellationToken: ct);
                 var root = doc.RootElement;
+                if (root.TryGetProperty("seq", out var seqEl) && seqEl.ValueKind == JsonValueKind.Number && seqEl.TryGetInt32(out int seqVal))
+                {
+                    _lastSeq = seqVal;
+                }
                 if (!root.TryGetProperty("op", out var opEl)) continue;
                 int op = opEl.GetInt32();
 
@@ -215,7 +221,7 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
                             {
                                 _selectedMode = modeEl.GetString() ?? _selectedMode;
                             }
-                            await SendSpeakingAsync(false);
+                            await SendInitialSilenceFramesAsync(ct);
                             StartAudioPipeline(ct);
                         }
                         break;
@@ -296,6 +302,35 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
         await SendJsonAsync(selectProto, ct);
     }
 
+    private async Task SendInitialSilenceFramesAsync(CancellationToken ct)
+    {
+        try
+        {
+            if (_udp == null || _secretKey == null) return;
+            await SendSpeakingAsync(true);
+            byte[] silenceFrame = [0xF8, 0xFF, 0xFE];
+            for (int i = 0; i < 5; i++)
+            {
+                byte[] rtpHeader = new byte[12];
+                rtpHeader[0] = 0x80;
+                rtpHeader[1] = 0x78;
+                BinaryPrimitives.WriteUInt16BigEndian(rtpHeader.AsSpan(2, 2), _rtpSeq++);
+                BinaryPrimitives.WriteUInt32BigEndian(rtpHeader.AsSpan(4, 4), _rtpTimestamp);
+                BinaryPrimitives.WriteUInt32BigEndian(rtpHeader.AsSpan(8, 4), _ssrc);
+                _rtpTimestamp += 960;
+
+                byte[]? packet = EncryptRtpPacket(rtpHeader, silenceFrame);
+                if (packet != null)
+                {
+                    await _udp.SendAsync(packet, packet.Length);
+                }
+                await Task.Delay(20, ct);
+            }
+            await SendSpeakingAsync(false);
+        }
+        catch { }
+    }
+
     private void StartAudioPipeline(CancellationToken ct)
     {
         try
@@ -305,7 +340,7 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
                 Bitrate = 64000
             };
 
-            // 1. Démarrer la sortie audio (Haut-parleurs / Casque)
+            // 1. Démarrer la sortie audio (Haut-parleurs / Casque) via WaveOutEvent (compatible tous périphériques Windows 48kHz 16-bit)
             try
             {
                 _playbackBuffer = new BufferedWaveProvider(new WaveFormat(48000, 16, 2))
@@ -313,33 +348,63 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
                     BufferDuration = TimeSpan.FromSeconds(2),
                     DiscardOnBufferOverflow = true
                 };
-                _speakerOut = new WasapiOut(AudioClientShareMode.Shared, 40);
-                _speakerOut.Init(_playbackBuffer);
-                _speakerOut.Play();
+                try
+                {
+                    var waveOut = new WaveOutEvent
+                    {
+                        DesiredLatency = 65,
+                        NumberOfBuffers = 3
+                    };
+                    waveOut.Init(_playbackBuffer);
+                    waveOut.Play();
+                    _speakerOut = waveOut;
+                }
+                catch
+                {
+                    var wasapiOut = new WasapiOut(AudioClientShareMode.Shared, 40);
+                    wasapiOut.Init(_playbackBuffer);
+                    wasapiOut.Play();
+                    _speakerOut = wasapiOut;
+                }
             }
             catch (Exception ex)
             {
                 System.IO.File.AppendAllText(
                     System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log"),
-                    $"[{DateTime.Now}] WasapiOut failed: {ex}\n\n");
+                    $"[{DateTime.Now}] Speaker output init failed: {ex}\n\n");
             }
 
             // 2. Boucle de réception UDP -> Déchiffrement -> Décodage Opus -> Haut-parleurs
             _ = Task.Run(() => UdpReceiveAudioLoopAsync(ct), ct);
 
-            // 3. Démarrer la capture Microphone WASAPI
+            // 3. Démarrer la capture Microphone (WaveInEvent 48kHz 16-bit stéréo natif, fallback sur WasapiCapture)
             try
             {
-                _micCapture = new WasapiCapture();
-                var capFormat = _micCapture.WaveFormat;
-                _micCapture.DataAvailable += (_, e) => OnMicDataAvailable(e.Buffer, e.BytesRecorded, capFormat);
-                _micCapture.StartRecording();
+                var directFormat = new WaveFormat(48000, 16, 2);
+                _waveIn = new WaveInEvent
+                {
+                    WaveFormat = directFormat,
+                    BufferMilliseconds = 20,
+                    NumberOfBuffers = 3
+                };
+                _waveIn.DataAvailable += (_, e) => OnMicDataAvailable(e.Buffer, e.BytesRecorded, directFormat);
+                _waveIn.StartRecording();
             }
-            catch (Exception ex)
+            catch
             {
-                System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log"),
-                    $"[{DateTime.Now}] WasapiCapture failed: {ex}\n\n");
+                try
+                {
+                    _micCapture = new WasapiCapture();
+                    var capFormat = _micCapture.WaveFormat;
+                    _micCapture.DataAvailable += (_, e) => OnMicDataAvailable(e.Buffer, e.BytesRecorded, capFormat);
+                    _micCapture.StartRecording();
+                }
+                catch (Exception ex)
+                {
+                    System.IO.File.AppendAllText(
+                        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DiscordNative_crash.log"),
+                        $"[{DateTime.Now}] Mic capture failed: {ex}\n\n");
+                }
             }
 
             if (_isSystemAudioSharingEnabled)
@@ -797,6 +862,8 @@ public sealed class DiscordVoiceClient : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _cts?.Cancel();
+        try { _waveIn?.StopRecording(); } catch { }
+        try { _waveIn?.Dispose(); } catch { }
         try { _micCapture?.StopRecording(); } catch { }
         try { _micCapture?.Dispose(); } catch { }
         try { _loopbackCapture?.StopRecording(); } catch { }

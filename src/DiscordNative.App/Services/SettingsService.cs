@@ -22,11 +22,12 @@ public sealed class AppSettings
     public double InterfaceScale { get; set; } = 1.0;
     public bool AnonymizeUploads { get; set; } = false;
     public bool ConvertLongMessagesToFile { get; set; } = true;
-    public string UpdateChannel { get; set; } = "Stable"; // Stable | Edge
+    public string UpdateChannel { get; set; } = "Edge"; // Stable | Edge
     public bool ShowNotifications { get; set; } = true;
     public bool StartMinimized { get; set; } = false;
     public bool MinimizeToTrayOnClose { get; set; } = true;
     public bool EnableKrispNoiseSuppression { get; set; } = true;
+    public bool EnableStartupIntroSound { get; set; } = true;
     public double InputVolume { get; set; } = 1.0;
     public double OutputVolume { get; set; } = 1.0;
     public string InputMode { get; set; } = "VoiceActivity"; // VoiceActivity | PushToTalk

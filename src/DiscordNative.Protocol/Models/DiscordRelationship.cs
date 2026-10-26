@@ -18,12 +18,29 @@ public sealed class DiscordRelationship : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    {
+        var handler = PropertyChanged;
+        if (handler is null) return;
+        try
+        {
+            DiscordNative.Protocol.App.RunOnUiThread(() =>
+            {
+                try { handler.Invoke(this, new PropertyChangedEventArgs(propertyName)); } catch { }
+            });
+        }
+        catch { }
+    }
 
     public void NotifyPresenceChanged()
     {
         OnPropertyChanged(nameof(User));
         OnPropertyChanged(nameof(SubtitleText));
+        OnPropertyChanged(nameof(IsOnline));
+        OnPropertyChanged(nameof(IsFriend));
+        OnPropertyChanged(nameof(IsPending));
+        OnPropertyChanged(nameof(IsPendingIncoming));
+        OnPropertyChanged(nameof(IsPendingOutgoing));
+        OnPropertyChanged(nameof(IsBlocked));
     }
 
     [JsonPropertyName("id")]

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -169,10 +169,22 @@ public sealed partial class MainWindowContent : UserControl
 
     }
 
+    private bool _introPlayedOnStartup;
+    private readonly List<DateTime> _diswinButtonClicks = new();
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         ApplyInterfaceScale();
         HookMessageListScroll();
+
+        if (!_introPlayedOnStartup)
+        {
+            _introPlayedOnStartup = true;
+            if (App.Settings.Current.EnableStartupIntroSound)
+            {
+                AudioSfxService.PlayDiswinIntro();
+            }
+        }
     }
 
     public async System.Threading.Tasks.Task CheckUpdatesDuringSplashAsync()
@@ -410,7 +422,29 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnFriendsClicked(object sender, RoutedEventArgs e)
     {
+        var now = DateTime.UtcNow;
+        _diswinButtonClicks.RemoveAll(t => (now - t).TotalSeconds > 2.8);
+        _diswinButtonClicks.Add(now);
+
+        if (_diswinButtonClicks.Count >= 5)
+        {
+            _diswinButtonClicks.Clear();
+            AudioSfxService.PlayDiswinIntro();
+
+            bool newValue = !App.Settings.Current.EnableStartupIntroSound;
+            App.Settings.Current.EnableStartupIntroSound = newValue;
+            App.Settings.Save();
+
+            UpdateInfoBar.Title = newValue ? "Son d'intro Diswin réactivé !" : "Son d'intro Diswin désactivé";
+            UpdateInfoBar.Message = newValue
+                ? "Le son d'intro « Diswin! » sera désormais joué à chaque lancement de l'application."
+                : "Le son d'intro a été rejoué et désactivé pour les prochains lancements (spammez à nouveau le bouton Diswin pour le réactiver).";
+            UpdateInfoBar.Severity = InfoBarSeverity.Informational;
+            UpdateInfoBar.IsOpen = true;
+        }
+
         GuildList.SelectedItem = null;
+        if (PrivateChannelList != null) PrivateChannelList.SelectedItem = null;
         ViewModel.ShowFriendsView();
     }
 
@@ -3287,6 +3321,7 @@ public sealed partial class MainWindowContent : UserControl
 
     private void OnFriendsHeaderClicked(object sender, RoutedEventArgs e)
     {
+        if (PrivateChannelList != null) PrivateChannelList.SelectedItem = null;
         ViewModel?.ShowFriendsView();
     }
 
@@ -6002,11 +6037,32 @@ public sealed partial class MainWindowContent : UserControl
         Canvas.SetLeft(ClanTagPopoutCard, left);
         Canvas.SetTop(ClanTagPopoutCard, top);
 
+        ClanTagPopoutOverlay.Width = this.ActualWidth;
+        ClanTagPopoutOverlay.Height = this.ActualHeight;
         ClanTagPopoutOverlay.Visibility = Visibility.Visible;
+
+        if (_clanTagPopup == null)
+        {
+            if (ClanTagPopoutOverlay.Parent is Microsoft.UI.Xaml.Controls.Panel parentPanel)
+            {
+                parentPanel.Children.Remove(ClanTagPopoutOverlay);
+            }
+            _clanTagPopup = new Microsoft.UI.Xaml.Controls.Primitives.Popup
+            {
+                Child = ClanTagPopoutOverlay,
+                IsLightDismissEnabled = false
+            };
+        }
+
+        _clanTagPopup.XamlRoot = this.XamlRoot;
+        _clanTagPopup.IsOpen = true;
     }
+
+    private Microsoft.UI.Xaml.Controls.Primitives.Popup? _clanTagPopup;
 
     private void OnClanTagOverlayBackdropPointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        if (_clanTagPopup != null) _clanTagPopup.IsOpen = false;
         ClanTagPopoutOverlay.Visibility = Visibility.Collapsed;
     }
 
@@ -6020,6 +6076,7 @@ public sealed partial class MainWindowContent : UserControl
         if (ViewModel.ActiveClanCard != null)
         {
             await ViewModel.JoinOrAccessClanGuildAsync(ViewModel.ActiveClanCard);
+            if (_clanTagPopup != null) _clanTagPopup.IsOpen = false;
             ClanTagPopoutOverlay.Visibility = Visibility.Collapsed;
         }
     }

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -23,6 +23,10 @@ public sealed class DiscordRestClient : IDisposable
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36");
         // Pas de préfixe "Bot" : c'est un token de compte utilisateur.
         _http.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", token);
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("X-Discord-Locale", "fr");
+        _http.DefaultRequestHeaders.TryAddWithoutValidation("X-Super-Properties",
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+                "{\"os\":\"Windows\",\"browser\":\"Discord Client\",\"release_channel\":\"stable\",\"client_version\":\"1.0.9168\",\"os_version\":\"10.0.22631\",\"os_arch\":\"x64\",\"app_arch\":\"x64\",\"system_locale\":\"fr\",\"browser_user_agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9168 Chrome/128.0.6613.186 Electron/32.2.2 Safari/537.36\",\"browser_version\":\"32.2.2\",\"client_build_number\":342420,\"native_build_number\":53993,\"client_event_source\":null}")));
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
     }
 
@@ -819,8 +823,64 @@ public sealed class DiscordRestClient : IDisposable
     public async Task<List<DiscordChannel>> GetPrivateChannelsAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<DiscordChannel>>($"{ApiBase}/users/@me/channels", ct) ?? new();
 
-    public async Task<List<DiscordRelationship>> GetRelationshipsAsync(CancellationToken ct = default) =>
-        await _http.GetFromJsonAsync<List<DiscordRelationship>>($"{ApiBase}/users/@me/relationships", ct) ?? new();
+    public async Task<List<DiscordRelationship>> GetRelationshipsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await _http.GetAsync($"{ApiBase}/users/@me/relationships", ct);
+            if (!resp.IsSuccessStatusCode) return new();
+
+            using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return new();
+
+            var list = new List<DiscordRelationship>();
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                var rel = ParseRelationshipElement(el);
+                if (rel is not null) list.Add(rel);
+            }
+            return list;
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    public static DiscordRelationship? ParseRelationshipElement(JsonElement el)
+    {
+        try
+        {
+            var rel = el.Deserialize<DiscordRelationship>(JsonOptions);
+            if (rel is null) return null;
+
+            string? userId = null;
+            if (el.TryGetProperty("user_id", out var uidEl) && uidEl.ValueKind == JsonValueKind.String)
+                userId = uidEl.GetString();
+
+            if (rel.User == null) rel.User = new DiscordUser();
+            if (string.IsNullOrWhiteSpace(rel.User.Id))
+            {
+                rel.User.Id = !string.IsNullOrWhiteSpace(userId) ? userId! : rel.Id;
+            }
+            if (string.IsNullOrWhiteSpace(rel.Id))
+            {
+                rel.Id = rel.User.Id;
+            }
+
+            if (el.TryGetProperty("nickname", out var nickEl) && nickEl.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(nickEl.GetString()))
+            {
+                if (string.IsNullOrWhiteSpace(rel.User.GlobalName))
+                    rel.User.GlobalName = nickEl.GetString();
+            }
+
+            return string.IsNullOrWhiteSpace(rel.Id) ? null : rel;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     public async Task<List<DiscordMessage>> GetMessagesAsync(string channelId, int limit = 50, string? beforeId = null, CancellationToken ct = default)
     {
@@ -1334,14 +1394,86 @@ public sealed class DiscordRestClient : IDisposable
 
     public async Task SendFriendRequestAsync(string username, CancellationToken ct = default)
     {
-        var response = await _http.PostAsJsonAsync($"{ApiBase}/users/@me/relationships", new { username }, ct);
-        response.EnsureSuccessStatusCode();
+        var clean = (username ?? string.Empty).Trim();
+        if (clean.StartsWith('@')) clean = clean[1..].Trim();
+        if (string.IsNullOrWhiteSpace(clean))
+            throw new InvalidOperationException("Veuillez saisir un nom d'utilisateur valide.");
+
+        // Si l'utilisateur a saisi un ID numérique Discord (Snowflake 17-20 chiffres), utiliser directement PUT /users/@me/relationships/{id}
+        if (clean.Length >= 16 && clean.Length <= 21 && clean.All(char.IsDigit))
+        {
+            await PutRelationshipAsync(clean, 1, ct);
+            return;
+        }
+
+        object payload;
+        int hashIdx = clean.IndexOf('#');
+        if (hashIdx > 0 && hashIdx < clean.Length - 1)
+        {
+            var namePart = clean[..hashIdx].Trim();
+            var discPart = clean[(hashIdx + 1)..].Trim();
+            if (discPart == "0" || discPart == "0000")
+            {
+                payload = new { username = namePart, discriminator = (int?)null };
+            }
+            else if (int.TryParse(discPart, out int discNum))
+            {
+                payload = new { username = namePart, discriminator = discNum };
+            }
+            else
+            {
+                payload = new { username = namePart, discriminator = (int?)null };
+            }
+        }
+        else
+        {
+            payload = new { username = clean, discriminator = (int?)null };
+        }
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{ApiBase}/users/@me/relationships")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        req.Headers.TryAddWithoutValidation("X-Context-Properties",
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"location\":\"Add Friend\"}")));
+
+        using var response = await _http.SendAsync(req, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            string errBody = string.Empty;
+            try { errBody = await response.Content.ReadAsStringAsync(ct); } catch { }
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(errBody)
+                    ? $"Échec de l'envoi de la demande d'ami ({(int)response.StatusCode})."
+                    : $"Discord a refusé la demande : {errBody}");
+        }
     }
 
     public async Task PutRelationshipAsync(string userId, int type = 1, CancellationToken ct = default)
     {
-        var response = await _http.PutAsJsonAsync($"{ApiBase}/users/@me/relationships/{userId}", new { type }, ct);
-        response.EnsureSuccessStatusCode();
+        object payload = type == 1 ? new { } : new { type };
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"{ApiBase}/users/@me/relationships/{userId}")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        req.Headers.TryAddWithoutValidation("X-Context-Properties",
+            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"location\":\"Friends\"}")));
+
+        using var response = await _http.SendAsync(req, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseFallback = await _http.PutAsJsonAsync($"{ApiBase}/users/@me/relationships/{userId}", new { type }, ct);
+            responseFallback.EnsureSuccessStatusCode();
+        }
+    }
+
+    public async Task RingCallAsync(string channelId, CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await _http.PostAsJsonAsync($"{ApiBase}/channels/{channelId}/call/ring", new { recipients = (object?)null }, ct);
+        }
+        catch { }
     }
 
     public async Task RemoveRelationshipAsync(string userId, CancellationToken ct = default)

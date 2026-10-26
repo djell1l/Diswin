@@ -116,6 +116,11 @@ public sealed partial class MainWindow : Window
         RootContent.ShowQuickSwitcher();
     }
 
+    public async System.Threading.Tasks.Task CheckForUpdatesAsync()
+    {
+        await RootContent.CheckUpdatesDuringSplashAsync();
+    }
+
     public void ShowAndActivate()
     {
         if (_appWindow != null)

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using DiscordNative.Protocol;
@@ -14,12 +14,14 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
     public DiscordUser User { get; }
     public DiscordActivity Activity { get; }
     public string? VoiceChannelName { get; }
+    public string? CustomTimeAgoText { get; }
 
-    public MemberActivityCardViewModel(DiscordUser user, DiscordActivity activity, string? voiceChannelName = null)
+    public MemberActivityCardViewModel(DiscordUser user, DiscordActivity activity, string? voiceChannelName = null, string? customTimeAgoText = null)
     {
         User = user;
         Activity = activity;
         VoiceChannelName = voiceChannelName;
+        CustomTimeAgoText = customTimeAgoText;
 
         if (!string.IsNullOrEmpty(activity.ApplicationId) && !HasLargeImage)
         {
@@ -42,8 +44,11 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
     }
 
     public string UserName => User.DisplayName;
+    public string UserRoleColor => User.RoleColorHex;
     public string UserStatusColor => User.StatusColor;
     public string UserAvatarUrl => User.AvatarUrl;
+    public bool HasUserAvatar => User.HasAvatar;
+    public string UserInitials => string.IsNullOrWhiteSpace(User.DisplayName) ? "?" : User.DisplayName[..1].ToUpperInvariant();
 
     public string ActivityName => Activity.Name;
     public string? LargeImageUrl => Activity.LargeImageUrl ?? Activity.SmallImageUrl ?? Activity.CoverImageUrl ?? User.CurrentGameIconUrl;
@@ -55,7 +60,11 @@ public sealed class MemberActivityCardViewModel : INotifyPropertyChanged
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrWhiteSpace(Activity.ElapsedText))
+            if (!string.IsNullOrWhiteSpace(CustomTimeAgoText))
+            {
+                parts.Add(CustomTimeAgoText);
+            }
+            else if (!string.IsNullOrWhiteSpace(Activity.ElapsedText))
             {
                 parts.Add(Activity.ElapsedText);
             }

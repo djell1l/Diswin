@@ -58,4 +58,48 @@ public static class AudioSfxService
         }
         catch { }
     }
+
+    /// <summary>
+    /// Joue l'intro personnalisée Diswin en assemblant les deux fichiers audio (« Diswin! » + jingle)
+    /// comme une seule séquence d'introduction au démarrage ou lors de l'easter egg du bouton Diswin.
+    /// </summary>
+    public static void PlayDiswinIntro()
+    {
+        _ = System.Threading.Tasks.Task.Run(async () =>
+        {
+            try
+            {
+                PlayCustomFile("diswin_voice.mp3", 0.90);
+                await System.Threading.Tasks.Task.Delay(250);
+                PlayCustomFile("diswin_chime.mp3", 0.85);
+            }
+            catch { }
+        });
+    }
+
+    private static void PlayCustomFile(string fileName, double volume)
+    {
+        try
+        {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var fullPath = Path.Combine(baseDir, "Assets", "Sounds", fileName);
+            if (!File.Exists(fullPath))
+            {
+                fullPath = Path.Combine("Assets", "Sounds", fileName);
+                if (!File.Exists(fullPath)) return;
+            }
+
+            var player = new MediaPlayer
+            {
+                Volume = volume
+            };
+            player.Source = MediaSource.CreateFromUri(new Uri(Path.GetFullPath(fullPath)));
+            player.MediaEnded += (sender, _) =>
+            {
+                try { sender.Dispose(); } catch { }
+            };
+            player.Play();
+        }
+        catch { }
+    }
 }

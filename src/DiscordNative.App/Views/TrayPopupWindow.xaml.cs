@@ -1,4 +1,6 @@
+using System;
 using System.Runtime.InteropServices;
+using DiscordNative.App.Services;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -14,8 +16,7 @@ public sealed partial class TrayPopupWindow : Window
     private readonly IntPtr _hWnd;
     private readonly AppWindow _appWindow;
 
-    private const int PopupWidth = 280;
-    private const int PopupHeight = 408;
+    private const int PopupWidth = 264;
 
     public TrayPopupWindow(MainWindow mainWindow)
     {
@@ -36,11 +37,34 @@ public sealed partial class TrayPopupWindow : Window
             presenter.SetBorderAndTitleBar(false, false);
         }
 
+        // Supprimer complètement la bordure blanche du système et activer les coins arrondis sombres
+        ApplyDwmWindowAttributes(_hWnd);
+
         // Masquer de la barre des tâches via WS_EX_TOOLWINDOW
         int exStyle = GetWindowLong(_hWnd, GWL_EXSTYLE);
         SetWindowLong(_hWnd, GWL_EXSTYLE, (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
 
         Activated += OnWindowActivated;
+    }
+
+    private static void ApplyDwmWindowAttributes(IntPtr hWnd)
+    {
+        try
+        {
+            int darkMode = 1;
+            // Supporte Windows 10 (19) et Windows 11 / Windows 10 20H1+ (20)
+            DwmSetWindowAttribute(hWnd, 19, ref darkMode, sizeof(int));
+            DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
+
+            // Arrondi Windows 11 natif
+            int cornerPreference = DWMWCP_ROUND;
+            DwmSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerPreference, sizeof(int));
+
+            // Supprime totalement la bordure DWM de la fenêtre (aucun contour blanc)
+            int borderColor = DWMWA_COLOR_NONE;
+            DwmSetWindowAttribute(hWnd, DWMWA_BORDER_COLOR, ref borderColor, sizeof(int));
+        }
+        catch { }
     }
 
     private void OnWindowActivated(object sender, WindowActivatedEventArgs args)
@@ -59,11 +83,22 @@ public sealed partial class TrayPopupWindow : Window
         var displayArea = DisplayArea.GetFromPoint(new PointInt32(pt.X, pt.Y), DisplayAreaFallback.Primary);
         var workArea = displayArea.WorkArea;
 
-        int height = _mainWindow.ViewModel.IsVoiceConnected ? PopupHeight + 36 : PopupHeight;
-        int x = Math.Clamp(pt.X - (PopupWidth / 2), workArea.X + 8, workArea.X + workArea.Width - PopupWidth - 8);
-        int y = Math.Clamp(pt.Y - height - 10, workArea.Y + 8, workArea.Y + workArea.Height - height - 8);
+        // Récupérer le facteur d'échelle DPI de l'écran pour convertir les DIPs XAML en pixels physiques
+        uint dpi = GetDpiForWindow(_hWnd);
+        double dpiScale = (dpi > 0 ? dpi : 96) / 96.0;
 
-        _appWindow.MoveAndResize(new RectInt32(x, y, PopupWidth, height));
+        // Mesurer la taille exacte nécessaire du contenu (en DIPs) avec une marge de sécurité
+        RootBorder.Measure(new Windows.Foundation.Size(PopupWidth, double.PositiveInfinity));
+        double dipHeight = Math.Max(RootBorder.DesiredSize.Height + 12, 330);
+
+        // Convertir en pixels physiques pour AppWindow.MoveAndResize
+        int physicalWidth = (int)Math.Ceiling(PopupWidth * dpiScale);
+        int physicalHeight = (int)Math.Ceiling(dipHeight * dpiScale);
+
+        int x = Math.Clamp(pt.X - (physicalWidth / 2), workArea.X + 8, workArea.X + workArea.Width - physicalWidth - 8);
+        int y = Math.Clamp(pt.Y - physicalHeight - (int)(12 * dpiScale), workArea.Y + 8, workArea.Y + workArea.Height - physicalHeight - 8);
+
+        _appWindow.MoveAndResize(new RectInt32(x, y, physicalWidth, physicalHeight));
         _appWindow.Show();
         SetForegroundWindow(_hWnd);
         Activate();
@@ -91,7 +126,7 @@ public sealed partial class TrayPopupWindow : Window
         var (statusLabel, colorHex) = vm.CurrentStatus switch
         {
             "idle" => ("Inactif", "#F0B232"),
-            "dnd" => ("Ne pas déranger", "#F23F43"),
+            "dnd" => ("Occupé", "#F23F43"),
             "invisible" => ("Invisible", "#80848E"),
             _ => ("En ligne", "#23A55A")
         };
@@ -102,7 +137,7 @@ public sealed partial class TrayPopupWindow : Window
 
         StatusDot.Fill = new SolidColorBrush(ParseColor(colorHex));
 
-        MuteMenuText.Text = vm.IsMuted ? "Réactiver le microphone" : "Couper le microphone";
+        MuteMenuText.Text = vm.IsMuted ? "Réactiver le micro" : "Couper le micro";
         MuteIcon.Glyph = vm.IsMuted ? "\uF781" : "\uE720";
         MuteIcon.Foreground = new SolidColorBrush(ParseColor(vm.IsMuted ? "#F23F43" : "#B5BAC1"));
 
@@ -165,6 +200,13 @@ public sealed partial class TrayPopupWindow : Window
         _mainWindow.ViewModel.DisconnectVoice();
     }
 
+    private async void OnCheckUpdatesClicked(object sender, RoutedEventArgs e)
+    {
+        HidePopup();
+        _mainWindow.ShowAndActivate();
+        await _mainWindow.CheckForUpdatesAsync();
+    }
+
     private void OnOpenSettingsClicked(object sender, RoutedEventArgs e)
     {
         HidePopup();
@@ -183,6 +225,15 @@ public sealed partial class TrayPopupWindow : Window
     private const int WS_EX_TOOLWINDOW = 0x00000080;
     private const int WS_EX_APPWINDOW = 0x00040000;
 
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWA_BORDER_COLOR = 34;
+    private const int DWMWCP_ROUND = 2;
+    private const int DWMWA_COLOR_NONE = unchecked((int)0xFFFFFFFE);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
     {
@@ -195,6 +246,9 @@ public sealed partial class TrayPopupWindow : Window
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);

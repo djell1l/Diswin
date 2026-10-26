@@ -30,66 +30,68 @@
             </Grid>
         </Border>
 
-        <!-- 2. Corps : Liste des catégories avec leurs émojis -->
-        <ScrollViewer Grid.Row="1" x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="CategoryItemsControl" ItemsSource="{x:Bind Groups, Mode=OneWay}" Margin="10,6,10,10">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="services:EmojiCategoryGroup">
-                        <StackPanel Margin="0,0,0,12">
-                            <!-- En-tête de catégorie (Nom de serveur ou catégorie standard) -->
-                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,4,4,6" VerticalAlignment="Center">
-                                <Border Width="16" Height="16" CornerRadius="4" Background="#313338"
-                                        Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <Image Source="{x:Bind IconUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="UniformToFill" />
-                                </Border>
-                                <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneTime}" FontSize="12" Foreground="#949BA4"
-                                          Visibility="{x:Bind HasIconUrl, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}" />
-                                <TextBlock Text="{x:Bind Title, Mode=OneTime}" FontSize="11" FontWeight="Bold" Foreground="#949BA4"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="320" />
-                            </StackPanel>
+        <!-- 2. Corps : Grille virtualisée instantanée (0ms freeze) -->
+        <Grid Grid.Row="1" Margin="10,6,10,6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-                            <!-- Grille des émojis -->
-                            <GridView ItemsSource="{x:Bind Emojis}"
-                                      SelectionMode="None" IsItemClickEnabled="True"
-                                      ItemClick="OnEmojiItemClicked"
-                                      Padding="0" Margin="0">
-                                <GridView.ItemContainerStyle>
-                                    <Style TargetType="GridViewItem">
-                                        <Setter Property="MinWidth" Value="38" />
-                                        <Setter Property="MinHeight" Value="38" />
-                                        <Setter Property="Width" Value="38" />
-                                        <Setter Property="Height" Value="38" />
-                                        <Setter Property="Padding" Value="0" />
-                                        <Setter Property="Margin" Value="2" />
-                                        <Setter Property="CornerRadius" Value="6" />
-                                    </Style>
-                                </GridView.ItemContainerStyle>
-                                <GridView.ItemTemplate>
-                                    <DataTemplate x:DataType="services:EmojiItemViewModel">
-                                        <Grid Width="38" Height="38" ToolTipService.ToolTip="{x:Bind TooltipText}"
-                                              Background="Transparent" CornerRadius="6" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Border Visibility="{x:Bind IsCustom, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                    Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Image Source="{x:Bind ImageUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
-                                            </Border>
-                                            <TextBlock Visibility="{x:Bind IsCustom, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
-                                                       Text="{x:Bind UnicodeChar, Mode=OneTime}"
-                                                       FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </GridView.ItemTemplate>
-                            </GridView>
-                        </StackPanel>
+            <!-- Titre et icône de la catégorie active -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,2,4,6" VerticalAlignment="Center">
+                <Border x:Name="ActiveCategoryIconBorder" Width="16" Height="16" CornerRadius="4" Background="#313338" Visibility="Collapsed">
+                    <Image x:Name="ActiveCategoryIconImage" Stretch="UniformToFill" />
+                </Border>
+                <FontIcon x:Name="ActiveCategoryGlyph" Glyph="&#xE823;" FontSize="12" Foreground="#949BA4" />
+                <TextBlock x:Name="ActiveCategoryTitle" Text="RÉCENTS" FontSize="11" FontWeight="Bold" Foreground="#949BA4"
+                           TextTrimming="CharacterEllipsis" MaxWidth="320" />
+            </StackPanel>
+
+            <!-- Grille d'émojis virtualisée avec ItemsWrapGrid -->
+            <GridView x:Name="EmojiGridView" Grid.Row="1"
+                      SelectionMode="None" IsItemClickEnabled="True"
+                      ItemClick="OnEmojiItemClicked"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      Padding="0" Margin="0">
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="9" ItemWidth="42" ItemHeight="42" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+                <GridView.ItemContainerStyle>
+                    <Style TargetType="GridViewItem">
+                        <Setter Property="MinWidth" Value="38" />
+                        <Setter Property="MinHeight" Value="38" />
+                        <Setter Property="Width" Value="38" />
+                        <Setter Property="Height" Value="38" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="2" />
+                        <Setter Property="CornerRadius" Value="6" />
+                    </Style>
+                </GridView.ItemContainerStyle>
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="services:EmojiItemViewModel">
+                        <Grid Width="38" Height="38" ToolTipService.ToolTip="{x:Bind TooltipText}"
+                              Background="Transparent" CornerRadius="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border Visibility="{x:Bind IsCustom, Mode=OneTime, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Image Source="{x:Bind ImageUrl, Mode=OneTime, Converter={StaticResource StringToImageSourceConverter}}" Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Visibility="{x:Bind IsCustom, Mode=OneTime, Converter={StaticResource InvertedBoolToVisibilityConverter}}"
+                                       Text="{x:Bind UnicodeChar, Mode=OneTime}"
+                                       FontFamily="Segoe UI Emoji"
+                                       FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                </GridView.ItemTemplate>
+            </GridView>
+        </Grid>
 
         <!-- 3. Pied : Barre de navigation des catégories -->
         <Border Grid.Row="2" Background="#232428" BorderBrush="#2B2D31" BorderThickness="0,1,0,0"
                 Padding="6,4" CornerRadius="0,0,12,12">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{x:Bind Groups, Mode=OneWay}">
+                <ItemsControl x:Name="CategoryNavItemsControl" ItemsSource="{x:Bind Groups, Mode=OneWay}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="4" />

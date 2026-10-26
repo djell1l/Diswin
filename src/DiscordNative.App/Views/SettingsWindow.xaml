@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="DiscordNative.App.Views.SettingsWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
@@ -12,7 +12,7 @@
         <Grid Grid.Row="0" x:Name="AppTitleBar" Background="Transparent" Padding="14,0">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <FontIcon Glyph="&#xE713;" FontSize="13" Foreground="#5865F2" />
-                <TextBlock Text="Diswin — Paramètres Utilisateur (WinUI 3)" FontSize="12" FontWeight="SemiBold" Opacity="0.85" />
+                <TextBlock Text="Diswin - Parametres" FontSize="12" FontWeight="SemiBold" Opacity="0.85" />
             </StackPanel>
         </Grid>
 
@@ -114,7 +114,7 @@
                                 BorderThickness="1" CornerRadius="12" Padding="18">
                             <StackPanel Spacing="12">
                                 <TextBlock Text="Fond d'écran personnalisé (Mica / Files)" FontSize="18" FontWeight="SemiBold" />
-                                <TextBlock Text="Choisissez une image qui s'affichera derrière l'interface WinUI 3, comme dans Files."
+                                <TextBlock Text="Choisissez une image ou un GIF qui s'affichera en arriere-plan."
                                            Opacity="0.7" TextWrapping="Wrap" />
 
                                 <Border Height="160" CornerRadius="8" Background="{ThemeResource ControlFillColorSecondaryBrush}"
@@ -365,11 +365,11 @@
 
                                 <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
 
-                                <TextBlock Text="Sauvegarde &amp; Diagnostics WinUI 3" FontSize="15" FontWeight="SemiBold" />
+                                <TextBlock Text="Sauvegarde &amp; Diagnostics" FontSize="15" FontWeight="SemiBold" />
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Content="Exporter les paramètres..." Click="OnExportSettingsClicked" />
                                     <Button Content="Importer des paramètres..." Click="OnImportSettingsClicked" />
-                                    <Button Content="Consulter les journaux (WinUI 3)" Click="OnOpenLogsClicked" />
+                                    <Button Content="Consulter les journaux" Click="OnOpenLogsClicked" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -395,7 +395,7 @@
                         </Border>
                     </StackPanel>
 
-                    <TextBlock Text="Diswin — Client WinUI 3 natif 100% C# non officiel, non affilié à Discord Inc." Opacity="0.5" FontSize="11" Margin="0,12,0,0" />
+                    <TextBlock Text="Diswin - Client natif non officiel, non affilie a Discord Inc." Opacity="0.5" FontSize="11" Margin="0,12,0,0" />
                 </StackPanel>
             </ScrollViewer>
         </NavigationView>

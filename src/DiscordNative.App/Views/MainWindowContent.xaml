@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="DiscordNative.App.Views.MainWindowContent"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -2169,7 +2169,7 @@
                     <!-- VUE PRINCIPALE DES AMIS & EN COURS (FRIENDS MAIN STAGE & ACTIVE NOW) -->
                     <Grid Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="3"
                           Visibility="{x:Bind ViewModel.FriendsMainStageVisibility, Mode=OneWay}"
-                          Background="#313338">
+                          Background="{ThemeResource LayerFillColorDefaultBrush}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -3718,25 +3718,37 @@
                                     </Border>
 
                                     <!-- Embeds -->
-                                    <ItemsControl ItemsSource="{x:Bind Embeds}" Margin="50,4,0,0"
+                                    <ItemsControl ItemsSource="{x:Bind DisplayEmbeds}" Margin="50,4,0,0"
                                                   Visibility="{x:Bind HasEmbeds, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:DiscordEmbed">
-                                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                        BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4" MaxWidth="400" HorizontalAlignment="Left">
-                                                    <StackPanel Spacing="4">
-                                                        <TextBlock Text="{x:Bind Provider.Name}" FontSize="12" Opacity="0.6" Visibility="{x:Bind HasProvider, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                        <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{x:Bind HasTitle, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                        <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" Visibility="{x:Bind HasDescription, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                                        <Border CornerRadius="8" Tag="{x:Bind}"
-                                                                Tapped="OnImageEmbedTapped"
-                                                                ContextRequested="OnImageEmbedContextRequested"
-                                                                Visibility="{x:Bind HasMainImage, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                            <Image Source="{x:Bind MainImageUrl, Converter={StaticResource StringToImageSourceConverter}}" MaxWidth="400" MaxHeight="300" Margin="0,8,0,0" Stretch="Uniform" />
-                                                        </Border>
-                                                    </StackPanel>
-                                                </Border>
+                                                <Grid Margin="0,4" MaxWidth="400" HorizontalAlignment="Left">
+                                                    <!-- Carte d'embed complÃ¨te (Titre, description, provider) -->
+                                                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                            BorderThickness="1" CornerRadius="8" Padding="12"
+                                                            Visibility="{x:Bind IsCard, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock Text="{x:Bind Provider.Name}" FontSize="12" Opacity="0.6" Visibility="{x:Bind HasProvider, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{x:Bind HasTitle, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                            <TextBlock Text="{x:Bind Description}" FontSize="12" TextWrapping="Wrap" Opacity="0.8" Visibility="{x:Bind HasDescription, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                            <Border CornerRadius="8" Tag="{x:Bind}"
+                                                                    Tapped="OnImageEmbedTapped"
+                                                                    ContextRequested="OnImageEmbedContextRequested"
+                                                                    Visibility="{x:Bind HasMainImage, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                <Image Source="{x:Bind MainImageUrl, Converter={StaticResource StringToImageSourceConverter}}" MaxWidth="400" MaxHeight="300" Margin="0,8,0,0" Stretch="Uniform" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </Border>
+
+                                                    <!-- MÃ©dia seul (GIFs, Tenor, Giphy, images directes) : Rendu propre sans cadre gris -->
+                                                    <Border CornerRadius="8" Tag="{x:Bind}"
+                                                            Tapped="OnImageEmbedTapped"
+                                                            ContextRequested="OnImageEmbedContextRequested"
+                                                            Visibility="{x:Bind IsMediaOnly, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Image Source="{x:Bind MainImageUrl, Converter={StaticResource StringToImageSourceConverter}}" MaxWidth="400" MaxHeight="300" Stretch="Uniform" />
+                                                    </Border>
+                                                </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -4155,11 +4167,21 @@
 
                                                                     <!-- Corps du profil positionné proprement sous la bannière -->
                                                                     <StackPanel Margin="16,168,16,16" Spacing="8">
-                                                                        <!-- Nom d'affichage en grand + bouton Note -->
+                                                                        <!-- Nom d'affichage en grand + Badge APP + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind User.DisplayName}"
-                                                                                       Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
-                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,26,0">
+                                                                                <TextBlock Text="{x:Bind User.DisplayName}"
+                                                                                           Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                                                                                <!-- Badge APP officiel -->
+                                                                                <Border Background="#5865F2" CornerRadius="4" Padding="5,1" VerticalAlignment="Center"
+                                                                                        Visibility="{x:Bind User.Bot, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                                                        <FontIcon Glyph="&#xE73E;" FontSize="9" Foreground="White" />
+                                                                                        <TextBlock Text="APP" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                                                                    </StackPanel>
+                                                                                </Border>
+                                                                            </StackPanel>
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
                                                                                 <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind User.ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>
@@ -4639,9 +4661,19 @@
                                                                     <StackPanel Margin="16,168,16,16" Spacing="8">
                                                                         <!-- Nom d'affichage en grand + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind DisplayName}"
-                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
-                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,26,0">
+                                                                                <TextBlock Text="{x:Bind DisplayName}"
+                                                                                           Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                                                                                <!-- Badge APP officiel -->
+                                                                                <Border Background="#5865F2" CornerRadius="4" Padding="5,1" VerticalAlignment="Center"
+                                                                                        Visibility="{x:Bind Bot, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                                                        <FontIcon Glyph="&#xE73E;" FontSize="9" Foreground="White" />
+                                                                                        <TextBlock Text="APP" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                                                                    </StackPanel>
+                                                                                </Border>
+                                                                            </StackPanel>
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
                                                                                 <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>
@@ -5128,9 +5160,19 @@
                                                                     <StackPanel Margin="16,168,16,16" Spacing="8">
                                                                         <!-- Nom d'affichage en grand + bouton Note -->
                                                                         <Grid>
-                                                                            <TextBlock Text="{x:Bind DisplayName}"
-                                                                                       Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
-                                                                                       FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" Margin="0,0,26,0" />
+                                                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,26,0">
+                                                                                <TextBlock Text="{x:Bind DisplayName}"
+                                                                                           Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}"
+                                                                                           FontWeight="Bold" FontSize="20" TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                                                                                <!-- Badge APP officiel -->
+                                                                                <Border Background="#5865F2" CornerRadius="4" Padding="5,1" VerticalAlignment="Center"
+                                                                                        Visibility="{x:Bind Bot, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                                                        <FontIcon Glyph="&#xE73E;" FontSize="9" Foreground="White" />
+                                                                                        <TextBlock Text="APP" FontSize="10" FontWeight="Bold" Foreground="White" />
+                                                                                    </StackPanel>
+                                                                                </Border>
+                                                                            </StackPanel>
                                                                             <Button HorizontalAlignment="Right" VerticalAlignment="Center" Padding="4" Background="Transparent" BorderThickness="0" CornerRadius="4" ToolTipService.ToolTip="Note sur l'utilisateur">
                                                                                 <FontIcon Glyph="&#xE70F;" FontSize="13" Foreground="{x:Bind ProfileTextForegroundColorHex, Mode=OneWay}" Opacity="0.8" />
                                                                             </Button>

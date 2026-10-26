@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Numerics;
 using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml.Controls;
@@ -8,68 +11,112 @@ namespace DiscordNative.App.Controls;
 
 /// <summary>
 /// Hôte du fond d'écran personnalisé de l'appli, inspiré du réglage "Custom background"
-/// de Files (files-community/Files) : image utilisateur + voile semi-transparent + flou gaussien
-/// appliqué via l'API Composition (nécessite le package Win2D.Uwp pour GaussianBlurEffect).
+/// de Files : image/gif utilisateur + voile semi-transparent + flou gaussien via Win2D.
+/// Optimisé pour CPU/GPU : mise en cache des états et aucun abonnement redondant à SizeChanged.
 /// </summary>
 public sealed partial class BackgroundImageHost : UserControl
 {
     private SpriteVisual? _blurVisual;
     private CompositionEffectBrush? _blurBrush;
+    private string? _appliedPath;
+    private double _appliedOpacity = -1;
+    private double _appliedBlur = -1;
 
     public BackgroundImageHost()
     {
         InitializeComponent();
         Loaded += (_, _) => ApplyFromSettings();
+        SizeChanged += OnHostSizeChanged;
         App.Settings.SettingsChanged += ApplyFromSettings;
+    }
+
+    private void OnHostSizeChanged(object sender, Microsoft.UI.Xaml.SizeChangedEventArgs e)
+    {
+        if (_blurVisual is not null)
+        {
+            _blurVisual.Size = new Vector2((float)ActualWidth, (float)ActualHeight);
+        }
     }
 
     public void ApplyFromSettings()
     {
         var settings = App.Settings.Current;
 
-        if (string.IsNullOrEmpty(settings.BackgroundImagePath) || !System.IO.File.Exists(settings.BackgroundImagePath))
+        if (string.IsNullOrEmpty(settings.BackgroundImagePath) || !File.Exists(settings.BackgroundImagePath))
         {
-            BackgroundImage.Source = null;
-            OverlayGrid.Opacity = 0;
-            RemoveBlur();
+            if (_appliedPath != null)
+            {
+                BackgroundImage.Source = null;
+                OverlayGrid.Opacity = 0;
+                RemoveBlur();
+                _appliedPath = null;
+                _appliedOpacity = -1;
+                _appliedBlur = -1;
+            }
             return;
         }
 
-        BackgroundImage.Source = new BitmapImage(new Uri(settings.BackgroundImagePath));
-        OverlayGrid.Opacity = settings.BackgroundOpacity;
-        ApplyBlur(settings.BackgroundBlurRadius);
+        if (_appliedPath != settings.BackgroundImagePath)
+        {
+            _appliedPath = settings.BackgroundImagePath;
+            if (Uri.TryCreate(settings.BackgroundImagePath, UriKind.Absolute, out var uri))
+            {
+                var bi = new BitmapImage(uri) { AutoPlay = true };
+                bi.ImageOpened += (s, e) =>
+                {
+                    try
+                    {
+                        if (bi.IsAnimatedBitmap)
+                            bi.Play();
+                    }
+                    catch { }
+                };
+                BackgroundImage.Source = bi;
+            }
+        }
+
+        if (Math.Abs(_appliedOpacity - settings.BackgroundOpacity) > 0.005)
+        {
+            _appliedOpacity = settings.BackgroundOpacity;
+            OverlayGrid.Opacity = settings.BackgroundOpacity;
+        }
+
+        if (Math.Abs(_appliedBlur - settings.BackgroundBlurRadius) > 0.005)
+        {
+            _appliedBlur = settings.BackgroundBlurRadius;
+            ApplyBlur(settings.BackgroundBlurRadius);
+        }
     }
 
     private void ApplyBlur(double radius)
     {
         RemoveBlur();
-        if (radius <= 0) return;
+        if (radius <= 0.5) return;
 
-        var hostVisual = ElementCompositionPreview.GetElementVisual(BackgroundImage);
-        var compositor = hostVisual.Compositor;
-
-        var graphicsEffect = new GaussianBlurEffect
+        try
         {
-            Name = "Blur",
-            BlurAmount = (float)radius,
-            Source = new CompositionEffectSourceParameter("Source"),
-            BorderMode = EffectBorderMode.Hard,
-        };
+            var hostVisual = ElementCompositionPreview.GetElementVisual(BackgroundImage);
+            var compositor = hostVisual.Compositor;
 
-        var effectFactory = compositor.CreateEffectFactory(graphicsEffect);
-        _blurBrush = effectFactory.CreateBrush();
-        _blurBrush.SetSourceParameter("Source", compositor.CreateBackdropBrush());
+            var graphicsEffect = new GaussianBlurEffect
+            {
+                Name = "Blur",
+                BlurAmount = (float)radius,
+                Source = new CompositionEffectSourceParameter("Source"),
+                BorderMode = EffectBorderMode.Hard,
+            };
 
-        _blurVisual = compositor.CreateSpriteVisual();
-        _blurVisual.Brush = _blurBrush;
-        _blurVisual.Size = new System.Numerics.Vector2((float)ActualWidth, (float)ActualHeight);
-        SizeChanged += (_, _) =>
-        {
-            if (_blurVisual is not null)
-                _blurVisual.Size = new System.Numerics.Vector2((float)ActualWidth, (float)ActualHeight);
-        };
+            var effectFactory = compositor.CreateEffectFactory(graphicsEffect);
+            _blurBrush = effectFactory.CreateBrush();
+            _blurBrush.SetSourceParameter("Source", compositor.CreateBackdropBrush());
 
-        ElementCompositionPreview.SetElementChildVisual(OverlayGrid, _blurVisual);
+            _blurVisual = compositor.CreateSpriteVisual();
+            _blurVisual.Brush = _blurBrush;
+            _blurVisual.Size = new Vector2((float)ActualWidth, (float)ActualHeight);
+
+            ElementCompositionPreview.SetElementChildVisual(OverlayGrid, _blurVisual);
+        }
+        catch { }
     }
 
     private void RemoveBlur()

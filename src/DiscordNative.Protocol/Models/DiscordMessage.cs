@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 namespace DiscordNative.Protocol.Models;
@@ -229,12 +229,28 @@ public sealed class DiscordMessage : INotifyPropertyChanged
         var idx = (int)(Timestamp.ToUnixTimeMilliseconds() % templates.Length);
         return string.Format(templates[idx], name);
     }
-    public bool HasContent => IsNormal && !string.IsNullOrEmpty(Content);
+    public bool HasContent => IsNormal && !string.IsNullOrWhiteSpace(FormattedContent);
     public string FormattedContent
     {
         get
         {
             if (string.IsNullOrEmpty(Content)) return string.Empty;
+            var trimmed = Content.Trim();
+            if (IsStandaloneMediaUrl(trimmed))
+                return string.Empty;
+
+            if (Embeds != null && Embeds.Count > 0)
+            {
+                foreach (var emb in Embeds)
+                {
+                    if (!string.IsNullOrEmpty(emb.Url) && (emb.IsMediaOnly || emb.Type is "gifv" or "image" or "video"))
+                    {
+                        if (string.Equals(trimmed, emb.Url.Trim(), StringComparison.OrdinalIgnoreCase))
+                            return string.Empty;
+                    }
+                }
+            }
+
             var text = Content;
             if (Mentions != null && Mentions.Count > 0)
             {
@@ -249,6 +265,57 @@ public sealed class DiscordMessage : INotifyPropertyChanged
             return text;
         }
     }
+
+    private bool IsStandaloneMediaUrl(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Contains(' ') || text.Contains('\n'))
+            return false;
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host.ToLowerInvariant();
+        var path = uri.AbsolutePath.ToLowerInvariant();
+
+        if (path.EndsWith(".gif") || path.EndsWith(".png") || path.EndsWith(".jpg") || path.EndsWith(".jpeg") || path.EndsWith(".webp"))
+            return true;
+
+        if ((host.Contains("tenor.com") || host.Contains("giphy.com") || host.Contains("discordapp.net") || host.Contains("discordapp.com"))
+            && (Embeds.Count > 0 || path.Contains("/attachments/")))
+            return true;
+
+        return false;
+    }
+
+    [JsonIgnore]
+    public List<DiscordEmbed> DisplayEmbeds
+    {
+        get
+        {
+            if (Embeds.Count > 0)
+                return Embeds;
+
+            var trimmed = Content?.Trim() ?? string.Empty;
+            if (IsStandaloneMediaUrl(trimmed) && !HasImages)
+            {
+                var normalized = DiscordEmbed.NormalizeAnimatedMediaUrl(trimmed, trimmed);
+                if (!string.IsNullOrEmpty(normalized))
+                {
+                    return new List<DiscordEmbed>
+                    {
+                        new DiscordEmbed
+                        {
+                            ParentMessage = this,
+                            Type = "image",
+                            Url = trimmed,
+                            Image = new DiscordEmbedImage { Url = normalized }
+                        }
+                    };
+                }
+            }
+            return Embeds;
+        }
+    }
+
     public bool IsEdited => EditedTimestamp is not null;
     public string EditedText => IsEdited ? "(modifié)" : string.Empty;
     public string TimeText
@@ -291,7 +358,7 @@ public sealed class DiscordMessage : INotifyPropertyChanged
     public bool HasImages => Attachments.Any(a => a.IsImage);
     public bool HasAudio => Attachments.Any(a => a.IsAudio);
     public bool HasFiles => Attachments.Any(a => !a.IsImage && !a.IsAudio);
-    public bool HasEmbeds => Embeds.Count > 0;
+    public bool HasEmbeds => DisplayEmbeds.Count > 0;
     public bool HasStickers => StickerItems.Count > 0;
     public bool HasReactions => Reactions.Count > 0;
     public bool HasPoll => Poll is not null;
@@ -398,29 +465,92 @@ public sealed class DiscordEmbed
     {
         get
         {
-            if (Image?.Url != null && Image.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Image.Url;
-            if (Image?.ProxyUrl != null && Image.ProxyUrl.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Image.ProxyUrl;
-            var raw = Image?.ProxyUrl ?? Image?.Url;
-            if (raw == null && (Type is "image" or "gifv"))
+            string? raw = null;
+            if (Image?.Url != null && Image.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase))
+                raw = Image.Url;
+            else if (Image?.ProxyUrl != null && Image.ProxyUrl.Contains(".gif", StringComparison.OrdinalIgnoreCase))
+                raw = Image.ProxyUrl;
+            else
+                raw = Image?.Url ?? Image?.ProxyUrl;
+
+            if (raw == null && (Type is "image" or "gifv" or "video" || !string.IsNullOrEmpty(Url)))
             {
-                if (Thumbnail?.Url != null && Thumbnail.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase)) return Thumbnail.Url;
-                return Thumbnail?.ProxyUrl ?? Thumbnail?.Url;
+                if (Thumbnail?.Url != null && Thumbnail.Url.Contains(".gif", StringComparison.OrdinalIgnoreCase))
+                    raw = Thumbnail.Url;
+                else
+                    raw = Thumbnail?.Url ?? Thumbnail?.ProxyUrl;
             }
-            return raw;
+            return NormalizeAnimatedMediaUrl(raw, Url);
         }
     }
+
+    public static string? NormalizeAnimatedMediaUrl(string? rawUrl, string? fallbackPageUrl = null)
+    {
+        var candidate = rawUrl;
+        if (string.IsNullOrWhiteSpace(candidate))
+            candidate = fallbackPageUrl;
+        if (string.IsNullOrWhiteSpace(candidate))
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(fallbackPageUrl) &&
+            Uri.TryCreate(fallbackPageUrl, UriKind.Absolute, out var pageUri) &&
+            pageUri.AbsolutePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+        {
+            candidate = fallbackPageUrl;
+        }
+
+        // Convert Discord media proxy URLs to direct CDN URLs so animated GIFs aren't converted to static WebP/PNG
+        if (candidate.Contains("media.discordapp.net/attachments/", StringComparison.OrdinalIgnoreCase))
+        {
+            candidate = candidate.Replace("media.discordapp.net/attachments/", "cdn.discordapp.com/attachments/", StringComparison.OrdinalIgnoreCase);
+            int qIdx = candidate.IndexOf('?');
+            if (qIdx > 0)
+            {
+                var pathPart = candidate[..qIdx];
+                if (pathPart.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                {
+                    candidate = candidate.Replace("&format=webp", "", StringComparison.OrdinalIgnoreCase)
+                                         .Replace("?format=webp&", "?", StringComparison.OrdinalIgnoreCase)
+                                         .Replace("?format=webp", "", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+        }
+
+        // Convert Tenor static PNG/WebP thumbnails (e.g. https://media.tenor.com/{prefix}AAAAe/{slug}.png) to animated GIF (AAAAC/{slug}.gif)
+        if (candidate.Contains("tenor.com/", StringComparison.OrdinalIgnoreCase))
+        {
+            candidate = System.Text.RegularExpressions.Regex.Replace(
+                candidate,
+                @"(https?://(?:media\d*|c)\.tenor\.com/[^/]+?)(?:AAAAe|AAAAd|AAAAi|AAAAM|AAAAx)/([^/?#]+?)\.(?:png|webp|jpg)",
+                "$1AAAAC/$2.gif",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        // Convert Giphy static preview to animated gif
+        if (candidate.Contains("giphy.com/media/", StringComparison.OrdinalIgnoreCase) &&
+            candidate.EndsWith("_s.gif", StringComparison.OrdinalIgnoreCase))
+        {
+            candidate = candidate[..^6] + ".gif";
+        }
+
+        return candidate;
+    }
+
     public string? SideThumbnailUrl => Image is null && Type is not ("image" or "gifv") ? Thumbnail?.ProxyUrl ?? Thumbnail?.Url : null;
     public bool HasTitle => !string.IsNullOrEmpty(Title);
     public bool HasDescription => !string.IsNullOrEmpty(Description);
     public bool HasAuthor => !string.IsNullOrEmpty(Author?.Name);
-    public bool HasProvider => !string.IsNullOrEmpty(Provider?.Name);
+    public bool HasProvider => !string.IsNullOrEmpty(Provider?.Name) && !IsMediaOnly;
     public bool HasFooter => !string.IsNullOrEmpty(Footer?.Text);
     public bool HasMainImage => MainImageUrl is not null;
     public bool HasSideThumbnail => SideThumbnailUrl is not null;
     public bool HasFields => Fields.Count > 0;
-    /// <summary>Embed "média seul" (lien direct vers une image/gif) : pas de cadre.</summary>
-    public bool IsMediaOnly => Type is "image" or "gifv" && !HasTitle && !HasDescription;
+    /// <summary>Embed "média seul" (lien direct vers une image/gif/tenor/giphy) : pas de cadre.</summary>
+    public bool IsMediaOnly => HasMainImage && ((Type is "image" or "gifv") || (!HasTitle && !HasDescription && !HasAuthor && !HasFooter && !HasFields));
     public bool IsCard => !IsMediaOnly;
+    public double EmbedCardPadding => IsMediaOnly ? 0 : 12;
+    public double EmbedCardBorderThickness => IsMediaOnly ? 0 : 1;
+    public string EmbedCardBackground => IsMediaOnly ? "#00000000" : "#2B2D31";
     public string ColorHex => Color is int c ? $"#FF{c:X6}" : "#FF4E5058";
 }
 public sealed class DiscordEmbedImage
